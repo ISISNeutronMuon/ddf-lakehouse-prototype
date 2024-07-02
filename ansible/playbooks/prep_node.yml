@@ -1,0 +1,11 @@
+---
+- name: Prep a new node
+
+  hosts: all
+
+  roles:
+    - name: packages_update
+    - name: geerlingguy.pip
+      become: yes
+    - name: geerlingguy.docker
+      become: yes
