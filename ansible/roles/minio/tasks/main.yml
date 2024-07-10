@@ -1,0 +1,23 @@
+---
+- name: Ensure minio data directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ minio_data_path }}"
+    state: directory
+    mode: '0755'
+
+- name: Ensure MinIO container is running
+  become: true
+  community.docker.docker_container:
+    name: minio
+    image: "{{ minio_image }}"
+    command: ["server", "/data", "--console-address", ":9001"]
+    state: started
+    cleanup: true
+    detach: true
+    restart: true
+    published_ports:
+      - 9000:9000
+      - 9001:9001
+    volumes:
+      - "{{ minio_data_path }}:/data"

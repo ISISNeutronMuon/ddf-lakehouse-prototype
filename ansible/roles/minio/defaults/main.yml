@@ -1,0 +1,3 @@
+---
+minio_image: quay.io/minio/minio:RELEASE.2024-07-04T14-25-45Z
+minio_data_path: /var/lib/minio/data

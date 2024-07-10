@@ -1,5 +1,5 @@
 ---
-# Docker installation
+# Docker
 docker_edition: 'ce'
 docker_packages:
     - "docker-{{ docker_edition }}"
@@ -13,5 +13,7 @@ docker_obsolete_packages:
   - containerd
   - runc
 docker_packages_state: present
+
+# Python
 pip_install_packages:
   - name: docker

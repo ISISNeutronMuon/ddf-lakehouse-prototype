@@ -1,0 +1,10 @@
+---
+- name: Configure minio
+  hosts: minio
+  roles:
+   - name: packages_update
+   - name: geerlingguy.pip
+     become: yes
+   - name: geerlingguy.docker
+     become: yes
+   - name: minio
