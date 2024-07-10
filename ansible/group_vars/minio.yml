@@ -1,0 +1,2 @@
+---
+minio_data_path: "{{ cephfs_mount_path }}/live/minio/data"
