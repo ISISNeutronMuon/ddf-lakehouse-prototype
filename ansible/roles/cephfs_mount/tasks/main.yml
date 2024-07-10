@@ -1,0 +1,31 @@
+---
+- name: Ensure dependencies are installed.
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yml"
+
+- name: Ensure mount directory exists
+  become: yes
+  ansible.builtin.file:
+    path: "{{ cephfs_mount_path }}"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+
+- name: Ensure CephFS share access key is available
+  become: yes
+  ansible.builtin.copy:
+    dest: /etc/cephfs_share_access.key
+    content: "{{ cephfs_access_secret }}"
+    owner: root
+    group: root
+    mode: "u=r,o=,g="
+
+- name: Mount CephFS share (using kernel client)
+  become: yes
+  ansible.posix.mount:
+    path: "{{ cephfs_mount_path }}"
+    src: "{{ cephfs_export_path }}"
+    fstype: ceph
+    opts: "name={{ cephfs_access_name }},secretfile=/etc/cephfs_share_access.key,noatime,_netdev"
+    boot: true
+    state: mounted

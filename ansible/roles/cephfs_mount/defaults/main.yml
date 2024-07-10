@@ -1,0 +1,3 @@
+---
+cephfs_mount_path: /mnt/share
+cephfs_export_path: ""
