@@ -1,0 +1,28 @@
+---
+- name: Ensure Python openstack bindings are present
+  ansible.builtin.pip:
+   name: "python-openstackclient=={{ openstackclient_version }}"
+   state: present
+
+- name: Ensure MinIO server is present
+  openstack.cloud.server:
+    cloud: "{{ openstack_cloud_name }}"
+    flavor: "{{ openstack_flavor }}"
+    image: "{{ openstack_image }}"
+    name: "{{ openstack_server_name }}"
+    key_name: "{{ openstack_key_name }}"
+    network: Internal
+    auto_floating_ip: no
+    security_groups: [default]
+    timeout: 200
+    state: present
+  register: vm_info
+
+- name: Get IP address of VM
+  debug:
+    msg: "{{ vm_info.server.addresses.Internal[0].addr }}"
+
+- name: Wait for connection
+  wait_for_connection:
+    timeout: 300
+  delegate_to: "{{ vm_info.server.addresses.Internal[0].addr }}"
