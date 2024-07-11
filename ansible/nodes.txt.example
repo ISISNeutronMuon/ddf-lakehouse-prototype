@@ -1,0 +1,5 @@
+# localhost should use the activated python in the case of a virtual/conda env
+localhost ansible_connection=local ansible_python_interpreter=python
+
+[minio]
+# addr

@@ -2,7 +2,6 @@
 - name: Configure minio
   hosts: minio
   roles:
-   - name: packages_update
    - name: cephfs_mount
    - name: geerlingguy.pip
      become: yes

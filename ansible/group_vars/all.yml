@@ -1,4 +1,7 @@
 ---
+# Server
+openstack_image: ubuntu-focal-20.04-nogui
+
 # Docker
 docker_edition: 'ce'
 docker_packages:
