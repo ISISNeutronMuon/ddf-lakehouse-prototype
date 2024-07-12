@@ -1,0 +1,3 @@
+---
+postgres_image: ghcr.io/cloudnative-pg/postgresql:16.3-bookworm
+postgres_data_path: /var/lib/postgresql/data

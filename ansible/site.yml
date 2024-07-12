@@ -1,6 +1,6 @@
 ---
-- name: Provision cloud resources
-  import_playbook: playbooks/provisioning/minio_create.yml
+- name: Deploy Minio
+  import_playbook: playbooks/fullstack/minio.yml
 
-- name: Configure services
-  import_playbook: playbooks/services/minio_configure.yml
+- name: Deploy Iceberg catalog
+  import_playbook: playbooks/fullstack/postgres.yml

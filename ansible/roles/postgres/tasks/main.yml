@@ -1,0 +1,41 @@
+---
+- name: Ensure postgres data directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ postgres_data_path }}"
+    state: directory
+    mode: '0755'
+
+- name: Ensure secrets directory exists
+  become: true
+  ansible.builtin.file:
+    path: /secrets
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+
+- name: Ensure postgres secrets are available
+  become: yes
+  ansible.builtin.copy:
+    dest: /secrets/postgres-passwd
+    content: "{{ postgres_passwd }}"
+    owner: root
+    group: root
+    mode: "u=r,g=r,o=r"
+
+- name: Ensure Postgresql container is running
+  become: true
+  community.docker.docker_container:
+    name: postgres
+    image: "{{ postgres_image }}"
+    state: started
+    cleanup: true
+    detach: true
+    restart: true
+    published_ports:
+      - 5432:5432
+    env:
+      POSTGRES_PASSWORD_FILE=/secrets/postgres-passwd
+      POSTGRES_DB="{{ postgres_db }}"
+    volumes:
+      - "{{ postgres_data_path }}:/data"
+      - /secrets:/secrets:ro

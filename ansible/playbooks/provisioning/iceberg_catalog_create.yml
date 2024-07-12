@@ -1,0 +1,24 @@
+---
+- name: Provision VMs for Iceberg's catalog
+  hosts: localhost
+  vars:
+    openstack_security_group_name: iceberg-catalog
+    openstack_security_group_description: Ingress to catalog ports
+    openstack_security_group_rules:
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: 5432
+        port_range_max: 5432
+    openstack_flavor: l3.nano
+    openstack_server_name: iceberg-catalog
+    openstack_vm_user: ubuntu
+    inventory_group: iceberg_catalog
+  roles:
+    - name: security_group_create
+    - name: vm_create
+
+- name: Base VM configuration
+  hosts: iceberg_catalog
+  roles:
+    - name: packages_update
