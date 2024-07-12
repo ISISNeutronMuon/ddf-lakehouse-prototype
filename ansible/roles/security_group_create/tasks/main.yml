@@ -1,0 +1,8 @@
+---
+- name: Ensure security group is present in openstack
+  openstack.cloud.security_group:
+    cloud: "{{ openstack_cloud_name }}"
+    name: "{{ openstack_security_group_name }}"
+    description: "{{ openstack_security_group_description }}"
+    security_group_rules: "{{ openstack_security_group_rules }}"
+    state: present
