@@ -3,4 +3,4 @@
   import_playbook: playbooks/fullstack/minio.yml
 
 - name: Deploy Iceberg catalog
-  import_playbook: playbooks/fullstack/postgres.yml
+  import_playbook: playbooks/fullstack/iceberg_catalog.yml
