@@ -8,8 +8,8 @@
       - direction: ingress
         ether_type: IPv4
         protocol: tcp
-        port_range_min: 5432
-        port_range_max: 5432
+        port_range_min: "{{ postgres_db_port }}"
+        port_range_max: "{{ postgres_db_port }}"
     openstack_flavor: l3.nano
     openstack_server_name: iceberg-catalog
     openstack_vm_user: ubuntu

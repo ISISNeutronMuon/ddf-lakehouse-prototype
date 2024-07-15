@@ -11,13 +11,13 @@
   community.docker.docker_container:
     name: minio
     image: "{{ minio_image }}"
-    command: ["server", "/data", "--console-address", ":9001"]
+    command: ["server", "/data", "--console-address", ":{{ minio_console_port }}"]
     state: started
     cleanup: true
     detach: true
     restart: true
     published_ports:
-      - 9000:9000
-      - 9001:9001
+      - "{{ minio_rest_port }}:9000"
+      - "{{ minio_console_port }}:9001"
     volumes:
       - "{{ minio_data_path }}:/data"
