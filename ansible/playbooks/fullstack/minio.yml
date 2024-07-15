@@ -1,6 +1,6 @@
 ---
-- name: Provision cloud resources
+- name: Provision cloud resources for MinIO
   import_playbook: ../provisioning/minio_create.yml
 
-- name: Configure services
+- name: Configure MinIO
   import_playbook: ../services/minio_configure.yml
