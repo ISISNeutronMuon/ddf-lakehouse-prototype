@@ -1,0 +1,6 @@
+---
+- name: Provision cloud resources for Spark
+  import_playbook: ../provisioning/spark_create.yml
+
+- name: Configure Spark
+  import_playbook: ../services/spark_configure.yml

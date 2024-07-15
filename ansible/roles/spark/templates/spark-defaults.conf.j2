@@ -1,0 +1,17 @@
+# Default system properties included when running spark-submit.
+# This is useful for setting default environmental settings.
+spark.eventLog.enabled                      true
+spark.eventLog.dir                          {{ spark_container_home }}/spark-events
+spark.history.fs.logDirectory               {{ spark_container_home }}/spark-events
+spark.sql.extensions                        org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+spark.sql.catalog.warehouse                 org.apache.iceberg.spark.SparkCatalog
+spark.sql.catalog.warehouse.io-impl         org.apache.iceberg.aws.s3.S3FileIO
+spark.sql.catalog.warehouse.warehouse       s3a://warehouse/
+spark.sql.catalog.warehouse.s3.endpoint     {{ iceberg_catalog_s3_endpoint }}
+spark.sql.catalog.warehouse.catalog-impl    org.apache.iceberg.jdbc.JdbcCatalog
+spark.sql.catalog.warehouse.uri             jdbc:{{ iceberg_catalog_db_uri }}
+spark.sql.catalog.warehouse.jdbc.user       iceberg
+spark.sql.catalog.warehouse.jdbc.password   {{ iceberg_catalog_db_passwd }}
+spark.sql.catalog.warehouse.jdbc.schema-version V1
+spark.sql.defaultCatalog                    warehouse
+spark.sql.catalogImplementation             in-memory

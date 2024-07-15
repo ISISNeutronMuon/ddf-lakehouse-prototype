@@ -1,0 +1,29 @@
+---
+- name: Provision VMs for Spark
+  hosts: localhost
+  vars:
+    openstack_security_group_name: spark
+    openstack_security_group_description: Ingress to spark ports
+    openstack_security_group_rules:
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ spark_controller_ui_port }}"
+        port_range_max: "{{ spark_controller_ui_port }}"
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ spark_notebook_port }}"
+        port_range_max: "{{ spark_notebook_port }}"
+    openstack_flavor: l3.nano
+    openstack_server_name: spark
+    openstack_vm_user: ubuntu
+    inventory_group: spark
+  roles:
+    - name: security_group_create
+    - name: vm_create
+
+- name: Base VM configuration
+  hosts: spark
+  roles:
+    - name: packages_update

@@ -1,0 +1,6 @@
+#!/bin/sh
+# Start PySpark & a Jupyter Notebook server with Spark enabled
+export PYSPARK_DRIVER_PYTHON=jupyter-notebook
+export PYSPARK_DRIVER_PYTHON_OPTS="--notebook-dir=${NOTEBOOKS_DIR} --ip='*' --NotebookApp.token='' --NotebookApp.password='' --port=8888 --no-browser --allow-root"
+
+pyspark

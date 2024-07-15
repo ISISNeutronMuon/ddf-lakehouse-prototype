@@ -1,0 +1,44 @@
+---
+- name: Ensure working directory for Docker image build exists
+  become: yes
+  ansible.builtin.file:
+    path: "{{ spark_image_build_path }}"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+
+- name: Ensure Docker image build files are synchronized
+  become: yes
+  ansible.posix.synchronize:
+    src: ./
+    dest: "{{ spark_image_build_path }}/"
+    recursive: yes
+    delete: yes
+
+- name: Ensure templated Docker image build files are present
+  become: yes
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ spark_image_build_path }}/{{ item | trim('.j2') }}"
+  loop:
+    - Dockerfile.j2
+    - spark-defaults.conf.j2
+
+- name: Build container image
+  become: yes
+  community.docker.docker_image_build:
+    name: pyspark-iceberg
+    path: "{{ spark_image_build_path }}"
+    rebuild: always
+
+- name: Run container
+  become: yes
+  community.docker.docker_container:
+    name: spark
+    image: pyspark-iceberg
+    state: started
+    cleanup: true
+    detach: true
+    restart: true
+    published_ports:
+      - 8888:8888
+      - 8080:8080
