@@ -8,10 +8,11 @@ ARG ICEBERG_VERSION=1.5.2
 ARG POSTGRES_CONNECTOR_VERSION=42.7.3
 
 # Environment
+ENV SPARK_HOME={{ spark_container_home }}
 ENV IJAVA_CLASSPATH=${SPARK_HOME}/jars/*
+ENV IPYTHON_STARTUP_DIR=/root/.ipython/profile_default/startup
 ENV LOCAL_BIN=/usr/local/bin
 ENV NOTEBOOKS_DIR=/var/lib/jupyter/notebooks
-ENV SPARK_HOME={{ spark_container_home }}
 
 # Basic configuration
 ENV PATH="${SPARK_HOME}/sbin:${SPARK_HOME}/bin:${PATH}"
@@ -45,6 +46,7 @@ COPY ./spark-defaults.conf ${SPARK_HOME}/conf/spark-defaults.conf
 # Python: Jupyter/Spark
 RUN --mount=type=bind,source=./,target=/build pip install -r /build/requirements.txt
 COPY ./notebook ${LOCAL_BIN}/
+COPY ./ipython/startup/ ${IPYTHON_STARTUP_DIR}/
 
 # Entrypoint: start notebook
 COPY ./entrypoint.sh ${LOCAL_BIN}/
