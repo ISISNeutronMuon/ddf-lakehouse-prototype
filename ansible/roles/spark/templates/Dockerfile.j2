@@ -39,6 +39,8 @@ RUN curl https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VER
   && rm -rf spark-${SPARK_VERSION}-bin-hadoop3.tgz
 RUN curl https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-${SPARK_MAJOR_VERSION}_2.12/${ICEBERG_VERSION}/iceberg-spark-runtime-${SPARK_MAJOR_VERSION}_2.12-${ICEBERG_VERSION}.jar \
   -Lo ${SPARK_HOME}/jars/iceberg-spark-runtime-${SPARK_MAJOR_VERSION}_2.12-${ICEBERG_VERSION}.jar
+RUN curl -s https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/${ICEBERG_VERSION}/iceberg-aws-bundle-${ICEBERG_VERSION}.jar \
+  -Lo /opt/spark/jars/iceberg-aws-bundle-${ICEBERG_VERSION}.jar
 RUN curl https://repo1.maven.org/maven2/org/postgresql/postgresql/${POSTGRES_CONNECTOR_VERSION}/postgresql-${POSTGRES_CONNECTOR_VERSION}.jar \
   -Lo ${SPARK_HOME}/jars/postgresql-${POSTGRES_CONNECTOR_VERSION}.jar
 COPY ./spark-defaults.conf ${SPARK_HOME}/conf/spark-defaults.conf
