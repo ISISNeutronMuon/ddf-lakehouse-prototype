@@ -51,3 +51,4 @@
       - 8080:8080
     volumes:
       - "{{ spark_jupyter_notebook_path }}:/var/lib/jupyter/notebooks"
+      - "{{ cephfs_mount_path }}/staging/:/staging:ro"
