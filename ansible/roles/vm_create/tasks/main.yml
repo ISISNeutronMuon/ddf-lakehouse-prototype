@@ -13,7 +13,7 @@
     key_name: "{{ openstack_key_name }}"
     network: Internal
     auto_floating_ip: no
-    security_groups: [default, "{{ openstack_security_group_name }}"]
+    security_groups: "{{ openstack_security_groups }}"
     timeout: 200
     state: present
   register: vm_info

@@ -12,6 +12,7 @@
         port_range_max: "{{ postgres_db_port }}"
     openstack_flavor: l3.nano
     openstack_server_name: iceberg-catalog
+    openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
     openstack_vm_user: ubuntu
     inventory_group: iceberg_catalog
   roles:
