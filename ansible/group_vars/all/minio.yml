@@ -1,4 +1,0 @@
----
-minio_data_path: "{{ cephfs_mount_path }}/live/minio/data"
-minio_rest_port: 9000
-minio_console_port: 9001
