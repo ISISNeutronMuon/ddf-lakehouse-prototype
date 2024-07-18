@@ -1,9 +1,0 @@
-ipykernel==6.29.5
-matplotlib==3.9.1
-nbconvert==7.16.4
-notebook==7.2.1
-pandas==2.2.2
-prettytable==3.10.2
-pyarrow==17.0.0
-pyiceberg==0.6.1
-pyspark==3.5.1

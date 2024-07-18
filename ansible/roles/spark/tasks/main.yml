@@ -1,11 +1,4 @@
 ---
-- name: Ensure Jupyter notebook directory exists
-  become: true
-  ansible.builtin.file:
-    path: "{{ spark_jupyter_notebook_path }}"
-    state: directory
-    mode: "u=rwx,g=rx,o=rx"
-
 - name: Ensure working directory for Docker image build exists
   become: yes
   ansible.builtin.file:
@@ -33,7 +26,7 @@
 - name: Build container image
   become: yes
   community.docker.docker_image_build:
-    name: pyspark-iceberg
+    name: spark-iceberg
     path: "{{ spark_image_build_path }}"
     rebuild: always
 
@@ -41,15 +34,14 @@
   become: yes
   community.docker.docker_container:
     name: spark
-    image: pyspark-iceberg
+    image: spark-iceberg
     state: started
     cleanup: true
     detach: true
     restart_policy: always
     restart_retries: 3
     published_ports:
-      - 8888:8888
       - 8080:8080
+      - 15002:15002
     volumes:
-      - "{{ spark_jupyter_notebook_path }}:/var/lib/jupyter/notebooks"
       - "{{ cephfs_mount_path }}/staging/:/staging:ro"

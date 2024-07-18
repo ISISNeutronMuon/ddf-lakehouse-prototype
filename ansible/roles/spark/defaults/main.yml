@@ -1,5 +1,4 @@
 ---
-spark_jupyter_notebook_path: /var/lib/jupyter/notebooks
-spark_image_build_path: /var/docker/spark
+spark_image_build_path: /tmp/docker/build/spark
 spark_container_home: /opt/spark
 spark_ui_port: 4041

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile
-FROM python:3.12-bookworm
+FROM debian:bookworm-slim
 
 # Versions
 ARG SPARK_VERSION=3.5.1
@@ -24,12 +24,10 @@ RUN apt-get update && \
   apt-get install -y --no-install-recommends \
   sudo \
   curl \
-  vim \
   unzip \
   openjdk-17-jdk \
   build-essential \
-  software-properties-common \
-  ssh && \
+  software-properties-common && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
@@ -49,11 +47,6 @@ RUN curl https://repo1.maven.org/maven2/org/postgresql/postgresql/${POSTGRES_CON
   -Lo ${SPARK_HOME}/jars/postgresql-${POSTGRES_CONNECTOR_VERSION}.jar
 COPY ./spark-defaults.conf ${SPARK_HOME}/conf/spark-defaults.conf
 
-# Python: Jupyter/Spark
-RUN --mount=type=bind,source=./,target=/build pip install -r /build/requirements.txt
-COPY ./notebook ${LOCAL_BIN}/
-COPY ./ipython/startup/ ${IPYTHON_STARTUP_DIR}/
-
 # Entrypoint: start notebook
 COPY ./entrypoint.sh ${LOCAL_BIN}/
 
@@ -63,4 +56,3 @@ RUN chmod u+x ${SPARK_HOME}/sbin/* && \
   chmod u+x ${LOCAL_BIN}/*
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["notebook"]
