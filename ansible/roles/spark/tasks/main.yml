@@ -45,7 +45,8 @@
     state: started
     cleanup: true
     detach: true
-    restart: true
+    restart_policy: always
+    restart_retries: 3
     published_ports:
       - 8888:8888
       - 8080:8080

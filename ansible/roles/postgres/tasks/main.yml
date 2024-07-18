@@ -30,7 +30,8 @@
     state: started
     cleanup: true
     detach: true
-    restart: true
+    restart_policy: always
+    restart_retries: 3
     published_ports:
       - "{{ postgres_db_port }}:5432"
     env:
