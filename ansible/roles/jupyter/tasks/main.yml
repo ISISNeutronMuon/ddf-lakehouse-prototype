@@ -38,7 +38,7 @@
     detach: true
     env:
       SPARK_REMOTE: "{{ spark_connect_endpoint }}"
-    restart-policy: always
+    restart_policy: unless-stopped
     published_ports:
       - "{{ jupyter_notebook_port }}:8888"
     volumes:

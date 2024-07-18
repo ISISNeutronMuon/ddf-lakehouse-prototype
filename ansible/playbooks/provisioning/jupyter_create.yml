@@ -4,27 +4,22 @@
   vars:
     openstack_security_group_name: jupyter
     openstack_security_group_description: Ingress to Jupyter ports
-    openstack_security_group_rules: |-
-     [
-     {% for port in (jupyter_notebook_port,)  %}
-       {
-        "direction": "ingress",
-        "ether_type": "IPv4",
-        "protocol": "tcp",
-        "port_range_min": "{{ port }}",
-        "port_range_max": "{{ port }}"
-       }
-       {% endfor %}
-      ]
+    openstack_security_group_rules:
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ jupyter_notebook_port }}"
+        port_range_max: "{{ jupyter_notebook_port }}"
     openstack_flavor: l3.nano
-    openstack_server_name: spark
+    openstack_server_name: jupyter
+    openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
     openstack_vm_user: ubuntu
-    inventory_group: spark
+    inventory_group: jupyter
   roles:
     - name: security_group_create
     - name: vm_create
 
 - name: Base VM configuration
-  hosts: spark
+  hosts: jupyter
   roles:
     - name: packages_update
