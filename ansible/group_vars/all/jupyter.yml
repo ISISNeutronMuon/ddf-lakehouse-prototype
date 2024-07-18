@@ -1,0 +1,3 @@
+---
+jupyter_notebook_path: "{{ cephfs_mount_path }}/live/jupyter/notebooks"
+jupyter_notebook_port: 8888

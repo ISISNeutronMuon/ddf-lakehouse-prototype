@@ -1,0 +1,3 @@
+---
+jupyter_notebook_path: /var/lib/jupyter/notebooks
+jupyter_image_build_path: /tmp/docker/build/jupyter

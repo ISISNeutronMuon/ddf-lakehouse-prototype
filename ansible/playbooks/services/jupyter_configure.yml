@@ -1,0 +1,10 @@
+---
+- name: Configure Jupyter Notebook instance
+  hosts: jupyter
+  roles:
+   - name: cephfs_mount
+   - name: geerlingguy.pip
+     become: yes
+   - name: geerlingguy.docker
+     become: yes
+   - name: jupyter
