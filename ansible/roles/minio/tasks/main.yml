@@ -15,8 +15,7 @@
     state: started
     cleanup: true
     detach: true
-    restart_policy: always
-    restart_retries: 3
+    restart_policy: unless-stopped
     published_ports:
       - "{{ minio_rest_port }}:9000"
       - "{{ minio_console_port }}:9001"
