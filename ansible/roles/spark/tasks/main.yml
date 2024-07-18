@@ -40,7 +40,7 @@
     detach: true
     restart_policy: unless-stopped
     published_ports:
-      - 8080:8080
-      - 15002:15002
+      - "{{ spark_controller_ui_port }}:8080"
+      - "{{ spark_connect_port }}:15002"
     volumes:
       - "{{ cephfs_mount_path }}/staging/:/staging:ro"
