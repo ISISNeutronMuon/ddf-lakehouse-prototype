@@ -1,0 +1,17 @@
+# Build an /etc/hosts file for localhost to ease debugging
+# Assumes that a single host exists for each group and is defined by ipv4 address
+
+- name: "Build hosts file"
+  hosts: all
+  tasks:
+    - name: Configure /etc/hosts
+      become: yes
+      ansible.builtin.lineinfile:
+        backup: true
+        dest: /etc/hosts
+        regexp: '.*{{ item }}$'
+        line: "{{ groups[item][0] }} {{item}}"
+        state: present
+      with_items: "{{ groups }}"
+      when: item != "all" and item != "ungrouped"
+      delegate_to: localhost
