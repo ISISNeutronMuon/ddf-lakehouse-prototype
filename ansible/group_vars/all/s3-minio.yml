@@ -2,9 +2,9 @@
 minio_data_path: "{{ cephfs_mount_path }}/live/minio/data"
 minio_rest_port: 9000
 minio_console_port: 9001
+minio_root_user: admin
+minio_root_passwd: "{{ vault_minio_root_passwd }}"
 
 s3_region: eu-west-1 # required by API but unused
-vault_s3_access_key_id: minioadmin
-vault_s3_access_secret: minioadmin
-s3_access_key_id: "{{ vault_s3_access_key_id }}"
+s3_access_key_id: "{{ minio_root_user }}"
 s3_access_secret: "{{ vault_s3_access_secret }}"

@@ -10,13 +10,7 @@ ARG POSTGRES_CONNECTOR_VERSION=42.7.3
 # Environment
 ENV SPARK_HOME={{ spark_container_home }}
 ENV IJAVA_CLASSPATH=${SPARK_HOME}/jars/*
-ENV IPYTHON_STARTUP_DIR=/root/.ipython/profile_default/startup
 ENV LOCAL_BIN=/usr/local/bin
-ENV NOTEBOOKS_DIR=/var/lib/jupyter/notebooks
-ENV AWS_REGION=us-east-1
-ENV AWS_ACCESS_KEY_ID=minioadmin
-ENV AWS_SECRET_ACCESS_KEY=minioadmin
-ENV AWS_REGION=us-east-1
 
 # Basic configuration
 ENV PATH="${SPARK_HOME}/sbin:${SPARK_HOME}/bin:${PATH}"

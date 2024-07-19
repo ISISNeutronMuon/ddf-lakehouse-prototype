@@ -39,6 +39,10 @@
     cleanup: true
     detach: true
     restart_policy: unless-stopped
+    env:
+      AWS_REGION: "{{ s3_region }}"
+      AWS_ACCESS_KEY_ID: "{{ s3_access_key_id }}"
+      AWS_SECRET_ACCESS_KEY: "{{ s3_access_secret }}"
     published_ports:
       - "{{ spark_controller_ui_port }}:8080"
       - "{{ spark_connect_port }}:15002"
