@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile
 FROM python:3.12-bookworm
 
-ENV IPYTHON_STARTUP_DIR=/root/.ipython/profile_default/startup
+ENV IPYTHON_DEFAULT_CONF_DIR=/root/.ipython/profile_default
+ENV IPYTHON_STARTUP_DIR=${IPYTHON_DEFAULT_CONF_DIR}/startup
 ENV LOCAL_BIN=/usr/local/bin
 ENV NOTEBOOKS_DIR=/var/lib/jupyter/notebooks
 
@@ -21,8 +22,9 @@ RUN mkdir -p \
 
 # Python: Jupyter/Spark
 RUN --mount=type=bind,source=./,target=/build pip install -r /build/requirements.txt
-COPY ./notebook ${LOCAL_BIN}/
+COPY ./ipython/ipython_kernel_config.py ${IPYTHON_DEFAULT_CONF_DIR}
 COPY ./ipython/startup/ ${IPYTHON_STARTUP_DIR}/
+COPY ./notebook ${LOCAL_BIN}/
 
 # Entrypoint: start notebook
 COPY ./entrypoint.sh ${LOCAL_BIN}/
