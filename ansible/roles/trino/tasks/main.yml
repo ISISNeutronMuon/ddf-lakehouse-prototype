@@ -1,0 +1,46 @@
+---
+- name: Ensure Trino directories exist
+  become: true
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: 'u=rwx,g=rx,o=rx'
+    owner: "{{ item.owner }}"
+    group: "{{ item.owner }}"
+  loop:
+    - { path: "{{ trino_data_path }}", owner: "1000", group: "1000" }
+    - { path: "{{ trino_config_path }}", owner: "root", group: "root" }
+
+- name: Ensure Trino etc properties files are present
+  become: yes
+  ansible.posix.synchronize:
+    src: etc/
+    dest: "{{ trino_config_path }}/etc"
+    recursive: yes
+    delete: yes
+
+- name: Ensure templated Trino properties files are present
+  become: yes
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ trino_config_path }}/{{ item | trim('.j2') }}"
+  loop:
+    - etc/config.properties.j2
+    - etc/catalog/warehouse.properties.j2
+
+- name: Ensure container is running
+  become: true
+  community.docker.docker_container:
+    name: trino
+    image: "{{ trino_image }}"
+    state: started
+    cleanup: true
+    detach: true
+    restart: true
+    restart_policy: unless-stopped
+    published_ports:
+      - "{{ trino_http_port }}:8060"
+      - "{{ trino_https_port }}:8063"
+    volumes:
+      - "{{ trino_data_path }}:/data/trino" # See node.properties
+      - "{{ trino_config_path }}/etc:/etc/trino:ro"

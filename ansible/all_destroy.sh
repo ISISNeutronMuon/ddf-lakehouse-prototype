@@ -2,7 +2,7 @@
 # Destroy all resources created for this project
 # Arguments:
 #  - $1: Cloud project in clouds.yml
-SERVER_NAMES="jupyter spark iceberg-catalog minio"
+SERVER_NAMES="jupyter spark iceberg-catalog minio trino"
 SECURITY_GROUPS=$SERVER_NAMES
 
 fatal() {

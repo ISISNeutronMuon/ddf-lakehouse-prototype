@@ -1,0 +1,18 @@
+coordinator=true
+node-scheduler.include-coordinator=true
+http-server.http.port={{ trino_http_port }}
+discovery.uri={{ trino_discovery_uri }}
+catalog.management=static
+transaction.idle-timeout=8h
+query.max-memory=2GB
+query.max-memory-per-node=1GB
+
+# http-server.https.enabled=true
+# http-server.https.port=8063
+# http-server.https.keystore.path=/certs/trino.jks
+# http-server.https.keystore.key=123456
+# http-server.process-forwarded=true
+# http-server.authentication.allow-insecure-over-http=true
+# internal-communication.shared-secret=kRVJHJ9FrSU7catEeiWJkrHroTqj/cf/jFlQ4nFHsWUEXPyxaPrsBuq6BtqNkQQ5Wp3EAqpvN6+Gec7nZgB1+I7nd5bivDTeF3BYj/E2r7E5eHmkQXGObNQKwYLv71hht3qgiGHtLtEDkJKNqz5ExZve7M0985loDQBkfvWRFC/tC/xfQJ2WQbRwIJ24d5npvPYEI6HQ6d8LnnIcCqSHm204t/dFo5NcTH5Hn+t3xZpGLJRGGBkpDCEiBm6uUT3GaA9Y7Y9eOPz0htqzwapY/TqQgM3YR862LR/CfSeW8ZtEwPXSJJ2rwnYqOxQ8Iw5/HeJZQPwgGnKypFhUg0Ozy+JkcndAskD1CtwZt+ZPxQ/ATaZ4nXH5TRW/TsUcJ7cSfU6QAyKyZ0GbDNZWfsCtKXpC1WdqXpxJ5Mam+LGzl7Gy2/IrBlAAKk90isSwSKwuxA2LXWel+mGfPGqz5H+DFTwUb0ZZm6CjOYgWftR23NHsfP+3ZLULxkP7CnwnXgtDSZ4bE4vfXbbW0mQQZXrsqyUadDilYmX2Vrc3ZiPPDsNiUVg+NSxmG1PjRyk8p+VSQa0hw/g98w6QmKD1i1eWaVxw40EcN86wN2d/YERNqzYJklBQLjPgDsW9aAhpveTmZHEiofeBNDZ6sHyZY4P89bfhriUBr6etRmkriXL0DXI=
+
+# http-server.authentication.type=PASSWORD

@@ -1,0 +1,30 @@
+---
+- name: Provision VMs for Trino service
+  hosts: localhost
+  vars:
+    openstack_security_group_name: trino
+    openstack_security_group_description: Ingress to Trino ports
+    openstack_security_group_rules:
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ trino_http_port }}"
+        port_range_max: "{{ trino_http_port }}"
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ trino_https_port }}"
+        port_range_max: "{{ trino_https_port }}"
+    openstack_flavor: l3.nano
+    openstack_server_name: trino
+    openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
+    openstack_vm_user: ubuntu
+    inventory_group: trino
+  roles:
+    - name: security_group_create
+    - name: vm_create
+
+- name: Base VM configuration
+  hosts: trino
+  roles:
+    - name: packages_update
