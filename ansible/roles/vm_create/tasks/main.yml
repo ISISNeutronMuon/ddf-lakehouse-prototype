@@ -19,21 +19,17 @@
     state: present
   register: vm_info
 
-- name: Set IP address fact
-  ansible.builtin.set_fact:
-    _runner_ip: "{{ vm_info.server.addresses.Internal[0].addr }}"
-
 - name: Get IP address of VM
   ansible.builtin.debug:
-    msg: "{{ _runner_ip }}"
+    msg: "{{ vm_info.server.addresses.Internal[0].addr }}"
 
 - name: Wait for connection
   ansible.builtin.wait_for_connection:
     timeout: 300
-  delegate_to: "{{ _runner_ip }}"
+  delegate_to: "{{ vm_info.server.addresses.Internal[0].addr }}"
 
 - name: Ensure instance is associated with a group
   ansible.builtin.add_host:
-    name: "{{ _runner_ip }}"
+    name: "{{ vm_info.server.addresses.Internal[0].addr }}"
     groups: "{{ inventory_group }}"
     ansible_user: "{{  openstack_vm_user }}"
