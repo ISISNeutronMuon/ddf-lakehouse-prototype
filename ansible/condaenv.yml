@@ -4,4 +4,4 @@ dependencies:
   - python=3.12
   - pip=24.0
   - pip:
-    - -r ansible-requirements.txt
+    - -r ansible-install-requirements.txt

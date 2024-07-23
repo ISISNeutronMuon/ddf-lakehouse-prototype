@@ -1,2 +1,1 @@
 ansible==10.1
-ansible-generator==3.1
