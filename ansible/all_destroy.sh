@@ -23,8 +23,23 @@ case "$response" in
 esac
 
 # Servers
+echo "Stopping all servers"
 openstack --os-cloud=$1 server stop $SERVER_NAMES
+active="$(openstack --os-cloud=$1 server list | grep ACTIVE)"
+while [ -n "$active" ]; do
+  sleep 1
+  echo "Waiting for servers to be stopped"
+  active="$(openstack --os-cloud=$1 server list | grep ACTIVE)"
+done
+
+echo "Deleting all servers"
 openstack --os-cloud=$1 server delete $SERVER_NAMES
+instances="$(openstack --os-cloud=$1 server list)"
+while [ -n "$instances" ]; do
+  sleep 1
+  echo "Waiting for servers to be deleted"
+  instances="$(openstack --os-cloud=$1 server list)"
+done
 
 # Security groups
 openstack --os-cloud=$1 security group delete $SECURITY_GROUPS
