@@ -7,14 +7,14 @@
         dir: group_vars/all
 
 # Openstack resources
-- import_playbook: playbooks/provisioning/minio_create.yml
-- import_playbook: playbooks/provisioning/iceberg_catalog_create.yml
-- import_playbook: playbooks/provisioning/spark_create.yml
-- import_playbook: playbooks/provisioning/jupyter_create.yml
-- import_playbook: playbooks/provisioning/trino_create.yml
+- import_playbook: playbooks/minio/start.yml
+- import_playbook: playbooks/iceberg_catalog/start.yml
+- import_playbook: playbooks/spark/start.yml
+- import_playbook: playbooks/jupyter/start.yml
+- import_playbook: playbooks/trino/start.yml
 
 # Dump inventory
-- import_playbook: playbooks/provisioning/inventory_create.yml
+- import_playbook: playbooks/inventory/persist.yml
 
 - name: Include all group variables
   hosts: all
@@ -23,11 +23,11 @@
         dir: group_vars/all
 
 # Apply updates
-- import_playbook: playbooks/maintenance/update.yml
+- import_playbook: playbooks/system/update.yml
 
 # Services
-- import_playbook: playbooks/services/minio_configure.yml
-- import_playbook: playbooks/services/iceberg_catalog_configure.yml
-- import_playbook: playbooks/services/spark_configure.yml
-- import_playbook: playbooks/services/jupyter_configure.yml
-- import_playbook: playbooks/services/trino_configure.yml
+- import_playbook: playbooks/minio/setup.yml
+- import_playbook: playbooks/iceberg_catalog/setup.yml
+- import_playbook: playbooks/spark/setup.yml
+- import_playbook: playbooks/jupyter/setup.yml
+- import_playbook: playbooks/trino/setup.yml
