@@ -1,0 +1,19 @@
+- name: Dump current Openstack inventory
+  hosts: localhost
+  tasks:
+    - name: Gather server information from Openstack
+      openstack.cloud.server_info:
+        cloud: "{{ openstack_cloud_name }}"
+      register: vms_info
+
+    - name: Configure inventory
+      ansible.builtin.blockinfile:
+        path: "{{ inventory_filename }}"
+        create: true
+        block: |
+          [{{ item.name }}]
+          {{ item.addresses.Internal[0].addr }} ansible_user=ubuntu
+        append_newline: true
+        marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.name }}"
+        state: present
+      with_items: "{{ vms_info['servers'] }}"

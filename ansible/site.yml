@@ -1,6 +1,33 @@
 ---
-- name: Deploy Minio
-  import_playbook: playbooks/fullstack/minio.yml
+# Implicit localhost is not included in all so doesn't load the all variables by default
+- name: Include all group variables
+  hosts: localhost
+  tasks:
+    - ansible.builtin.include_vars:
+        dir: group_vars/all
 
-- name: Deploy Iceberg catalog
-  import_playbook: playbooks/fullstack/iceberg_catalog.yml
+# Openstack resources
+- import_playbook: playbooks/provisioning/minio_create.yml
+- import_playbook: playbooks/provisioning/iceberg_catalog_create.yml
+- import_playbook: playbooks/provisioning/spark_create.yml
+- import_playbook: playbooks/provisioning/jupyter_create.yml
+- import_playbook: playbooks/provisioning/trino_create.yml
+
+# Dump inventory
+- import_playbook: playbooks/provisioning/inventory_create.yml
+
+- name: Include all group variables
+  hosts: all
+  tasks:
+    - ansible.builtin.include_vars:
+        dir: group_vars/all
+
+# Apply updates
+- import_playbook: playbooks/maintenance/update.yml
+
+# Services
+- import_playbook: playbooks/services/minio_configure.yml
+- import_playbook: playbooks/services/iceberg_catalog_configure.yml
+- import_playbook: playbooks/services/spark_configure.yml
+- import_playbook: playbooks/services/jupyter_configure.yml
+- import_playbook: playbooks/services/trino_configure.yml

@@ -23,8 +23,3 @@
   roles:
     - name: security_group_create
     - name: vm_create
-
-- name: Base VM configuration
-  hosts: minio
-  roles:
-    - name: packages_update

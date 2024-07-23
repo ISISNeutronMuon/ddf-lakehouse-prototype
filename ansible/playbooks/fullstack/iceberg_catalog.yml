@@ -1,6 +1,0 @@
----
-- name: Provision cloud resources for Iceberg catalog
-  import_playbook: ../provisioning/iceberg_catalog_create.yml
-
-- name: Configure Iceberg catalog
-  import_playbook: ../services/iceberg_catalog_configure.yml
