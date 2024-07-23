@@ -2,9 +2,9 @@
 - name: Configure trino
   hosts: trino
   roles:
-   - name: cephfs_mount
-   - name: geerlingguy.pip
-     become: yes
-   - name: geerlingguy.docker
-     become: yes
-   - name: trino
+    - role: cephfs_mount
+    - role: geerlingguy.pip
+      become: true
+    - role: geerlingguy.docker
+      become: true
+    - role: trino

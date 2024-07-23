@@ -1,6 +1,6 @@
 ---
-- name: Ensure ceph-common is available
-  become: yes
+- name: Debian | Ensure ceph-common is available
+  become: true
   ansible.builtin.apt:
     name: ceph-common
     update_cache: true

@@ -1,4 +1,4 @@
 - name: Apply any package updates (might involve a reboot)
   hosts: all
   roles:
-    - name: packages_update
+    - role: packages_update

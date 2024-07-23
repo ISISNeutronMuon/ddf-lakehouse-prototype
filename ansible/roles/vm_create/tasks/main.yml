@@ -1,9 +1,9 @@
 ---
 - name: Ensure Python openstack bindings are present
   ansible.builtin.pip:
-   name: "python-openstackclient=={{ openstackclient_version }}"
-   executable: "{{ ansible_python_interpreter | dirname }}/pip"
-   state: present
+    name: "python-openstackclient=={{ openstackclient_version }}"
+    executable: "{{ ansible_python_interpreter | dirname }}/pip"
+    state: present
 
 - name: Ensure cloud server is present
   openstack.cloud.server:
@@ -13,7 +13,7 @@
     name: "{{ openstack_server_name }}"
     key_name: "{{ openstack_key_name }}"
     network: Internal
-    auto_floating_ip: no
+    auto_floating_ip: false
     security_groups: "{{ openstack_security_groups }}"
     timeout: 200
     state: present

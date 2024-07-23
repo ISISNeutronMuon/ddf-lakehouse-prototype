@@ -14,7 +14,7 @@
     mode: "u=rwx,g=rx,o=rx"
 
 - name: Ensure postgres secrets are available
-  become: yes
+  become: true
   ansible.builtin.copy:
     dest: /secrets/postgres-passwd
     content: "{{ postgres_db_passwd }}"

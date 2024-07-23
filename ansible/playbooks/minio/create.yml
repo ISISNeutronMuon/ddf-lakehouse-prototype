@@ -21,5 +21,5 @@
     openstack_vm_user: ubuntu
     inventory_group: minio
   roles:
-    - name: security_group_create
-    - name: vm_create
+    - role: security_group_create
+    - role: vm_create

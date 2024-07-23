@@ -1,5 +1,5 @@
 ---
-postgres_db_data_path: "{{ cephfs_mount_path }}/live/postgres/data"
+postgres_db_data_path: "{{ cephfs_mount_mount_path }}/live/postgres/data"
 postgres_db_port: 5432
 postgres_db_name: iceberg
 postgres_db_user: iceberg

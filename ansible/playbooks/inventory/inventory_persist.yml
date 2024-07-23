@@ -15,5 +15,6 @@
           {{ item.addresses.Internal[0].addr }} ansible_user=ubuntu
         append_newline: true
         marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.name }}"
+        mode: "u=rw,g=r,o=r"
         state: present
       with_items: "{{ vms_info['servers'] }}"

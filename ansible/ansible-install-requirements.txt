@@ -1,1 +1,2 @@
 ansible==10.1
+ansible-lint[lock]==24.7.0

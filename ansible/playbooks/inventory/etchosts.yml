@@ -5,12 +5,12 @@
   hosts: all
   tasks:
     - name: Configure /etc/hosts
-      become: yes
+      become: true
       ansible.builtin.lineinfile:
         backup: true
         dest: /etc/hosts
-        regexp: '.*{{ item }}$'
-        line: "{{ groups[item][0] }} {{item}}"
+        regexp: ".*{{ item }}$"
+        line: "{{ groups[item][0] }} {{ item }}"
         state: present
       with_items: "{{ groups }}"
       when: item != "all" and item != "ungrouped"

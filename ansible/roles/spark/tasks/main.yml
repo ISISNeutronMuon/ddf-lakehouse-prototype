@@ -1,37 +1,41 @@
 ---
 - name: Ensure working directory for Docker image build exists
-  become: yes
+  become: true
   ansible.builtin.file:
     path: "{{ spark_image_build_path }}"
     state: directory
     mode: "u=rwx,g=rx,o=rx"
 
 - name: Ensure Docker image build files are synchronized
-  become: yes
+  become: true
   ansible.posix.synchronize:
     src: ./
     dest: "{{ spark_image_build_path }}/"
-    recursive: yes
-    delete: yes
+    archive: false
+    recursive: true
+    delete: true
 
 - name: Ensure templated Docker image build files are present
-  become: yes
+  become: true
   ansible.builtin.template:
-    src: "{{ item }}"
-    dest: "{{ spark_image_build_path }}/{{ item | trim('.j2') }}"
+    src: "{{ spark_template }}"
+    dest: "{{ spark_image_build_path }}/{{ spark_template | trim('.j2') }}"
+    mode: "u=rw,g=r,o=r"
   loop:
     - Dockerfile.j2
     - spark-defaults.conf.j2
+  loop_control:
+    loop_var: spark_template
 
 - name: Build container image
-  become: yes
+  become: true
   community.docker.docker_image_build:
     name: spark-iceberg
     path: "{{ spark_image_build_path }}"
     rebuild: always
 
 - name: Run container
-  become: yes
+  become: true
   community.docker.docker_container:
     name: spark
     image: spark-iceberg
@@ -47,4 +51,4 @@
       - "{{ spark_controller_ui_port }}:8080"
       - "{{ spark_connect_port }}:15002"
     volumes:
-      - "{{ cephfs_mount_path }}/staging/:/staging:ro"
+      - "{{ cephfs_mount_mount_path }}/staging/:/staging:ro"

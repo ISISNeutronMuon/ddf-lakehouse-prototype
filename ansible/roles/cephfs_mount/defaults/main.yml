@@ -1,3 +1,5 @@
 ---
-cephfs_mount_path: /mnt/share
-cephfs_export_path: ""
+cephfs_mount_mount_path: /mnt/share
+cephfs_mount_export_path: ""
+cephfs_mount_access_name: ""
+cephfs_mount_access_secret: ""
