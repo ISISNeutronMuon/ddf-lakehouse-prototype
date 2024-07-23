@@ -2,6 +2,7 @@
 - name: Ensure Python openstack bindings are present
   ansible.builtin.pip:
    name: "python-openstackclient=={{ openstackclient_version }}"
+   executable: "{{ ansible_python_interpreter | dirname }}/pip"
    state: present
 
 - name: Ensure cloud server is present
