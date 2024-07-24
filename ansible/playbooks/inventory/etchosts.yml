@@ -2,7 +2,7 @@
 # Assumes that a single host exists for each group and is defined by ipv4 address
 
 - name: "Build hosts file"
-  hosts: all
+  hosts: localhost:all
   tasks:
     - name: Configure /etc/hosts
       become: true
@@ -11,6 +11,6 @@
         dest: /etc/hosts
         regexp: ".*{{ item }}$"
         line: "{{ groups[item][0] }} {{ item }}"
-        state: present
+        state: "{{ etchosts_state | default('present') }}"
       with_items: "{{ groups }}"
-      when: item != "all" and item != "ungrouped"
+      when: item not in group_names and item != "all" and item != "ungrouped"

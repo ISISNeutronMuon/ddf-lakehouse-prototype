@@ -22,6 +22,10 @@ case "$response" in
         ;;
 esac
 
+# Remove local /etc/hosts mods
+ansible-playbook -i staging --limit localhost -e etchosts_state=absent -K \
+  playbooks/inventory/etchosts.yml
+
 # Servers
 echo "Stopping all servers"
 openstack --os-cloud=$1 server stop $SERVER_NAMES
