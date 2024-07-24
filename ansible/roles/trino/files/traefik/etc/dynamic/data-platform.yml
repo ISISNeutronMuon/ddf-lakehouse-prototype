@@ -1,0 +1,13 @@
+# Dynamic traefik configuration
+
+http:
+  routers:
+    to-trino:
+      rule: "HostRegexp(`^.*$`)"
+      service: trino
+
+  services:
+    trino:
+      loadBalancer:
+        servers:
+          - url: http://trino:8060

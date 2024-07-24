@@ -2,22 +2,23 @@
 - name: Ensure Trino directories exist
   become: true
   ansible.builtin.file:
-    path: "{{ item.path }}"
+    path: "{{ trino_dir.path }}"
     state: directory
     mode: "u=rwx,g=rx,o=rx"
     owner: "{{ trino_dir.owner }}"
     group: "{{ trino_dir.owner }}"
   loop:
     - { path: "{{ trino_data_path }}", owner: "1000", group: "1000" }
-    - { path: "{{ trino_config_path }}", owner: "root", group: "root" }
+    - { path: "/config/trino", owner: "root", group: "root" }
+    - { path: "/config/traefik/dynamic", owner: "root", group: "root" }
   loop_control:
     loop_var: trino_dir
 
 - name: Ensure Trino etc properties files are present
   become: true
   ansible.posix.synchronize:
-    src: etc/
-    dest: "{{ trino_config_path }}/etc"
+    src: .
+    dest: "/config"
     archive: false
     recursive: true
     delete: true
@@ -26,13 +27,19 @@
   become: true
   ansible.builtin.template:
     src: "{{ trino_template }}"
-    dest: "{{ trino_config_path }}/{{ trino_template | trim('.j2') }}"
+    dest: "/config/trino/{{ trino_template | trim('.j2') }}"
     mode: "u=rw,g=r,o=r"
   loop:
     - etc/config.properties.j2
     - etc/catalog/warehouse.properties.j2
   loop_control:
     loop_var: trino_template
+
+- name: Create a docker network for Trino/Traefik
+  become: true
+  community.docker.docker_network:
+    name: trino_net
+    state: present
 
 - name: Ensure Trino container is running
   become: true
@@ -44,31 +51,33 @@
     detach: true
     restart: true
     restart_policy: unless-stopped
-    published_ports:
-      - "8061:8060"
-      - "{{ trino_https_port }}:8063"
+    networks:
+      - name: trino_net
+        aliases: trino
+    comparisons:
+      networks: strict
     volumes:
       - "{{ trino_data_path }}:/data/trino" # See node.properties
-      - "{{ trino_config_path }}/etc:/etc/trino:ro"
-#     labels:
-#       traefik.http.routers.trino.rule: Host(`trino`)
-#       traefik.http.routers.trino.service: trino
-#       traefik.http.services.trino.loadbalancer.server.port: "8061"
+      - "/config/trino/etc:/etc/trino:ro"
 
-# - name: Ensure Traefik container is running
-#   become: true
-#   community.docker.docker_container:
-#     name: traefik
-#     image: traefik:v3.1
-#     state: started
-#     cleanup: true
-#     detach: true
-#     restart: true
-#     restart_policy: unless-stopped
-#     published_ports:
-#       - "8060:80"
-#       - "443:443"
-#     volumes:
-#       - /config/traefik/etc:/etc/traefik
-#       - /etc/localtime:/etc/localtime:ro
-#       - /var/run/docker.sock:/var/run/docker.sock:ro
+- name: Ensure Traefik container is running
+  become: true
+  community.docker.docker_container:
+    name: traefik
+    image: traefik:v3.1
+    state: started
+    cleanup: true
+    detach: true
+    restart: true
+    restart_policy: unless-stopped
+    networks:
+      - name: trino_net
+        aliases: traefik
+    comparisons:
+      networks: strict
+    published_ports:
+      - "8060:80"
+    volumes:
+      - /config/traefik/etc:/etc/traefik
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
