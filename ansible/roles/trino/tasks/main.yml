@@ -9,16 +9,15 @@
     group: "{{ trino_dir.owner }}"
   loop:
     - { path: "{{ trino_data_path }}", owner: "1000", group: "1000" }
-    - { path: "/config/trino", owner: "root", group: "root" }
-    - { path: "/config/traefik/dynamic", owner: "root", group: "root" }
+    - { path: "{{ trino_config_path }}", owner: "root", group: "root" }
   loop_control:
     loop_var: trino_dir
 
 - name: Ensure Trino etc properties files are present
   become: true
   ansible.posix.synchronize:
-    src: .
-    dest: "/config"
+    src: ./trino/
+    dest: "{{ trino_config_path }}"
     archive: false
     recursive: true
     delete: true
@@ -27,7 +26,7 @@
   become: true
   ansible.builtin.template:
     src: "{{ trino_template }}"
-    dest: "/config/trino/{{ trino_template | trim('.j2') }}"
+    dest: "{{ trino_config_path }}/{{ trino_template | trim('.j2') }}"
     mode: "u=rw,g=r,o=r"
   loop:
     - etc/config.properties.j2
@@ -58,7 +57,51 @@
       networks: strict
     volumes:
       - "{{ trino_data_path }}:/data/trino" # See node.properties
-      - "/config/trino/etc:/etc/trino:ro"
+      - "{{ trino_config_path }}/etc:/etc/trino:ro"
+
+# Traefik
+- name: Ensure Traefik directories exist
+  become: true
+  ansible.builtin.file:
+    path: "{{ trino_dir.path }}"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+    owner: "{{ trino_dir.owner }}"
+    group: "{{ trino_dir.owner }}"
+  loop:
+    - { path: "{{ trino_traefik_config_path }}", owner: "root", group: "root" }
+    - { path: "{{ trino_certs_root }}", owner: "root", group: "root" }
+  loop_control:
+    loop_var: trino_dir
+
+- name: Ensure Trino etc properties files are present
+  become: true
+  ansible.posix.synchronize:
+    src: ./traefik/
+    dest: "{{ trino_traefik_config_path }}"
+    archive: false
+    recursive: true
+    delete: true
+
+- name: Ensure TLS certifcates are present
+  become: true
+  ansible.builtin.copy:
+    dest: "{{ trino_tls.filename }}"
+    content: "{{ trino_tls.content }}"
+    owner: root
+    group: root
+    mode: "u=r,o=,g="
+  loop:
+    - {
+        filename: "{{ trino_certs_root }}/dataplatform_cert.pem",
+        content: "{{ tls_certificate_cert }}",
+      }
+    - {
+        filename: "{{ trino_certs_root }}/dataplatform_key.pem",
+        content: "{{ tls_certificate_private_key }}",
+      }
+  loop_control:
+    loop_var: trino_tls
 
 - name: Ensure Traefik container is running
   become: true
@@ -77,6 +120,16 @@
       networks: strict
     published_ports:
       - "8060:80"
+      - "8063:443"
+    mounts:
+      - type: bind
+        source: "{{ trino_certs_root }}/dataplatform_cert.pem"
+        target: /certs/dataplatform_cert.pem
+        read_only: true
+      - type: bind
+        source: "{{ trino_certs_root }}/dataplatform_key.pem"
+        target: /certs/dataplatform_key.pem
+        read_only: true
     volumes:
       - /config/traefik/etc:/etc/traefik
       - /etc/localtime:/etc/localtime:ro

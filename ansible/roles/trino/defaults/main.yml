@@ -1,5 +1,8 @@
 ---
 trino_image: trinodb/trino:452
+trino_config_path: /config/trino
+trino_traefik_config_path: /config/traefik
+trino_certs_root: /certs
 trino_data_path: /var/lib/trino/data
 trino_http_port: 8060
 trino_https_port: 8063

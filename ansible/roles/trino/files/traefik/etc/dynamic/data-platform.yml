@@ -2,12 +2,23 @@
 
 http:
   routers:
-    to-trino:
-      rule: "HostRegexp(`^.*$`)"
+    to-trino-http:
+      rule: "HostRegexp(`trino`)"
       service: trino
+    to-trino-https:
+      rule: "HostRegexp(`trino`)"
+      service: trino
+      tls: {}
 
   services:
     trino:
       loadBalancer:
         servers:
           - url: http://trino:8060
+
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/dataplatform_cert.pem
+        keyFile: /certs/dataplatform_key.pem
