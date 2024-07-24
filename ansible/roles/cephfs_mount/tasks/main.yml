@@ -15,6 +15,7 @@
 
 - name: Ensure CephFS share access key is available
   become: true
+  no_log: true
   ansible.builtin.copy:
     dest: /etc/cephfs_share_access.key
     content: "{{ cephfs_mount_access_secret }}"

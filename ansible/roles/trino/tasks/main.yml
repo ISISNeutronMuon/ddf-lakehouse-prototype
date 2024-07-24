@@ -85,6 +85,7 @@
 
 - name: Ensure TLS certifcates are present
   become: true
+  no_log: true
   ansible.builtin.copy:
     dest: "{{ trino_tls.filename }}"
     content: "{{ trino_tls.content }}"
