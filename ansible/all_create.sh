@@ -5,6 +5,7 @@
 #  - $1: Cloud project in clouds.yml
 #  - $2: Key name used for connection to nodes
 INVENTORY_FILENAME=staging
+SITE_PB=site.yml
 
 fatal() {
   echo $1 1>&2
@@ -16,8 +17,9 @@ test -z "$2" && fatal "Usage: $0 <cloud-project-name> <ssh-key-name>"
 
 export ANSIBLE_STDOUT_CALLBACK=ansible.posix.debug
 export ANSIBLE_HOST_KEY_CHECKING=False
+echo "Running ${SITE_PB} to create and setup all services"
 ansible-playbook \
-  -e openstack_cloud_name=$1 \
-  -e openstack_key_name=$2 \
-  -e inventory_filename=$PWD/${INVENTORY_FILENAME} \
-  site.yml
+  --extra-vars openstack_cloud_name=$1 \
+  --extra-vars openstack_key_name=$2 \
+  --extra-vars inventory_filename=$PWD/${INVENTORY_FILENAME} \
+  ${SITE_PB}

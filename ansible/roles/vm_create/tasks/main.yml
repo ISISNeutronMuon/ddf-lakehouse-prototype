@@ -21,7 +21,7 @@
 
 - name: Get IP address of VM
   ansible.builtin.debug:
-    msg: "{{ vm_info.server.addresses.Internal[0].addr }}"
+    msg: "{{ openstack_server_name }}: {{ vm_info.server.addresses.Internal[0].addr }}"
 
 - name: Wait for connection
   ansible.builtin.wait_for_connection:
@@ -32,4 +32,5 @@
   ansible.builtin.add_host:
     name: "{{ vm_info.server.addresses.Internal[0].addr }}"
     groups: "{{ inventory_group }}"
-    ansible_user: "{{  openstack_vm_user }}"
+    ansible_user: "{{ openstack_vm_user }}"
+    ansible_python_interpreter: "{{ openstack_python_interpreter }}"

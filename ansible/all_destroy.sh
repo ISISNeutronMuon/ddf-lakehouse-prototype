@@ -2,8 +2,10 @@
 # Destroy all resources created for this project
 # Arguments:
 #  - $1: Cloud project in clouds.yml
-SERVER_NAMES="jupyter spark iceberg-catalog minio trino"
+SERVER_NAMES="jupyter spark iceberg_catalog minio trino"
 SECURITY_GROUPS=$SERVER_NAMES
+
+set -eo pipefail
 
 fatal() {
   echo $1 1>&2
@@ -22,13 +24,21 @@ case "$response" in
         ;;
 esac
 
-# Remove local /etc/hosts mods
-ansible-playbook -i staging --limit localhost -e etchosts_state=absent -K \
-  playbooks/inventory/etchosts.yml
+echo "Removing all openstack resources (requires sudo password to edit local /etc/hosts)"
+
+# Remove local /etc/hosts and ~/.ssh/known_hosts mods
+ansible-playbook -i staging -i localhost --limit localhost \
+  -e etchosts_state=absent -e openstack_cloud_name=$1 -K \
+  playbooks/system/etchosts.yml
+ansible-playbook -i staging -i localhost --limit localhost \
+  -e ssh_knownhosts_state=absent -e openstack_cloud_name=$1 \
+  playbooks/system/ssh_knownhosts.yml
 
 # Servers
+set +e
+servers=$(openstack --os-cloud=da-proto server list -f json | jq --raw-output '.[].Name' | xargs)
 echo "Stopping all servers"
-openstack --os-cloud=$1 server stop $SERVER_NAMES
+openstack --os-cloud=$1 server stop $servers
 active="$(openstack --os-cloud=$1 server list | grep ACTIVE)"
 while [ -n "$active" ]; do
   sleep 1
@@ -37,7 +47,7 @@ while [ -n "$active" ]; do
 done
 
 echo "Deleting all servers"
-openstack --os-cloud=$1 server delete $SERVER_NAMES
+openstack --os-cloud=$1 server delete $servers
 instances="$(openstack --os-cloud=$1 server list)"
 while [ -n "$instances" ]; do
   sleep 1
@@ -46,4 +56,5 @@ while [ -n "$instances" ]; do
 done
 
 # Security groups
-openstack --os-cloud=$1 security group delete $SECURITY_GROUPS
+security_groups=$servers
+openstack --os-cloud=$1 security group delete $security_groups

@@ -1,28 +1,32 @@
 ---
 # Implicit localhost is not included in all so doesn't load the all variables by default
-- name: Include all group variables
+- name: Include all group variables (for localhost)
   hosts: localhost
   tasks:
     - ansible.builtin.include_vars:
         dir: group_vars/all
 
 # Openstack resources
-- import_playbook: playbooks/minio/start.yml
-- import_playbook: playbooks/iceberg_catalog/start.yml
-- import_playbook: playbooks/spark/start.yml
-- import_playbook: playbooks/jupyter/start.yml
-- import_playbook: playbooks/trino/start.yml
+- import_playbook: playbooks/minio/create.yml
+- import_playbook: playbooks/iceberg_catalog/create.yml
+- import_playbook: playbooks/spark/create.yml
+- import_playbook: playbooks/jupyter/create.yml
+- import_playbook: playbooks/trino/create.yml
 
-# Dump inventory
-- import_playbook: playbooks/inventory/persist.yml
-
-- name: Include all group variables
+- name: Include all group variables (for all hosts)
   hosts: all
   tasks:
     - ansible.builtin.include_vars:
         dir: group_vars/all
 
-# Apply updates
+# Dump information on new hosts.
+- import_playbook: playbooks/inventory/inventory_persist.yml
+# The following playbook can also be used to update the /etc/hosts of the local
+# if required. Run the playbook separately, allowing it to ask for the sudo password.
+- import_playbook: playbooks/system/etchosts.yml
+- import_playbook: playbooks/system/ssh_knownhosts.yml
+
+# System tasks
 - import_playbook: playbooks/system/update.yml
 
 # Services

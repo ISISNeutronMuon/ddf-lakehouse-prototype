@@ -1,8 +1,8 @@
 # Build an /etc/hosts file for localhost to ease debugging
 # Assumes that a single host exists for each group and is defined by ipv4 address
 
-- name: "Build hosts file"
-  hosts: localhost:all
+- name: "Manage /etc/hosts file"
+  hosts: all
   tasks:
     - name: Configure /etc/hosts
       become: true
@@ -10,7 +10,7 @@
         backup: true
         dest: /etc/hosts
         regexp: ".*{{ item }}$"
-        line: "{{ groups[item][0] }} {{ item }}"
+        line: "{{ groups[item][0] }} {{ item }}.{{ openstack_domain_name }}"
         state: "{{ etchosts_state | default('present') }}"
       with_items: "{{ groups }}"
       when: item not in group_names and item != "all" and item != "ungrouped"

@@ -1,3 +1,5 @@
 ---
 openstackclient_version: 6.6
 openstack_image: ubuntu-focal-20.04-nogui
+openstack_domain_name: "{{ openstack_cloud_name }}.scdcloud"
+openstack_python_interpreter: /usr/bin/python3
