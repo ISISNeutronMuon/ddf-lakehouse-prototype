@@ -1,0 +1,87 @@
+---
+- name: Ensure Traefik directories exist
+  become: true
+  ansible.builtin.file:
+    path: "{{ traefik_dir.path }}"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+    owner: "root"
+    group: "root"
+  loop:
+    - { path: "{{ traefik_config_path }}/etc", mode: "u=rwx,g=rx,o=rx" }
+    - {
+        path: "{{ traefik_config_path }}/logs/traefik",
+        mode: "u=rwx,g=rx,o=rx",
+      }
+    - { path: "{{ traefik_certs_root }}", mode: "u=rwx,g=,o=" }
+  loop_control:
+    loop_var: traefik_dir
+
+- name: Ensure Traefik etc files are present
+  become: true
+  ansible.posix.synchronize:
+    src: ./etc/
+    dest: "{{ traefik_config_path }}/etc"
+    archive: false
+    recursive: true
+    delete: true
+
+- name: Regnerate Traefik template files
+  become: true
+  ansible.builtin.template:
+    src: "{{ traefik_template }}"
+    dest: "{{ traefik_config_path }}/{{ traefik_template | trim('.j2') }}"
+    mode: "u=rw,g=r,o=r"
+  loop:
+    - etc/traefik/dynamic/data-platform.yml.j2
+  loop_control:
+    loop_var: traefik_template
+
+- name: Ensure TLS certifcates are present
+  become: true
+  no_log: true
+  ansible.builtin.copy:
+    dest: "{{ traefik_tls.filename }}"
+    content: "{{ traefik_tls.content }}"
+    owner: root
+    group: root
+    mode: "u=r,o=,g="
+  loop:
+    - {
+        filename: "{{ traefik_certs_root }}/dataplatform_cert.pem",
+        content: "{{ tls_certificate_cert }}",
+      }
+    - {
+        filename: "{{ traefik_certs_root }}/dataplatform_key.pem",
+        content: "{{ tls_certificate_private_key }}",
+      }
+  loop_control:
+    loop_var: traefik_tls
+
+- name: Ensure Traefik container is running
+  become: true
+  community.docker.docker_container:
+    name: traefik
+    image: traefik:v3.1
+    state: started
+    cleanup: true
+    detach: true
+    restart: true
+    restart_policy: unless-stopped
+    published_ports:
+      - "80:80"
+      - "443:80"
+    mounts:
+      - type: bind
+        source: "{{ traefik_certs_root }}/dataplatform_cert.pem"
+        target: /certs/dataplatform_cert.pem
+        read_only: true
+      - type: bind
+        source: "{{ traefik_certs_root }}/dataplatform_key.pem"
+        target: /certs/dataplatform_key.pem
+        read_only: true
+    volumes:
+      - "{{ traefik_config_path }}/etc/traefik:/etc/traefik"
+      - "{{ traefik_config_path }}/logs/traefik:/var/log/traefik"
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro

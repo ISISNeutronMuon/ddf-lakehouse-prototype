@@ -34,12 +34,6 @@
   loop_control:
     loop_var: trino_template
 
-- name: Create a docker network for Trino/Traefik
-  become: true
-  community.docker.docker_network:
-    name: trino_net
-    state: present
-
 - name: Ensure Trino container is running
   become: true
   community.docker.docker_container:
@@ -48,90 +42,10 @@
     state: started
     cleanup: true
     detach: true
+    published_ports:
+      - "{{ trino_http_port }}:8060"
     restart: true
     restart_policy: unless-stopped
-    networks:
-      - name: trino_net
-        aliases: trino
-    comparisons:
-      networks: strict
     volumes:
       - "{{ trino_data_path }}:/data/trino" # See node.properties
       - "{{ trino_config_path }}/etc:/etc/trino:ro"
-
-# Traefik
-- name: Ensure Traefik directories exist
-  become: true
-  ansible.builtin.file:
-    path: "{{ trino_dir.path }}"
-    state: directory
-    mode: "u=rwx,g=rx,o=rx"
-    owner: "{{ trino_dir.owner }}"
-    group: "{{ trino_dir.owner }}"
-  loop:
-    - { path: "{{ trino_traefik_config_path }}", owner: "root", group: "root" }
-    - { path: "{{ trino_certs_root }}", owner: "root", group: "root" }
-  loop_control:
-    loop_var: trino_dir
-
-- name: Ensure Trino etc properties files are present
-  become: true
-  ansible.posix.synchronize:
-    src: ./traefik/
-    dest: "{{ trino_traefik_config_path }}"
-    archive: false
-    recursive: true
-    delete: true
-
-- name: Ensure TLS certifcates are present
-  become: true
-  no_log: true
-  ansible.builtin.copy:
-    dest: "{{ trino_tls.filename }}"
-    content: "{{ trino_tls.content }}"
-    owner: root
-    group: root
-    mode: "u=r,o=,g="
-  loop:
-    - {
-        filename: "{{ trino_certs_root }}/dataplatform_cert.pem",
-        content: "{{ tls_certificate_cert }}",
-      }
-    - {
-        filename: "{{ trino_certs_root }}/dataplatform_key.pem",
-        content: "{{ tls_certificate_private_key }}",
-      }
-  loop_control:
-    loop_var: trino_tls
-
-- name: Ensure Traefik container is running
-  become: true
-  community.docker.docker_container:
-    name: traefik
-    image: traefik:v3.1
-    state: started
-    cleanup: true
-    detach: true
-    restart: true
-    restart_policy: unless-stopped
-    networks:
-      - name: trino_net
-        aliases: traefik
-    comparisons:
-      networks: strict
-    published_ports:
-      - "8060:80"
-      - "8063:443"
-    mounts:
-      - type: bind
-        source: "{{ trino_certs_root }}/dataplatform_cert.pem"
-        target: /certs/dataplatform_cert.pem
-        read_only: true
-      - type: bind
-        source: "{{ trino_certs_root }}/dataplatform_key.pem"
-        target: /certs/dataplatform_key.pem
-        read_only: true
-    volumes:
-      - /config/traefik/etc:/etc/traefik
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro

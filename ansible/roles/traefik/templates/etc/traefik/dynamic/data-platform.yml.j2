@@ -1,0 +1,32 @@
+# Dynamic traefik configuration
+
+http:
+  routers:
+    dashboard:
+      rule: PathPrefix(`/api`) || PathPrefix(`/dashboard`)
+      service: api@internal
+      middlewares:
+        - dashboardauth
+      tls: {}
+    trino:
+      rule: PathPrefix(`/trino`)
+      service: trino
+      tls: {}
+
+  middlewares:
+    dashboardauth:
+      basicauth:
+        users: admin:$2y$10$xRntwpemRqOvRaDz6kLt1ed3d5JcHZSjTdlO3tCiKmnN42hdrQsA6
+
+  services:
+    trino:
+      loadBalancer:
+        servers:
+          - url: "{{ trino_discovery_uri }}"
+
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/dataplatform_cert.pem
+        keyFile: /certs/dataplatform_key.pem

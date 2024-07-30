@@ -1,9 +1,18 @@
 global:
-  checkNewVersion: true
-  sendAnonymousUsage: true
+  checkNewVersion: false
+  sendAnonymousUsage: false
 
 log:
-  level: INFO
+  level: DEBUG
+  noColor: true
+
+accessLog:
+  addInternals: false
+  filePath: /var/log/traefik/access.log
+
+api:
+  dashboard: true
+  insecure: false
 
 entryPoints:
   web:
@@ -15,6 +24,8 @@ entryPoints:
           scheme: https
   websecure:
     address: ":443"
+    http:
+      tls: {}
 
 providers:
   file:
