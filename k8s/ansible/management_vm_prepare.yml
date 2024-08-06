@@ -1,0 +1,31 @@
+---
+- name: Ensure machine is up to date
+  hosts: all
+  roles:
+    - role: machine_update
+
+- name: Wait for connection after possible reboot
+  hosts: all
+  gather_facts: false
+  tasks:
+    - ansible.builtin.wait_for_connection:
+        timeout: 300
+
+- name: Copy over required files for cluster bootstrapping
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Copy cluster bootstrapping script
+      ansible.builtin.copy:
+        src: files/capi/bootstrap.sh
+        dest: ~/capi/bootstrap.sh
+        mode: u=rwx,g=r,o=r
+    - name: Copy cluster configuration files
+      ansible.builtin.copy:
+        src: files/capi/{{ cluster }}/
+        dest: ~/capi/{{ cluster }}/
+        mode: u=rwx,g=rx,o=rx
+      loop:
+        - management-cluster
+      loop_control:
+        loop_var: cluster

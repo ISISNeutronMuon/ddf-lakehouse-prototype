@@ -1,0 +1,39 @@
+---
+- name: Create K8s management VM
+  hosts: localhost
+  vars:
+    openstack_client_version: "{{ client_version | default(6.6) }}"
+    openstack_cloud_name: "{{ cloud }}"
+    openstack_server_name: "{{ server_name }}"
+    openstack_key_name: "{{ key_name }}"
+    openstack_flavor: "{{ flavor | default('l3.nano') }}"
+    openstack_image: "{{ image | default('ubuntu-focal-20.04-nogui') }}"
+    openstack_security_groups: ["default"]
+  tasks:
+    - name: Ensure Python openstack bindings are present
+      ansible.builtin.pip:
+        name: "python-openstackclient=={{ openstack_client_version }}"
+        state: present
+
+    - name: Ensure cloud server is present
+      openstack.cloud.server:
+        cloud: "{{ openstack_cloud_name }}"
+        flavor: "{{ openstack_flavor }}"
+        image: "{{ openstack_image }}"
+        name: "{{ openstack_server_name }}"
+        key_name: "{{ openstack_key_name }}"
+        network: Internal
+        auto_floating_ip: false
+        security_groups: "{{ openstack_security_groups }}"
+        timeout: 200
+        state: present
+      register: vm_info
+
+    - name: Get IP address of VM
+      ansible.builtin.debug:
+        msg: "{{ openstack_server_name }}: {{ vm_info.server.addresses.Internal[0].addr }}"
+
+    - name: Wait for connection
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+      delegate_to: "{{ vm_info.server.addresses.Internal[0].addr }}"
