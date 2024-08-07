@@ -24,15 +24,7 @@ case "$response" in
         ;;
 esac
 
-echo "Removing all openstack resources (requires sudo password to edit local /etc/hosts)"
-
-# Remove local /etc/hosts and ~/.ssh/known_hosts mods
-ansible-playbook -i staging -i localhost --limit localhost \
-  -e etchosts_state=absent -e openstack_cloud_name=$1 -K \
-  playbooks/system/etchosts.yml
-ansible-playbook -i staging -i localhost --limit localhost \
-  -e ssh_knownhosts_state=absent -e openstack_cloud_name=$1 \
-  playbooks/system/ssh_knownhosts.yml
+echo "Removing all openstack resources."
 
 # Servers
 set +e
@@ -56,5 +48,9 @@ while [ -n "$instances" ]; do
 done
 
 # Security groups
-security_groups=$servers
+security_groups=${servers/traefik/}
 openstack --os-cloud=$1 security group delete $security_groups
+
+# Post
+echo "All openstack resources have been removed."
+echo "Any modifications to ~/.ssh/known_hosts or /etc/hosts on localhosts have not been removed and will need to be removed manually."
