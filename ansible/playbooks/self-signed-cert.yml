@@ -9,7 +9,7 @@
     - name: Create certificate signing request (CSR) for self-signed certificate
       community.crypto.openssl_csr_pipe:
         privatekey_path: "{{ privatekey_path }}"
-        common_name: "*.{{ openstack_domain_name }}"
+        common_name: "{{ server_name }}"
         organization_name: ISIS Computing Division
       register: csr
 
