@@ -21,10 +21,6 @@
 
 # Dump information on new hosts.
 - import_playbook: playbooks/inventory/inventory_persist.yml
-# The following playbook can also be used to update the /etc/hosts of the local
-# if required. Run the playbook separately, allowing it to ask for the sudo password.
-- import_playbook: playbooks/system/etchosts.yml
-- import_playbook: playbooks/system/ssh_knownhosts.yml
 
 # System tasks
 - import_playbook: playbooks/system/update.yml
