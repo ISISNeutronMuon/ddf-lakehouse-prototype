@@ -9,11 +9,22 @@ http:
       middlewares:
         - dashboardauth
       tls: {}
+    jupyterhub:
+      entryPoints: websecure
+      rule: PathPrefix(`/jupyterhub`)
+      service: jupyterhub
+      tls: {}
 
   middlewares:
     dashboardauth:
       basicauth:
         users: admin:$2y$10$xRntwpemRqOvRaDz6kLt1ed3d5JcHZSjTdlO3tCiKmnN42hdrQsA6
+
+  services:
+    jupyterhub:
+      loadBalancer:
+        servers:
+          - url: "http://{{ groups['jupyterhub'][0] }}:{{ jupyterhub_http_port }}"
 
 tls:
   certificates:

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile
-FROM python:3.12-bookworm
+FROM python:3.10-bookworm
 
 # Versions
 ARG SPARK_VERSION=3.5.1
@@ -26,11 +26,11 @@ RUN apt-get update && \
   rm -rf /var/lib/apt/lists/*
 
 # Dirs
-RUN mkdir -p ${SPARK_HOME} ${SPARK_HOME}/spark-events ${NOTEBOOKS_DIR} ${IPYTHON_STARTUP_DIR}
+RUN mkdir -p ${SPARK_HOME} ${SPARK_HOME}/spark-events
 
 # Java: Spark, Iceberg & Postgres (Iceberg catalog)
 WORKDIR ${SPARK_HOME}
-RUN curl https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz -o spark-${SPARK_VERSION}-bin-hadoop3.tgz \
+RUN curl https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz -o spark-${SPARK_VERSION}-bin-hadoop3.tgz \
   && tar xvzf spark-${SPARK_VERSION}-bin-hadoop3.tgz --directory ${SPARK_HOME} --strip-components 1 \
   && rm -rf spark-${SPARK_VERSION}-bin-hadoop3.tgz
 RUN curl https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-${SPARK_MAJOR_VERSION}_2.12/${ICEBERG_VERSION}/iceberg-spark-runtime-${SPARK_MAJOR_VERSION}_2.12-${ICEBERG_VERSION}.jar \

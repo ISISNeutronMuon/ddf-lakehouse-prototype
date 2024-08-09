@@ -1,0 +1,9 @@
+users:
+  admin:
+    - admin
+base_url: "{{ jupyterhub_base_url }}"
+services:
+  cull:
+    timeout: 43200
+    every: 3600
+    max_age: 0

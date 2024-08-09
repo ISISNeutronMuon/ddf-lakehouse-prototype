@@ -10,7 +10,7 @@
 - import_playbook: playbooks/minio/create.yml
 - import_playbook: playbooks/iceberg_catalog/create.yml
 - import_playbook: playbooks/spark/create.yml
-- import_playbook: playbooks/jupyter/create.yml
+- import_playbook: playbooks/jupyterhub/create.yml
 - import_playbook: playbooks/trino/create.yml
 
 - name: Include all group variables (for all hosts)
@@ -29,5 +29,5 @@
 - import_playbook: playbooks/minio/setup.yml
 - import_playbook: playbooks/iceberg_catalog/setup.yml
 - import_playbook: playbooks/spark/setup.yml
-- import_playbook: playbooks/jupyter/setup.yml
+- import_playbook: playbooks/jupyterhub/setup.yml
 - import_playbook: playbooks/trino/setup.yml

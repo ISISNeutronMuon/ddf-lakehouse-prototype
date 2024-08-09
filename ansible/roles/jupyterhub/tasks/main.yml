@@ -1,0 +1,78 @@
+---
+- name: Install required APT packages
+  become: true
+  ansible.builtin.apt:
+    pkg:
+      - openjdk-17-jdk
+      - python3
+      - python3-dev
+    state: present
+
+- name: Ensure persistent home directory root exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ jupyterhub_home_root_path }}"
+    state: directory
+    mode: "0755"
+
+- name: Change default directory for home directories
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/default/useradd
+    regexp: "^HOME="
+    line: "HOME={{ jupyterhub_home_root_path }}"
+
+- name: Ensure skeleton ipython directory exists
+  become: true
+  ansible.builtin.file:
+    path: "/etc/skel/.ipython"
+    state: directory
+    mode: "0755"
+
+- name: Add additional skeleton content for each new user created
+  become: true
+  ansible.posix.synchronize:
+    src: ipython/
+    dest: /etc/skel/.ipython/
+    archive: false
+    recursive: true
+    delete: true
+
+- name: Download The Littlest JupyterHub bootstrap script
+  ansible.builtin.get_url:
+    url: https://tljh.jupyter.org/bootstrap.py
+    dest: /tmp/bootstrap.py
+    mode: "u=rwx,g=rx,o=rx"
+
+# Start the default server once to create the directory structure
+# We'll then copy our configuration over and reload
+- name: Run bootstrap script
+  become: true
+  ansible.builtin.command:
+    cmd: python3 /tmp/bootstrap.py
+    creates: /opt/tljh/installer.log
+
+- name: Ensure common set of pip packages are present in tljh user environment
+  become: true
+  ansible.builtin.pip:
+    executable: /opt/tljh/user/bin/pip
+    name:
+      - matplotlib==3.9.1
+      - pandas==2.2.2
+      - prettytable==3.10.2
+      - pyarrow==17.0.0
+      - pyspark[connect]==3.5.1
+
+- name: Ensure config.yaml files are present and up to date
+  become: true
+  ansible.builtin.template:
+    src: config/config.yaml.j2
+    dest: /opt/tljh/config/config.yaml
+    mode: "u=rw,g=r,o=r"
+  register: jupyterhub_configs
+
+- name: Reload JupyterHub
+  become: true
+  ansible.builtin.command:
+    cmd: tljh-config reload hub
+  when: jupyterhub_configs.changed
