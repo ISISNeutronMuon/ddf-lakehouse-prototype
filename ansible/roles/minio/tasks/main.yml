@@ -4,14 +4,15 @@
   ansible.builtin.file:
     path: "{{ minio_data_path }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
 
 - name: Ensure MinIO container is running
   become: true
   community.docker.docker_container:
     name: minio
     image: "{{ minio_image }}"
-    command: ["server", "/data", "--console-address", ":{{ minio_console_port }}"]
+    command:
+      ["server", "/data", "--console-address", ":{{ minio_console_port }}"]
     state: started
     cleanup: true
     detach: true
@@ -24,3 +25,5 @@
       - "{{ minio_console_port }}:9001"
     volumes:
       - "{{ minio_data_path }}:/data"
+    comparisons:
+      env: strict
