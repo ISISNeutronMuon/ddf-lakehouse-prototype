@@ -2,8 +2,6 @@
 # Destroy all resources created for this project
 # Arguments:
 #  - $1: Cloud project in clouds.yml
-SERVER_NAMES="jupyter spark iceberg_catalog minio trino"
-SECURITY_GROUPS=$SERVER_NAMES
 
 set -eo pipefail
 
@@ -53,4 +51,4 @@ openstack --os-cloud=$1 security group delete $security_groups
 
 # Post
 echo "All openstack resources have been removed."
-echo "Any modifications to ~/.ssh/known_hosts or /etc/hosts on localhosts have not been removed and will need to be removed manually."
+echo "Any modifications to ~/.ssh/known_hosts or /etc/hosts on localhost have not been removed and will need to be removed manually."
