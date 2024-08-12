@@ -63,12 +63,18 @@
       - pyarrow==17.0.0
       - pyspark[connect]==3.5.1
 
-- name: Ensure config.yaml files are present and up to date
+- name: Ensure config files are present and up to date
   become: true
   ansible.builtin.template:
-    src: config/config.yaml.j2
-    dest: /opt/tljh/config/config.yaml
+    src: "{{jupyterhub_template }}"
+    dest: "/opt/tljh/{{ jupyterhub_template | replace('.j2', '') }}"
     mode: "u=rw,g=r,o=r"
+  loop:
+    - config/config.yaml.j2
+    - config/jupyterhub_config.d/00-envvars.py.j2
+    - config/jupyterhub_config.d/01-logout.py.j2
+  loop_control:
+    loop_var: jupyterhub_template
   register: jupyterhub_configs
 
 - name: Reload JupyterHub
