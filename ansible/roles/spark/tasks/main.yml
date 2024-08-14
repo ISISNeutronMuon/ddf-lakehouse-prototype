@@ -40,9 +40,10 @@
     name: spark
     image: spark-iceberg
     state: started
-    cleanup: true
     detach: true
+    restart: true
     restart_policy: unless-stopped
+    recreate: true
     env:
       AWS_REGION: "{{ s3_region }}"
       AWS_ACCESS_KEY_ID: "{{ s3_access_key_id }}"
