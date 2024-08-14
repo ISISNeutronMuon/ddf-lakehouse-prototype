@@ -1,0 +1,6 @@
+---
+postgres_db_data_path: "{{ cephfs_mount_mount_path }}/live/iceberg_catalog/data"
+postgres_port: "{{ iceberg_catalog_db_port }}"
+postgres_db_name: "{{ iceberg_catalog_db_name }}"
+postgres_db_user: "{{ iceberg_catalog_db_user }}"
+postgres_db_passwd: "{{ iceberg_catalog_db_passwd }}"

@@ -4,7 +4,9 @@
   ansible.builtin.file:
     path: "{{ postgres_db_data_path }}"
     state: directory
-    mode: '0755'
+    owner: 26
+    group: 999
+    mode: "u=rwx,g=rx,o=rx"
 
 - name: Ensure secrets directory exists
   become: true
@@ -22,6 +24,11 @@
     group: root
     mode: "u=r,g=r,o=r"
 
+- name: Create container network
+  become: true
+  community.docker.docker_network:
+    name: "{{ postgres_container_network }}"
+
 - name: Ensure Postgresql container is running
   become: true
   community.docker.docker_container:
@@ -33,10 +40,13 @@
     restart_policy: unless-stopped
     published_ports:
       - "{{ postgres_db_port }}:5432"
-    env:
-      POSTGRES_DB="{{ postgres_db_name }}"
+    env: POSTGRES_DB="{{ postgres_db_name }}"
       POSTGRES_USER="{{ postgres_db_user }}"
       POSTGRES_PASSWORD_FILE=/secrets/postgres-passwd
     volumes:
-      - "{{ postgres_db_data_path }}:/data"
+      - "{{ postgres_db_data_path }}:/var/lib/postgresql/data"
       - /secrets:/secrets:ro
+    networks:
+      - name: "{{ postgres_container_network }}"
+    comparisons:
+      networks: strict

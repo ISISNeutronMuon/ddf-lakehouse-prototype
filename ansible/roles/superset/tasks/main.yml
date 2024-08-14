@@ -1,0 +1,76 @@
+---
+- name: Ensure configuration directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ superset_config_path }}"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+
+- name: Ensure configuration files are synchronized
+  become: true
+  ansible.posix.synchronize:
+    src: ./
+    dest: "{{ superset_config_path }}/"
+    archive: false
+    recursive: true
+    delete: true
+
+- name: Ensure templated configuration files are synchronized
+  become: true
+  ansible.builtin.template:
+    src: "{{ superset_template.src }}"
+    dest: "{{ superset_config_path }}/{{ superset_template.dest }}"
+    mode: "u=rw,g=r,o=r"
+  loop:
+    - { src: docker-compose.yml.j2, dest: docker-compose.yml }
+    - { src: docker/dotenv.j2, dest: docker/.env }
+  loop_control:
+    loop_var: superset_template
+
+- name: Create container network
+  become: true
+  community.docker.docker_network:
+    name: "{{ superset_container_network }}"
+
+- name: Ensure certificates directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ superset_config_path }}/certs"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+
+- name: Ensure certificates are present
+  become: true
+  ansible.builtin.copy:
+    dest: "{{ superset_config_path }}/certs/cert.pem"
+    content: "{{ tls_certificate_cert }}"
+    owner: root
+    group: root
+    mode: "u=r,o=,g="
+
+- name: Pull Superset sources
+  become: true
+  ansible.builtin.git:
+    repo: https://github.com/martyngigg/superset/
+    dest: "{{ superset_build_path }}"
+    single_branch: true
+    version: allow_prefixed_paths
+  register: sources
+
+- name: Build docker image
+  become: true
+  community.docker.docker_image_build:
+    name: "{{ superset_image }}"
+    path: "{{ superset_build_path }}"
+    args:
+      BASE_PATH: "{{ superset_url_prefix }}"
+      PY_VER: 3.10-slim-bookworm
+    target: lean
+  when: sources.changed
+
+- name: Run Superset services
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: "{{ superset_config_path }}"
+    recreate: always
+    state: present

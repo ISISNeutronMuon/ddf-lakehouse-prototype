@@ -1,0 +1,104 @@
+x-superset-image: &superset-image {{ superset_image }}
+x-superset-user: &superset-user root
+x-superset-depends-on: &superset-depends-on
+  redis:
+    condition: service_started
+x-superset-env: &superset-env
+  - path: docker/.env # default
+    required: true
+x-superset-volumes: &superset-volumes
+  - {{ superset_config_path }}/docker:/app/docker
+  - superset_home:/app/superset_home
+  - {{ superset_config_path }}/certs:/certs:ro
+x-networks: &superset-networks
+  - {{ superset_container_network }}
+# Temporarily set an /etc/hosts reference until we get a proper
+# DNS registry entry created
+x-extra-hosts: &extra-hosts
+  - "{{ top_level_domain }}:{{ groups['traefik'][0] }}"
+
+services:
+  redis:
+    env_file: *superset-env
+    image: redis:7
+    container_name: superset_cache
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+    networks: *superset-networks
+
+  superset:
+    env_file: *superset-env
+    image: *superset-image
+    container_name: superset_app
+    command: [ "/app/docker/docker-bootstrap.sh", "app-gunicorn" ]
+    user: *superset-user
+    restart: unless-stopped
+    ports:
+      - {{ superset_http_port }}:8088
+    depends_on:
+      <<: *superset-depends-on
+      superset-init:
+        condition: service_completed_successfully
+    volumes: *superset-volumes
+    networks: *superset-networks
+    extra_hosts: *extra-hosts
+
+  superset-init:
+    env_file: *superset-env
+    image: *superset-image
+    container_name: superset_init
+    command: [ "/app/docker/docker-init.sh" ]
+    depends_on: *superset-depends-on
+    user: *superset-user
+    volumes: *superset-volumes
+    healthcheck:
+      disable: true
+    networks: *superset-networks
+    extra_hosts: *extra-hosts
+
+  superset-worker:
+    env_file: *superset-env
+    image: *superset-image
+    container_name: superset_worker
+    command: [ "/app/docker/docker-bootstrap.sh", "worker" ]
+    restart: unless-stopped
+    depends_on:
+     <<: *superset-depends-on
+     superset:
+        condition: service_healthy
+    user: *superset-user
+    volumes: *superset-volumes
+    networks: *superset-networks
+    extra_hosts: *extra-hosts
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME"
+        ]
+
+  superset-worker-beat:
+    env_file: *superset-env
+    image: *superset-image
+    container_name: superset_worker_beat
+    command: [ "/app/docker/docker-bootstrap.sh", "beat" ]
+    restart: unless-stopped
+    depends_on:
+     <<: *superset-depends-on
+     superset:
+        condition: service_healthy
+    user: *superset-user
+    volumes: *superset-volumes
+    networks: *superset-networks
+    extra_hosts: *extra-hosts
+    healthcheck:
+      disable: true
+
+volumes:
+  redis:
+  superset_home:
+
+networks:
+  {{ superset_container_network }}:
+    external: true

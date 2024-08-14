@@ -1,0 +1,36 @@
+# Metadata DB
+SUPERSET_DB_HOST='{{ superset_metadb_host }}'
+SUPERSET_DB_USER='{{ superset_metadb_user }}'
+SUPERSET_DB_PASSWORD='{{ superset_metadb_passwd }}'
+SUPERSET_DB_NAME='{{ superset_metadb_name }}'
+SUPERSET_DB_PORT='{{ superset_metadb_port }}'
+SUPERSET_DB_DIALECT=postgresql
+
+# Caching layer (match service name and port in compose file)
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# Admin user
+SUPERSET_ADMIN_USER='{{ superset_admin_user }}'
+SUPERSET_ADMIN_FIRSTNAME='{{ superset_admin_firstname }}'
+SUPERSET_ADMIN_LASTNAME='{{ superset_admin_lastname }}'
+SUPERSET_ADMIN_EMAIL='{{ superset_admin_email }}'
+SUPERSET_ADMIN_PASSWORD='admin'
+
+# Environment/development settings
+PYTHONPATH=/app/docker/pythonpath
+SCARF_ANALYTICS=false
+FLASK_DEBUG={{ superset_flask_debug }}
+SUPERSET_ENV={{ superset_env_name }}
+SUPERSET_PORT={{ superset_http_port }}
+
+# Make sure you set this to a unique secure random value on production
+SUPERSET_SECRET_KEY='{{ superset_secret_key }}'
+
+# Add our self-signed certificate to the bundle
+CA_CERT=/certs/cert.pem
+
+# Data Sources DB connections
+DATABASE_CONNECTION_NAME='ISIS Lakehouse'
+DATABASE_CONNECTION_URI='trino://{{ trino_admin_user }}:{{ trino_admin_passwd }}@{{ top_level_domain }}:{{
+trino_https_port }}/{{ iceberg_catalog_name }}'

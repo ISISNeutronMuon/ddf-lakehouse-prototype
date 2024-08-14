@@ -1,14 +1,8 @@
 ---
-postgres_db_data_path: "{{ cephfs_mount_mount_path }}/live/postgres/data"
-postgres_db_port: 5432
-postgres_db_name: iceberg
-postgres_db_user: iceberg
-postgres_db_passwd: "{{ vault_postgres_db_passwd }}"
-
-
-iceberg_catalog_s3_endpoint: "http://{{ groups['minio'][0] }}:{{ minio_rest_port }}"
-iceberg_catalog_db_port: "{{ postgres_db_port }}"
+iceberg_catalog_db_name: iceberg
+iceberg_catalog_db_user: iceberg
+iceberg_catalog_db_passwd: "{{ vault_iceberg_catalog_db_passwd }}"
+iceberg_catalog_db_port: 5432
 iceberg_catalog_db_uri: "postgresql://{{ groups['iceberg_catalog'][0] }}:{{ iceberg_catalog_db_port }}/{{ iceberg_catalog_db_name }}"
-iceberg_catalog_db_name: "{{ postgres_db_name }}"
-iceberg_catalog_db_user: "{{ postgres_db_user }}"
-iceberg_catalog_db_passwd: "{{ postgres_db_passwd }}"
+iceberg_catalog_name: warehouse
+iceberg_catalog_s3_endpoint: "http://{{ groups['minio'][0] }}:{{ minio_rest_port }}"

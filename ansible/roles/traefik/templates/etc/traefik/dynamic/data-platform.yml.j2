@@ -15,6 +15,13 @@ http:
       rule: PathPrefix(`/jupyterhub`)
       service: jupyterhub
       tls: {}
+    superset:
+      entryPoints: websecure
+      rule: PathPrefix(`{{ superset_url_prefix }}`)
+      service: superset
+      middlewares:
+        - superset-strip-prefix
+      tls: {}
     trino:
       entryPoints: trinosecure
       rule: PathPrefix(`/`)
@@ -25,9 +32,12 @@ http:
     dashboardauth:
       basicauth:
         users: admin:$2y$10$xRntwpemRqOvRaDz6kLt1ed3d5JcHZSjTdlO3tCiKmnN42hdrQsA6
+    superset-strip-prefix:
+      stripPrefix:
+        prefixes: "{{ superset_url_prefix }}"
     traefik-strip-prefix:
-      stripPrefixRegex:
-        regex:
+      stripPrefix:
+        prefixes:
           - "/traefik"
 
   services:
@@ -35,6 +45,10 @@ http:
       loadBalancer:
         servers:
           - url: "http://{{ groups['jupyterhub'][0] }}:{{ jupyterhub_http_port }}"
+    superset:
+      loadBalancer:
+        servers:
+          - url: "http://{{ groups['superset'][0] }}:{{ superset_http_port }}"
     trino:
       loadBalancer:
         servers:
