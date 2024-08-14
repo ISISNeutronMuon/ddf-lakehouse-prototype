@@ -3,7 +3,7 @@ global:
   sendAnonymousUsage: false
 
 log:
-  level: INFO
+  level: ERROR
   noColor: true
 
 accessLog:
@@ -19,10 +19,12 @@ entryPoints:
     http:
       redirections:
         entryPoint:
-          to: https
+          to: websecure
           scheme: https
   websecure:
     address: ":443"
+  trinosecure:
+    address: ":8443"
 
 providers:
   file:

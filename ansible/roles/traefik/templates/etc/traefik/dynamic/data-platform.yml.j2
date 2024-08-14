@@ -15,6 +15,11 @@ http:
       rule: PathPrefix(`/jupyterhub`)
       service: jupyterhub
       tls: {}
+    trino:
+      entryPoints: trinosecure
+      rule: PathPrefix(`/`)
+      service: trino
+      tls: {}
 
   middlewares:
     dashboardauth:
@@ -23,13 +28,17 @@ http:
     traefik-strip-prefix:
       stripPrefixRegex:
         regex:
-          - "/traefik/?"
+          - "/traefik"
 
   services:
     jupyterhub:
       loadBalancer:
         servers:
           - url: "http://{{ groups['jupyterhub'][0] }}:{{ jupyterhub_http_port }}"
+    trino:
+      loadBalancer:
+        servers:
+          - url: "{{ trino_coordinator_url }}"
 
 tls:
   certificates:

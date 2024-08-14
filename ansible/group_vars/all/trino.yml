@@ -1,5 +1,9 @@
 ---
 trino_data_path: "{{ cephfs_mount_mount_path }}/live/trino/data"
 trino_http_port: 8060
-trino_https_port: 8063
-trino_discovery_uri: "http://{{ groups['trino'][0] }}:{{ trino_http_port }}"
+trino_https_port: 8443
+trino_coordinator_url: "http://{{ groups['trino'][0] }}:{{ trino_http_port }}"
+
+trino_admin_user: admin
+trino_admin_passwd: "{{ vault_trino_admin_passwd }}"
+trino_shared_secret: "{{ vault_trino_shared_secret }}"

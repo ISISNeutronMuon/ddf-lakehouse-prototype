@@ -2,12 +2,19 @@
 - name: Provision VM for Traefik service
   hosts: localhost
   vars:
-    openstack_security_group_name: traefik
-    openstack_security_group_description: Ingress to traefik ports
     openstack_flavor: l3.nano
     openstack_server_name: traefik
-    openstack_security_groups: [default, "HTTP", "HTTPS"]
+    openstack_security_group_name: traefik
+    openstack_security_group_description: Ingress to traefik ports
+    openstack_security_group_rules:
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ trino_https_port }}"
+        port_range_max: "{{ trino_https_port }}"
+    openstack_security_groups: [default, "traefik", "HTTP", "HTTPS"]
     openstack_vm_user: ubuntu
     inventory_group: traefik
   roles:
+    - role: security_group_create
     - role: vm_create
