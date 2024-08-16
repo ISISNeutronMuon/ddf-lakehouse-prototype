@@ -12,6 +12,7 @@
 - import_playbook: playbooks/spark/create.yml
 - import_playbook: playbooks/jupyterhub/create.yml
 - import_playbook: playbooks/trino/create.yml
+- import_playbook: playbooks/traefik/create.yml
 
 - name: Include all group variables (for all hosts)
   hosts: all
@@ -31,3 +32,4 @@
 - import_playbook: playbooks/spark/setup.yml
 - import_playbook: playbooks/jupyterhub/setup.yml
 - import_playbook: playbooks/trino/setup.yml
+- import_playbook: playbooks/traefik/setup.yml
