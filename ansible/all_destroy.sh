@@ -46,7 +46,7 @@ while [ -n "$instances" ]; do
 done
 
 # Security groups
-security_groups=${servers/traefik/}
+security_groups=${servers/jupyterhub/}
 openstack --os-cloud=$1 security group delete $security_groups
 
 # Post
