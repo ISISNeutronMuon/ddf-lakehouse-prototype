@@ -11,7 +11,7 @@ spark.sql.catalog.warehouse.warehouse       s3://{{ iceberg_catalog_name }}/
 spark.sql.catalog.warehouse.s3.endpoint     {{ iceberg_catalog_s3_endpoint }}
 spark.sql.catalog.warehouse.catalog-impl    org.apache.iceberg.jdbc.JdbcCatalog
 spark.sql.catalog.warehouse.uri             jdbc:{{ iceberg_catalog_db_uri }}
-spark.sql.catalog.warehouse.jdbc.user       {{ iceberg_catalog_user }}
+spark.sql.catalog.warehouse.jdbc.user       {{ iceberg_catalog_db_user }}
 spark.sql.catalog.warehouse.jdbc.password   {{ iceberg_catalog_db_passwd }}
 spark.sql.catalog.warehouse.jdbc.schema-version V1
 spark.sql.defaultCatalog                    {{ iceberg_catalog_name }}
