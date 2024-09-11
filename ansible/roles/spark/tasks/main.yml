@@ -22,7 +22,6 @@
     dest: "{{ spark_image_build_path }}/{{ spark_template | trim('.j2') }}"
     mode: "u=rw,g=r,o=r"
   loop:
-    - Dockerfile.j2
     - spark-defaults.conf.j2
   loop_control:
     loop_var: spark_template
