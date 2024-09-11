@@ -50,6 +50,7 @@
     published_ports:
       - "{{ spark_controller_ui_port }}:8080"
       - "{{ spark_connect_port }}:15002"
+      - "{{ spark_connect_ui_port }}:4040"
     mounts:
       - source: "{{ spark_image_build_path }}/spark-defaults.conf"
         target: /opt/spark/conf/spark-defaults.conf

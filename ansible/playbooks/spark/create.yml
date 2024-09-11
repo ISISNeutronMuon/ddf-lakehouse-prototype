@@ -15,6 +15,11 @@
         protocol: tcp
         port_range_min: "{{ spark_connect_port }}"
         port_range_max: "{{ spark_connect_port }}"
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ spark_connect_ui_port }}"
+        port_range_max: "{{ spark_connect_ui_port }}"
     openstack_flavor: l3.small
     openstack_server_name: spark
     openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
