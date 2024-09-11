@@ -15,7 +15,7 @@
         protocol: tcp
         port_range_min: "{{ spark_connect_port }}"
         port_range_max: "{{ spark_connect_port }}"
-    openstack_flavor: l3.nano
+    openstack_flavor: l3.small
     openstack_server_name: spark
     openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
     openstack_vm_user: ubuntu
