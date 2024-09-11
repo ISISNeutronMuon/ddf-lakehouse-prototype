@@ -30,7 +30,7 @@
     mode: "u=rw,g=r,o=r"
   loop:
     - etc/config.properties.j2
-    - etc/catalog/warehouse.properties.j2
+    - etc/catalog/isis.properties.j2
   loop_control:
     loop_var: trino_template
 

@@ -4,5 +4,5 @@ iceberg_catalog_db_user: iceberg
 iceberg_catalog_db_passwd: "{{ vault_iceberg_catalog_db_passwd }}"
 iceberg_catalog_db_port: 5432
 iceberg_catalog_db_uri: "postgresql://{{ groups['iceberg_catalog'][0] }}:{{ iceberg_catalog_db_port }}/{{ iceberg_catalog_db_name }}"
-iceberg_catalog_name: warehouse
 iceberg_catalog_s3_endpoint: "http://{{ groups['minio'][0] }}:{{ minio_rest_port }}"
+iceberg_catalog_name: isis
