@@ -22,12 +22,7 @@ FROM python:3.10-bookworm
 ARG SPARK_DOWNLOAD_URL=https://dlcdn.apache.org/spark/
 ARG SPARK_VERSION=3.5.2
 ARG SPARK_MAJOR_VERSION=3.5
-ARG MAVEN_REPO=https://repo1.maven.org/maven2
 ARG SCALA_VERSION=2.12
-ARG HADOOP_VERSION=3.4.0
-ARG ICEBERG_VERSION=1.5.2
-ARG POSTGRES_CONNECTOR_VERSION=42.7.4
-ARG AWS_SDK_VERSION=2.27.21
 
 # Environment
 ENV SPARK_HOME=/opt/spark
@@ -57,6 +52,7 @@ RUN curl ${SPARK_DOWNLOAD_URL}/spark-3.5.2/spark-3.5.2-bin-without-hadoop.tgz -o
   && tar xvzf spark-${SPARK_VERSION}-bin-without-hadoop.tgz --directory ${SPARK_HOME} --strip-components 1 \
   && rm -rf spark-${SPARK_VERSION}-bin-without-hadoop.tgz
 
+# Additional Jars
 COPY --chown=root:root --from=spark-jars /source/target/dependency/ ${SPARK_HOME}/jars/
 
 # Entrypoint: start spark connect
