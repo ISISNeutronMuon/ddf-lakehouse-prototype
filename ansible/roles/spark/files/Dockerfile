@@ -59,9 +59,6 @@ RUN curl ${SPARK_DOWNLOAD_URL}/spark-3.5.2/spark-3.5.2-bin-without-hadoop.tgz -o
 
 COPY --chown=root:root --from=spark-jars /source/target/dependency/ ${SPARK_HOME}/jars/
 
-# Default spark config
-COPY ./spark-defaults.conf ${SPARK_HOME}/conf/spark-defaults.conf
-
 # Entrypoint: start spark connect
 COPY ./entrypoint.sh ${LOCAL_BIN}/
 
