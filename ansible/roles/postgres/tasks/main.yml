@@ -24,6 +24,20 @@
     group: root
     mode: "u=r,g=r,o=r"
 
+- name: Ensure docker initdb directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ postgres_docker_initdb_path }}"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+
+- name: Create docker initdb script
+  become: true
+  ansible.builtin.template:
+    src: init-catalog-dbs.sh.j2
+    dest: "{{ postgres_docker_initdb_path }}/init-catalogs-dbs.sh"
+    mode: "u=rwx,g=rwx,o=r"
+
 - name: Create container network
   become: true
   community.docker.docker_network:
@@ -40,12 +54,12 @@
     restart_policy: unless-stopped
     published_ports:
       - "{{ postgres_db_port }}:5432"
-    env: POSTGRES_DB="{{ postgres_db_name }}"
-      POSTGRES_USER="{{ postgres_db_user }}"
+    env: POSTGRES_USER="{{ postgres_db_user }}"
       POSTGRES_PASSWORD_FILE=/secrets/postgres-passwd
     volumes:
       - "{{ postgres_db_data_path }}:/var/lib/postgresql/data"
       - /secrets:/secrets:ro
+      - "{{ postgres_docker_initdb_path }}:/docker-entrypoint-initdb.d"
     networks:
       - name: "{{ postgres_container_network }}"
     comparisons:

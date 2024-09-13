@@ -29,8 +29,3 @@ SUPERSET_SECRET_KEY='{{ superset_secret_key }}'
 
 # Add our self-signed certificate to the bundle
 CA_CERT=/certs/cert.pem
-
-# Data Sources DB connections
-DATABASE_CONNECTION_NAME='ISIS Lakehouse'
-DATABASE_CONNECTION_URI='trino://{{ trino_admin_user }}:{{ trino_admin_passwd }}@{{ top_level_domain }}:{{
-trino_https_port }}/{{ iceberg_catalog_name }}'

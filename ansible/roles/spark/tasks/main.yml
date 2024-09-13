@@ -55,3 +55,6 @@
       - source: "{{ spark_image_build_path }}/spark-defaults.conf"
         target: /opt/spark/conf/spark-defaults.conf
         type: bind
+      - source: "{{ spark_image_build_path }}/log4j2.properties"
+        target: /opt/spark/conf/log4j2.properties
+        type: bind

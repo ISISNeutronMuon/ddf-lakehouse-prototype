@@ -8,3 +8,4 @@ minio_root_passwd: "{{ vault_minio_root_passwd }}"
 s3_region: eu-west-1 # required by API but unused
 s3_access_key_id: "{{ minio_root_user }}"
 s3_access_secret: "{{ vault_s3_access_secret }}"
+s3_endpoint: "http://{{ groups['minio'][0] }}:{{ minio_rest_port }}"

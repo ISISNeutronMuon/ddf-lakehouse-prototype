@@ -20,10 +20,15 @@
   ansible.builtin.template:
     src: "{{ superset_template.src }}"
     dest: "{{ superset_config_path }}/{{ superset_template.dest }}"
-    mode: "u=rw,g=r,o=r"
+    mode: "{{ superset_template.mode|default('u=rw,g=r,o=r') }}"
   loop:
     - { src: docker-compose.yml.j2, dest: docker-compose.yml }
     - { src: docker/dotenv.j2, dest: docker/.env }
+    - {
+        src: docker/docker-init.sh.j2,
+        dest: docker/docker-init.sh,
+        mode: "u=rwx,g=rx,o=r",
+      }
   loop_control:
     loop_var: superset_template
 

@@ -1,0 +1,15 @@
+connector.name=iceberg
+iceberg.catalog.type=jdbc
+iceberg.security=READ_ONLY
+iceberg.jdbc-catalog.catalog-name=accelerator
+iceberg.jdbc-catalog.driver-class=org.postgresql.Driver
+iceberg.jdbc-catalog.connection-url=jdbc:{{ iceberg_catalog_db_uri }}/iceberg_catalog_accelerator
+iceberg.jdbc-catalog.connection-user={{ iceberg_catalog_db_user }}
+iceberg.jdbc-catalog.connection-password={{ iceberg_catalog_db_passwd }}
+iceberg.jdbc-catalog.default-warehouse-dir=s3://iceberg-catalog-accelerator
+fs.native-s3.enabled=true
+s3.endpoint={{ s3_endpoint }}
+s3.region={{ s3_region }}
+s3.path-style-access=true
+s3.aws-access-key={{ s3_access_key_id }}
+s3.aws-secret-key={{ s3_access_secret }}
