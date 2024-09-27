@@ -58,8 +58,7 @@
   ansible.builtin.git:
     repo: https://github.com/martyngigg/superset/
     dest: "{{ superset_build_path }}"
-    single_branch: true
-    version: allow_prefixed_paths
+    version: allow_prefixed_paths_backup
   register: sources
 
 - name: Build docker image
@@ -68,10 +67,11 @@
     name: "{{ superset_image }}"
     path: "{{ superset_build_path }}"
     args:
-      BASE_PATH: "{{ superset_url_prefix }}"
+      BASE_PATH: "{{ superset_base_path if (superset_base_path != '/') else '' }}"
       PY_VER: 3.10-slim-bookworm
     target: lean
-  when: sources.changed
+    rebuild: always
+  when: sources.changed or (superset_rebuild_image | default(false))
 
 - name: Run Superset services
   become: true
