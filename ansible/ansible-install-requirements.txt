@@ -5,7 +5,7 @@ ansible-lint[lock]==24.7.0
 # Once this passlib issue is fixed upgrade passlib version and move brcypt to latest
 # (trapped) error reading bcrypt version
 #Traceback (most recent call last):
-#  File "/Users/dmn58364/Code/git/martyngigg/dv-data-platform-poc/ansible/condaenv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+#  File ".../lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
 #    version = _bcrypt.__about__.__version__
 bcrypt==4.0.1
 passlib==1.7.4
