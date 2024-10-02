@@ -1,8 +1,5 @@
 ---
-- name: Ensure Python openstack bindings are present
-  ansible.builtin.pip:
-    name: "python-openstackclient=={{ openstackclient_version }}"
-    state: present
+- include_tasks: ../../../tasks/ensure_openstack_bindings.yml
 
 - name: Ensure cloud server is present
   openstack.cloud.server:
