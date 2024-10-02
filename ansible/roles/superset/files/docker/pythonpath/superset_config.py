@@ -10,7 +10,7 @@ logger = logging.getLogger()
 # Application setup
 # If BASE_PATH is set we are assumed to be proxyed at this prefix location
 base_path = os.getenv("BASE_PATH", "")
-asset_base = os.getenv("ASSET_BASE_URL", base_path)
+asset_base = os.getenv("ASSET_BASE_URL") if os.getenv("ASSET_BASE_URL") else base_path
 if base_path:
     ENABLE_PROXY_FIX = True
     # Change x_port to 1 if the we are on the same port as the proxy server
