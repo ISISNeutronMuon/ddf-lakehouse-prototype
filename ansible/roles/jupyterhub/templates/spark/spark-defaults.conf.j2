@@ -1,11 +1,8 @@
 # Default system properties included when running spark-submit.
 # This is useful for setting default environmental settings.
-spark.sql.session.timeZone                    UTC
-spark.eventLog.enabled                        true
-spark.eventLog.dir                            {{ spark_container_home }}/spark-events
 spark.hadoop.fs.s3a.impl                      org.apache.hadoop.fs.s3a.S3AFileSystem
 spark.hadoop.fs.s3a.endpoint                  {{ s3_endpoint }}
-spark.history.fs.logDirectory                 {{ spark_container_home }}/spark-events
+spark.sql.session.timeZone                    UTC
 spark.sql.repl.eagerEval.enabled              true
 spark.sql.extensions                          org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
 spark.sql.catalogImplementation               in-memory
@@ -14,20 +11,24 @@ spark.sql.catalog.accelerator                        org.apache.iceberg.spark.Sp
 spark.sql.catalog.accelerator.io-impl                org.apache.iceberg.aws.s3.S3FileIO
 spark.sql.catalog.accelerator.warehouse              s3://iceberg-catalog-accelerator/
 spark.sql.catalog.accelerator.s3.endpoint            {{ s3_endpoint }}
+spark.sql.catalog.accelerator.client.region          eu-west-1
+spark.sql.catalog.accelerator.s3.access-key-id       {{ s3_access_key_id }}
+spark.sql.catalog.accelerator.s3.secret-access-key   {{ s3_access_secret }}
 spark.sql.catalog.accelerator.catalog-impl           org.apache.iceberg.jdbc.JdbcCatalog
 spark.sql.catalog.accelerator.uri                    jdbc:{{ iceberg_catalog_db_uri }}/iceberg_catalog_accelerator
 spark.sql.catalog.accelerator.jdbc.user              {{ iceberg_catalog_db_user }}
 spark.sql.catalog.accelerator.jdbc.password          {{ iceberg_catalog_db_passwd }}
 spark.sql.catalog.accelerator.jdbc.schema-version    V1
 
-spark.sql.catalog.facility                        org.apache.iceberg.spark.SparkCatalog
-spark.sql.catalog.facility.io-impl                org.apache.iceberg.aws.s3.S3FileIO
-spark.sql.catalog.facility.warehouse              s3://iceberg-catalog-facility
-spark.sql.catalog.facility.s3.endpoint            {{ s3_endpoint }}
-spark.sql.catalog.facility.catalog-impl           org.apache.iceberg.jdbc.JdbcCatalog
-spark.sql.catalog.facility.uri                    jdbc:{{ iceberg_catalog_db_uri }}/iceberg_catalog_facility
-spark.sql.catalog.facility.jdbc.user              {{ iceberg_catalog_db_user }}
-spark.sql.catalog.facility.jdbc.password          {{ iceberg_catalog_db_passwd }}
-spark.sql.catalog.facility.jdbc.schema-version    V1
-
-spark.sql.defaultCatalog                          facility
+spark.sql.catalog.facility                           org.apache.iceberg.spark.SparkCatalog
+spark.sql.catalog.facility.io-impl                   org.apache.iceberg.aws.s3.S3FileIO
+spark.sql.catalog.facility.warehouse                 s3://iceberg-catalog-facility/
+spark.sql.catalog.facility.s3.endpoint               {{ s3_endpoint }}
+spark.sql.catalog.facility.client.region             eu-west-1
+spark.sql.catalog.facility.s3.access-key-id          {{ s3_access_key_id }}
+spark.sql.catalog.facility.s3.secret-access-key      {{ s3_access_secret }}
+spark.sql.catalog.facility.catalog-impl              org.apache.iceberg.jdbc.JdbcCatalog
+spark.sql.catalog.facility.uri                       jdbc:{{ iceberg_catalog_db_uri }}/iceberg_catalog_facility
+spark.sql.catalog.facility.jdbc.user                 {{ iceberg_catalog_db_user }}
+spark.sql.catalog.facility.jdbc.password             {{ iceberg_catalog_db_passwd }}
+spark.sql.catalog.facility.jdbc.schema-version       V1
