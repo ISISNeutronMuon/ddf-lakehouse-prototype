@@ -1,8 +1,8 @@
 ---
-- name: Ensure working directory for Docker image build exists
+- name: Ensure configuration directory exists
   become: true
   ansible.builtin.file:
-    path: "{{ spark_image_build_path }}"
+    path: "{{ spark_config_path }}"
     state: directory
     mode: "u=rwx,g=rx,o=rx"
 
@@ -10,49 +10,75 @@
   become: true
   ansible.posix.synchronize:
     src: ./
-    dest: "{{ spark_image_build_path }}/"
+    dest: "{{ spark_config_path }}/"
     archive: false
     recursive: true
     delete: true
 
-- name: Ensure templated Docker image build files are present
-  become: true
-  ansible.builtin.template:
-    src: "{{ spark_template }}"
-    dest: "{{ spark_image_build_path }}/{{ spark_template | trim('.j2') }}"
-    mode: "u=rw,g=r,o=r"
-  loop:
-    - spark-defaults.conf.j2
-  loop_control:
-    loop_var: spark_template
-
-- name: Build container image
+- name: Build Spark container image
   become: true
   community.docker.docker_image_build:
     name: spark-iceberg
-    path: "{{ spark_image_build_path }}"
+    path: "{{ spark_config_path }}"
+    dockerfile: Dockerfile.spark
     rebuild: always
 
-- name: Run container
+- name: Create container network
+  become: true
+  community.docker.docker_network:
+    name: spark
+
+- name: Run Spark controller
   become: true
   community.docker.docker_container:
-    name: spark
+    name: spark-controller
     image: spark-iceberg
+    entrypoint: /bin/bash
+    command: "start-master.sh"
     state: started
     detach: true
     restart: true
     restart_policy: unless-stopped
     recreate: true
+    comparisons:
+      networks: strict
+      env: strict
     env:
-      AWS_REGION: "{{ s3_region }}"
-      AWS_ACCESS_KEY_ID: "{{ s3_access_key_id }}"
-      AWS_SECRET_ACCESS_KEY: "{{ s3_access_secret }}"
+      SPARK_MASTER_PORT: "{{ spark_controller_port | int }}"
+      SPARK_NO_DAEMONIZE: "true"
+    networks:
+      - name: spark
     published_ports:
+      - "{{ spark_controller_port }}:7077"
       - "{{ spark_controller_ui_port }}:8080"
-      - "{{ spark_connect_port }}:15002"
-      - "{{ spark_connect_ui_port }}:4040"
     mounts:
-      - source: "{{ spark_image_build_path }}/spark-defaults.conf"
+      - source: "{{ spark_config_path }}/log4j2.properties"
+        target: /opt/spark/conf/log4j2.properties
+        type: bind
+
+- name: Run Spark worker
+  become: true
+  community.docker.docker_container:
+    name: spark-worker
+    image: spark-iceberg
+    entrypoint: "/bin/bash"
+    command: "start-worker.sh spark://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:{{ spark_controller_port }}"
+    state: started
+    detach: true
+    restart: true
+    restart_policy: unless-stopped
+    recreate: true
+    comparisons:
+      networks: strict
+      env: strict
+    env:
+      SPARK_NO_DAEMONIZE: "true"
+    networks:
+      - name: spark
+    mounts:
+      - source: "{{ spark_config_path }}/log4j2.properties"
+        target: /opt/spark/conf/log4j2.properties
+        type: bind
         target: /opt/spark/conf/spark-defaults.conf
         type: bind
       - source: "{{ spark_image_build_path }}/log4j2.properties"

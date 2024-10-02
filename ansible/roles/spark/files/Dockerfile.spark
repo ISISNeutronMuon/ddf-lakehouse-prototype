@@ -19,15 +19,11 @@ RUN mvn dependency:copy-dependencies
 FROM python:3.10-bookworm
 
 # Arguments
-ARG SPARK_DOWNLOAD_URL=https://dlcdn.apache.org/spark/
+ARG SPARK_DOWNLOAD_BASE_URL=https://archive.apache.org/dist/spark
 ARG SPARK_VERSION=3.5.2
-ARG SPARK_MAJOR_VERSION=3.5
-ARG SCALA_VERSION=2.12
 
 # Environment
 ENV SPARK_HOME=/opt/spark
-ENV SCALA_VERSION=${SCALA_VERSION}
-ENV LOCAL_BIN=/usr/local/bin
 
 # Basic configuration
 ENV PATH="${SPARK_HOME}/sbin:${SPARK_HOME}/bin:${PATH}"
@@ -43,24 +39,20 @@ RUN apt-get update && \
   rm -rf /var/lib/apt/lists/*
 
 # Dirs
-RUN mkdir -p ${SPARK_HOME} \
+RUN mkdir -p \
+  ${SPARK_HOME} \
+  ${SPARK_HOME}/logs \
   ${SPARK_HOME}/spark-events
 WORKDIR ${SPARK_HOME}
 
 # Spark
-RUN curl ${SPARK_DOWNLOAD_URL}/spark-3.5.2/spark-3.5.2-bin-without-hadoop.tgz -o spark-${SPARK_VERSION}-bin-without-hadoop.tgz \
+RUN curl ${SPARK_DOWNLOAD_BASE_URL}/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-without-hadoop.tgz -o spark-${SPARK_VERSION}-bin-without-hadoop.tgz \
   && tar xvzf spark-${SPARK_VERSION}-bin-without-hadoop.tgz --directory ${SPARK_HOME} --strip-components 1 \
   && rm -rf spark-${SPARK_VERSION}-bin-without-hadoop.tgz
 
 # Additional Jars
 COPY --chown=root:root --from=spark-jars /source/target/dependency/ ${SPARK_HOME}/jars/
 
-# Entrypoint: start spark connect
-COPY ./entrypoint.sh ${LOCAL_BIN}/
-
 # File modes
 RUN chmod u+x ${SPARK_HOME}/sbin/* && \
-  chmod u+x ${SPARK_HOME}/bin/* && \
-  chmod u+x ${LOCAL_BIN}/*
-
-ENTRYPOINT ["entrypoint.sh"]
+  chmod u+x ${SPARK_HOME}/bin/*
