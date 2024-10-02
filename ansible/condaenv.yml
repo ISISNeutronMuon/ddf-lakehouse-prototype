@@ -1,4 +1,4 @@
-name: dv-data-platform-poc
+name: ddf-lakehouse-prototype
 
 dependencies:
   - python=3.12
