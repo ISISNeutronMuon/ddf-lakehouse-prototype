@@ -1,4 +1,6 @@
 ---
+- include_tasks: ../../../tasks/ensure_openstack_bindings.xml
+
 - name: Ensure security group is present in openstack
   openstack.cloud.security_group:
     cloud: "{{ openstack_cloud_name }}"
