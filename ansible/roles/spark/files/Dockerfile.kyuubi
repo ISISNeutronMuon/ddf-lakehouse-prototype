@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile
+FROM spark-iceberg
+
+# Arguments
+ARG KYUUBI_DOWNLOAD_BASE_URL=https://dlcdn.apache.org/kyuubi
+ARG KYUUBI_VERSION=1.9.2
+
+# Environment
+ENV KYUUBI_HOME=/opt/kyuubi
+
+# Basic configuration
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+  curl \
+  openjdk-17-jdk \
+  build-essential \
+  software-properties-common && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
+
+# Dirs
+RUN mkdir -p ${KYUUBI_HOME}
+WORKDIR ${KYUUBI_HOME}
+
+# Kyuubi
+RUN curl -Lo apache-kyuubi-${KYUUBI_VERSION}-bin.tgz ${KYUUBI_DOWNLOAD_BASE_URL}/kyuubi-${KYUUBI_VERSION}/apache-kyuubi-${KYUUBI_VERSION}-bin.tgz && \
+  tar xvzf apache-kyuubi-${KYUUBI_VERSION}-bin.tgz --strip-components=1 && \
+  rm -rf apache-kyuubi-${KYUUBI_VERSION}-bin.tgz
+
+ENTRYPOINT [ "bin/kyuubi", "run" ]

@@ -79,8 +79,35 @@
       - source: "{{ spark_config_path }}/log4j2.properties"
         target: /opt/spark/conf/log4j2.properties
         type: bind
+
+- name: Build Kyuubi container image
+  become: true
+  community.docker.docker_image_build:
+    name: kyuubi-spark
+    path: "{{ spark_config_path }}"
+    dockerfile: Dockerfile.kyuubi
+    rebuild: always
+
+- name: Run Kyuubi server
+  become: true
+  community.docker.docker_container:
+    name: kyuubi-spark
+    image: kyuubi-spark
+    state: started
+    detach: true
+    restart: true
+    restart_policy: unless-stopped
+    recreate: true
+    comparisons:
+      networks: strict
+    networks:
+      - name: spark
+    published_ports:
+      - "{{ spark_kyuubi_port }}:10009"
+    mounts:
+      - source: "{{ spark_config_path }}/spark-defaults.conf"
         target: /opt/spark/conf/spark-defaults.conf
         type: bind
-      - source: "{{ spark_image_build_path }}/log4j2.properties"
+      - source: "{{ spark_config_path }}/log4j2.properties"
         target: /opt/spark/conf/log4j2.properties
         type: bind
