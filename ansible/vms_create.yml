@@ -1,0 +1,24 @@
+---
+- name: Pre-play checks and setup
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - ansible.builtin.fail:
+        msg: "Exiting: play requires the variable 'inventory_filename' to be defined. Define it using the '-e inventory_filename=...' option n the command line."
+      when: inventory_filename is not defined
+    # Implicit localhost is not included in all so doesn't load the all variables by default
+    - ansible.builtin.include_vars:
+        dir: group_vars/all
+
+# Openstack resources
+- import_playbook: playbooks/minio/create.yml
+- import_playbook: playbooks/iceberg_catalog/create.yml
+- import_playbook: playbooks/spark/create.yml
+- import_playbook: playbooks/trino/create.yml
+- import_playbook: playbooks/jupyterhub/create.yml
+- import_playbook: playbooks/superset/create.yml
+- import_playbook: playbooks/traefik/create.yml
+
+# Record inventory
+- import_playbook: playbooks/inventory/inventory_persist.yml
