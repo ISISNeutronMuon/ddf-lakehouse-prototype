@@ -4,7 +4,10 @@
   ansible.builtin.apt:
     update_cache: true
     upgrade: "yes"
+  retries: 3
+  delay: 5
   register: updates
+  until: not updates.failed
 
 - name: Check if a reboot is required
   ansible.builtin.stat:
