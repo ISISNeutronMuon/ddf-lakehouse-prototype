@@ -40,7 +40,9 @@
 
 - name: Download The Littlest JupyterHub bootstrap script
   ansible.builtin.get_url:
-    url: https://tljh.jupyter.org/bootstrap.py
+    # The bootstrap script doesn allow versions to be defined and recently dropped support for Ubuntu 20.04
+    # so we have to use a version from before that commit landed
+    url: https://raw.githubusercontent.com/jupyterhub/the-littlest-jupyterhub/92465ade36cce37b764236072059c2f7d3995d93/bootstrap/bootstrap.py
     dest: /tmp/bootstrap.py
     mode: "u=rwx,g=rx,o=rx"
 
