@@ -1,6 +1,8 @@
 ---
 - name: Provision VMs for Spark
   hosts: localhost
+  connection: local
+  gather_facts: False
   vars:
     openstack_security_group_name: spark
     openstack_security_group_description: Ingress to spark ports

@@ -30,3 +30,10 @@
     groups: "{{ inventory_group }}"
     ansible_user: "{{ openstack_vm_user }}"
     ansible_python_interpreter: "{{ openstack_python_interpreter }}"
+
+- name: Ensuring machine is up to date
+  include_role:
+    name: packages_update
+    apply:
+      delegate_to: "{{ vm_info.server.addresses.Internal[0].addr }}"
+  when: vm_create_package_update

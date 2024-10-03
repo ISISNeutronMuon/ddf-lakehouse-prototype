@@ -1,6 +1,7 @@
 ---
 - name: Provision VM for Traefik service
   hosts: localhost
+  gather_facts: false
   vars:
     openstack_flavor: l3.nano
     openstack_server_name: traefik
