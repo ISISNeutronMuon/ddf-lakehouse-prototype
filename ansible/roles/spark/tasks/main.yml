@@ -79,8 +79,3 @@
       - source: "{{ spark_config_path }}/log4j2.properties"
         target: /opt/spark/conf/log4j2.properties
         type: bind
-        target: /opt/spark/conf/spark-defaults.conf
-        type: bind
-      - source: "{{ spark_image_build_path }}/log4j2.properties"
-        target: /opt/spark/conf/log4j2.properties
-        type: bind
