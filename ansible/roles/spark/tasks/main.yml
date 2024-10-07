@@ -45,6 +45,7 @@
       env: strict
     env:
       SPARK_MASTER_PORT: "{{ spark_controller_port | int }}"
+      SPARK_MASTER_OPTS: "-Dspark.deploy.defaultCores=8"
       SPARK_NO_DAEMONIZE: "true"
     networks:
       - name: spark
