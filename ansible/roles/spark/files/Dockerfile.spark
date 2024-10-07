@@ -1,21 +1,4 @@
 # syntax=docker/dockerfile
-######################################################################
-# Maven stage to fetch the required jar extensions for Spark
-# along with their dependencies.
-# The main Spark distribution is currently handled directly by
-# downloading it has part of the final image stage.
-######################################################################
-FROM maven:3.9.9-eclipse-temurin-17 AS spark-jars
-
-RUN mkdir /source
-COPY pom.xml /source/
-
-WORKDIR /source
-RUN mvn dependency:copy-dependencies
-
-######################################################################
-# Final image
-######################################################################
 FROM python:3.10-bookworm
 
 # Arguments
@@ -46,12 +29,9 @@ RUN mkdir -p \
 WORKDIR ${SPARK_HOME}
 
 # Spark
-RUN curl ${SPARK_DOWNLOAD_BASE_URL}/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-without-hadoop.tgz -o spark-${SPARK_VERSION}-bin-without-hadoop.tgz \
-  && tar xvzf spark-${SPARK_VERSION}-bin-without-hadoop.tgz --directory ${SPARK_HOME} --strip-components 1 \
-  && rm -rf spark-${SPARK_VERSION}-bin-without-hadoop.tgz
-
-# Additional Jars
-COPY --chown=root:root --from=spark-jars /source/target/dependency/ ${SPARK_HOME}/jars/
+RUN curl ${SPARK_DOWNLOAD_BASE_URL}/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz -o spark-${SPARK_VERSION}-bin-hadoop3.tgz \
+  && tar xvzf spark-${SPARK_VERSION}-bin-hadoop3.tgz --directory ${SPARK_HOME} --strip-components 1 \
+  && rm -rf spark-${SPARK_VERSION}-bin-hadoop3.tgz
 
 # File modes
 RUN chmod u+x ${SPARK_HOME}/sbin/* && \
