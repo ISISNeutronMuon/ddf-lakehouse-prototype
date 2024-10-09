@@ -90,6 +90,41 @@
     dest: "{{ pyspark_root.stdout }}/conf/spark-defaults.conf"
     mode: "u=rw,g=r,o=r"
 
+- name: Ensure spark-excel Dockerfile is present
+  become: true
+  ansible.builtin.template:
+    src: spark/Dockerfile.spark-excel.j2
+    dest: "/tmp/Dockerfile.spark-excel.j2"
+    mode: "u=rw,g=r,o=r"
+
+- name: Build spark-excel container image
+  become: true
+  community.docker.docker_image_build:
+    name: spark-excel
+    path: /tmp
+    dockerfile: Dockerfile.spark-excel.j2
+    rebuild: always
+
+- name: Create spark-excel container
+  become: true
+  community.docker.docker_container:
+    name: spark-excel
+    image: spark-excel
+    state: present
+
+- name: Copy spark-excel JAR from container
+  become: true
+  ansible.builtin.command:
+    cmd: "docker cp spark-excel:/artefacts/spark-excel-3.5.2_2.12.20.jar {{ pyspark_root.stdout }}/jars/"
+    creates: "{{ pyspark_root.stdout }}/jars/spark-excel-3.5.2_2.12.20.jar"
+
+- name: Remove spark-excel container
+  become: true
+  community.docker.docker_container:
+    name: spark-excel
+    image: spark-excel
+    state: absent
+
 - name: Ensure JupyterHub config files are present and up to date
   become: true
   ansible.builtin.template:

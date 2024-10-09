@@ -3,4 +3,6 @@
   hosts: jupyterhub
   roles:
     - role: cephfs_mount
+    - role: geerlingguy.docker
+      become: true
     - role: jupyterhub

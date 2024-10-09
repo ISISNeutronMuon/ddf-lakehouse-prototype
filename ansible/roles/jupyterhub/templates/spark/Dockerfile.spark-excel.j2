@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile
+######################################################################
+# Build the spark-excel plugin for the Spark version we are using.
+# Maven Central does not have all jars for later Spark versions
+######################################################################
+FROM maven:3.9.9-eclipse-temurin-17 AS spark-jars
+
+ARG MILL_VERSION=0.11.10
+ARG MILL_BASE_URL=https://github.com/lihaoyi/mill/releases/download
+ARG SCALA_VERSION=2.12.20
+ARG SPARK_EXCEL_SHA=4b2e719075ac08660324e145fc3a78ba6b1c6820
+ARG SPARK_EXCEL_BASE_URL=https://github.com/crealytics/spark-excel/archive
+ARG SPARK_VERSION=3.5.2
+
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+  unzip && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+RUN cd /build && \
+  curl -Lo spark-excel.zip ${SPARK_EXCEL_BASE_URL}/${SPARK_EXCEL_SHA}.zip && \
+  unzip spark-excel.zip && \
+  curl -Lo /usr/local/bin/mill ${MILL_BASE_URL}/${MILL_VERSION}/${MILL_VERSION}-assembly && \
+  chmod +x /usr/local/bin/mill
+
+RUN cd spark-excel-${SPARK_EXCEL_SHA} && \
+  mill spark-excel[${SCALA_VERSION},${SPARK_VERSION}].assembly
+
+RUN mkdir /artefacts && \
+  cp spark-excel-${SPARK_EXCEL_SHA}/out/spark-excel/${SCALA_VERSION}/${SPARK_VERSION}/assembly.dest/out.jar \
+  /artefacts/spark-excel-${SPARK_VERSION}_${SCALA_VERSION}.jar
