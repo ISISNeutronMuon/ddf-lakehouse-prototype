@@ -1,7 +1,20 @@
 # Dynamic traefik configuration
+tcp:
+  routers:
+    # Non-TLS
+    sparkcontroller:
+      entryPoints: sparkcontroller
+      rule: HostSNI(`*`)
+      service: sparkcontroller
+  services:
+    sparkcontroller:
+      loadBalancer:
+        servers:
+          - address: "{{ groups['spark'][0] }}:{{ spark_controller_port }}"
 
 http:
   routers:
+    # TLS
     traefik:
       entryPoints: websecure
       rule: PathPrefix(`/traefik`) || HeaderRegexp(`Referer`, `/traefik`)

@@ -71,6 +71,7 @@
     published_ports:
       - "80:80"
       - "443:443"
+      - "{{ spark_controller_port }}:{{ spark_controller_port }}"
       - "{{ trino_https_port }}:{{ trino_https_port }}"
     mounts:
       - type: bind

@@ -14,6 +14,7 @@ api:
   dashboard: true
 
 entryPoints:
+  # Non-TLS entrypoints
   web:
     address: ":80"
     http:
@@ -21,6 +22,10 @@ entryPoints:
         entryPoint:
           to: websecure
           scheme: https
+  sparkcontroller:
+    address: ":7077"
+
+  # TLS entrypoints
   websecure:
     address: ":443"
   trinosecure:

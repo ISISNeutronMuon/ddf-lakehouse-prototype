@@ -108,3 +108,12 @@
   ansible.builtin.command:
     cmd: tljh-config reload hub
   when: jupyterhub_configs.changed
+
+- name: Configure /etc/hosts
+  become: true
+  ansible.builtin.lineinfile:
+    backup: true
+    dest: /etc/hosts
+    regexp: ".*{{ top_level_domain }}$"
+    line: "{{ groups['traefik'][0] }} {{ top_level_domain }}"
+    state: "present"
