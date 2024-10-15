@@ -58,7 +58,7 @@
   ansible.builtin.git:
     repo: https://github.com/martyngigg/superset/
     dest: "{{ superset_build_path }}"
-    version: allow_prefixed_paths_backup
+    version: "{{ superset_build_git_ref }}"
   register: sources
 
 - name: Build docker image
