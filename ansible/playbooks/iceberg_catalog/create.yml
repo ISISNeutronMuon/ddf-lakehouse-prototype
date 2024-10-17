@@ -1,7 +1,6 @@
 ---
 - name: Provision VMs for Iceberg's catalog
   hosts: localhost
-  connection: local
   gather_facts: False
   vars:
     openstack_security_group_name: iceberg_catalog

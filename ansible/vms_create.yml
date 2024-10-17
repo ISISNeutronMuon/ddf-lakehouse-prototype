@@ -1,7 +1,6 @@
 ---
 - name: Pre-play checks and setup
   hosts: localhost
-  connection: local
   gather_facts: false
   tasks:
     - ansible.builtin.fail:

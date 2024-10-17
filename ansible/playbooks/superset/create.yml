@@ -1,7 +1,6 @@
 ---
 - name: Provision VMs for Apache Superset
   hosts: localhost
-  connection: local
   gather_facts: false
   vars:
     openstack_security_group_name: superset
