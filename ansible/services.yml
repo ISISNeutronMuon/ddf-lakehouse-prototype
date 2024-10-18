@@ -1,6 +1,6 @@
 ---
 - import_playbook: playbooks/minio/setup.yml
-- import_playbook: playbooks/iceberg_catalog/setup.yml
+- import_playbook: playbooks/nessie/setup.yml
 - import_playbook: playbooks/spark/setup.yml
 - import_playbook: playbooks/jupyterhub/setup.yml
 - import_playbook: playbooks/trino/setup.yml

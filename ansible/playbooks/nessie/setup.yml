@@ -1,0 +1,9 @@
+---
+- name: Configure Project Nessie to act as an Iceberg catalog
+  hosts: nessie
+  roles:
+    - role: cephfs_mount
+    - role: geerlingguy.docker
+      become: true
+    - role: postgres
+    - role: nessie

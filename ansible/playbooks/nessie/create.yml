@@ -1,21 +1,21 @@
 ---
-- name: Provision VMs for Iceberg's catalog
+- name: Provision VMs for Iceberg's Nessie catalog
   hosts: localhost
   gather_facts: False
   vars:
-    openstack_security_group_name: iceberg_catalog
+    openstack_security_group_name: nessie
     openstack_security_group_description: Ingress to catalog ports
     openstack_security_group_rules:
       - direction: ingress
         ether_type: IPv4
         protocol: tcp
-        port_range_min: "{{ iceberg_catalog_db_port }}"
-        port_range_max: "{{ iceberg_catalog_db_port }}"
+        port_range_min: "{{ nessie_port }}"
+        port_range_max: "{{ nessie_port }}"
     openstack_flavor: l3.nano
-    openstack_server_name: iceberg_catalog
+    openstack_server_name: nessie
     openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
     openstack_vm_user: ubuntu
-    inventory_group: iceberg_catalog
+    inventory_group: nessie
   roles:
     - role: security_group_create
     - role: vm_create

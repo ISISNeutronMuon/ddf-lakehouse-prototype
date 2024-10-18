@@ -1,0 +1,32 @@
+---
+- name: Ensure Nessie container is running
+  become: true
+  community.docker.docker_container:
+    name: nessie
+    image: "{{ nessie_image }}"
+    state: started
+    cleanup: true
+    detach: true
+    restart_policy: unless-stopped
+    published_ports:
+      # API port
+      - "{{ nessie_port }}:19120"
+    env:
+      # Version store
+      nessie.version.store.type=JDBC2
+      nessie.version.store.persist.jdbc.datasource=postgresql
+      quarkus.datasource.postgresql.jdbc.url="jdbc:postgresql://postgres:{{ nessie_store_port }}/{{ nessie_store_dbname }}"
+      quarkus.datasource.postgresql.username="{{ nessie_store_user }}"
+      quarkus.datasource.postgresql.password="{{ nessie_store_passwd }}"
+      nessie.catalog.default-warehouse=isis
+      nessie.catalog.warehouses.isis.location=s3://warehouse-isis/
+      nessie.catalog.service.s3.default-options.endpoint={{ s3_endpoint }}
+      nessie.catalog.service.s3.default-options.region=eu-west-1
+      nessie.catalog.service.s3.default-options.path-style-access=false
+      nessie.catalog.service.s3.default-options.access-key=urn:nessie-secret:quarkus:nessie.catalog.secrets.access-key
+      nessie.catalog.secrets.access-key.name="{{ s3_access_key_id }}"
+      nessie.catalog.secrets.access-key.secret="{{ s3_access_secret }}"
+    networks:
+      - name: "{{ nessie_container_network }}"
+    comparisons:
+      networks: strict

@@ -1,8 +1,0 @@
----
-iceberg_catalog_db_user: postgres
-iceberg_catalog_db_passwd: "{{ vault_iceberg_catalog_db_passwd }}"
-iceberg_catalog_db_port: 5432
-iceberg_catalog_db_uri: "postgresql://{{ groups['iceberg_catalog'][0] }}:{{ iceberg_catalog_db_port }}"
-iceberg_catalog_names:
-  - iceberg_catalog_facility
-  - iceberg_catalog_accelerator
