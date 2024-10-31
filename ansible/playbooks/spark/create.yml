@@ -19,7 +19,6 @@
     openstack_flavor: l3.small
     openstack_server_name: spark
     openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
-    openstack_vm_user: ubuntu
     inventory_group: spark
   roles:
     - role: security_group_create

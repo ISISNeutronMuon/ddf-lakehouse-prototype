@@ -9,6 +9,7 @@
 - name: Ensure Docker image build files are synchronized
   become: true
   ansible.posix.synchronize:
+    use_ssh_args: true
     src: ./
     dest: "{{ spark_config_path }}/"
     archive: false

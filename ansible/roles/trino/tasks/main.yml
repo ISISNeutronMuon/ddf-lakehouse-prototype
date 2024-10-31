@@ -16,6 +16,7 @@
 - name: Ensure Trino etc properties files are present
   become: true
   ansible.posix.synchronize:
+    use_ssh_args: true
     src: ./trino/
     dest: "{{ trino_config_path }}"
     archive: false

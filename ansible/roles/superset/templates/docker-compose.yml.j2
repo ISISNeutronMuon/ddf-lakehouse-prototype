@@ -12,10 +12,7 @@ x-superset-volumes: &superset-volumes
   - {{ superset_config_path }}/certs:/certs:ro
 x-networks: &superset-networks
   - {{ superset_container_network }}
-# Temporarily set an /etc/hosts reference until we get a proper
-# DNS registry entry created
-x-extra-hosts: &extra-hosts
-  - "{{ top_level_domain }}:{{ groups['traefik'][0] }}"
+
 
 services:
   redis:
@@ -42,7 +39,6 @@ services:
         condition: service_completed_successfully
     volumes: *superset-volumes
     networks: *superset-networks
-    extra_hosts: *extra-hosts
 
   superset-init:
     env_file: *superset-env
@@ -55,7 +51,6 @@ services:
     healthcheck:
       disable: true
     networks: *superset-networks
-    extra_hosts: *extra-hosts
 
   superset-worker:
     env_file: *superset-env
@@ -70,7 +65,6 @@ services:
     user: *superset-user
     volumes: *superset-volumes
     networks: *superset-networks
-    extra_hosts: *extra-hosts
     healthcheck:
       test:
         [
@@ -91,7 +85,6 @@ services:
     user: *superset-user
     volumes: *superset-volumes
     networks: *superset-networks
-    extra_hosts: *extra-hosts
     healthcheck:
       disable: true
 

@@ -5,6 +5,7 @@
   vars:
     openstack_flavor: l3.nano
     openstack_server_name: traefik
+    openstack_server_fip: 130.246.214.124
     openstack_security_group_name: traefik
     openstack_security_group_description: Ingress to traefik ports
     openstack_security_group_rules:
@@ -19,7 +20,6 @@
         port_range_min: "{{ spark_controller_port }}"
         port_range_max: "{{ spark_controller_port }}"
     openstack_security_groups: [default, "traefik", "HTTP", "HTTPS"]
-    openstack_vm_user: ubuntu
     inventory_group: traefik
   roles:
     - role: security_group_create

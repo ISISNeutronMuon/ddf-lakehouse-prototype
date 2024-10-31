@@ -8,4 +8,5 @@ ansible-lint[lock]==24.7.0
 #  File ".../lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
 #    version = _bcrypt.__about__.__version__
 bcrypt==4.0.1
+jmespath==1.0.1
 passlib==1.7.4

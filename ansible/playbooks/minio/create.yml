@@ -19,7 +19,6 @@
     openstack_flavor: l3.nano
     openstack_server_name: minio
     openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
-    openstack_vm_user: ubuntu
     inventory_group: minio
   roles:
     - role: security_group_create

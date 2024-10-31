@@ -1,0 +1,13 @@
+---
+- name: Provision management VM
+  hosts: localhost
+  gather_facts: False
+  vars:
+    openstack_flavor: l3.nano
+    openstack_image: ubuntu-focal-20.04-nogui
+    openstack_server_name: management_vm
+    openstack_security_groups: [default]
+    openstack_server_fip: "{{ openstack_management_vm_fip }}"
+    inventory_group: management_vm
+  roles:
+    - role: vm_create

@@ -20,6 +20,7 @@
 - name: Ensure Traefik etc files are present
   become: true
   ansible.posix.synchronize:
+    use_ssh_args: true
     src: ./etc/
     dest: "{{ traefik_config_path }}/etc"
     archive: false
