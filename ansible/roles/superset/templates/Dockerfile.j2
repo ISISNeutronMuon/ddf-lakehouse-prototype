@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile
+FROM {{ superset_base_image }}
+
+# Install required APT packages for building Python wheels
+#   python-ldap: build-essential
+USER root
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+  build-essential &&\
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
+
+# Install Python requirements
+RUN pip install --no-cache-dir \
+  openpyxl==3.1.5 \
+  psycopg2-binary==2.9.9 \
+  prophet==1.1.5 \
+  python-ldap==3.4.4
+
+# Run as superset
+USER superset

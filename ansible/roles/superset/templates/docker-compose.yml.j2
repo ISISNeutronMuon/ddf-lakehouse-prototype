@@ -1,4 +1,4 @@
-x-superset-image: &superset-image {{ superset_image }}
+x-superset-build: &superset-build ./
 x-superset-user: &superset-user root
 x-superset-depends-on: &superset-depends-on
   redis:
@@ -26,7 +26,7 @@ services:
 
   superset:
     env_file: *superset-env
-    image: *superset-image
+    build: *superset-build
     container_name: superset_app
     command: [ "/app/docker/docker-bootstrap.sh", "app-gunicorn" ]
     user: *superset-user
@@ -42,7 +42,7 @@ services:
 
   superset-init:
     env_file: *superset-env
-    image: *superset-image
+    build: *superset-build
     container_name: superset_init
     command: [ "/app/docker/docker-init.sh" ]
     depends_on: *superset-depends-on
@@ -54,7 +54,7 @@ services:
 
   superset-worker:
     env_file: *superset-env
-    image: *superset-image
+    build: *superset-build
     container_name: superset_worker
     command: [ "/app/docker/docker-bootstrap.sh", "worker" ]
     restart: unless-stopped
@@ -74,7 +74,7 @@ services:
 
   superset-worker-beat:
     env_file: *superset-env
-    image: *superset-image
+    build: *superset-build
     container_name: superset_worker_beat
     command: [ "/app/docker/docker-bootstrap.sh", "beat" ]
     restart: unless-stopped

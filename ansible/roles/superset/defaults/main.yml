@@ -1,6 +1,6 @@
 ---
 superset_build_path: /build/superset
-superset_image: local/superset-prefixed
+superset_base_image: local/superset-prefixed
 superset_config_path: /config/superset
 superset_metadb_image: ghcr.io/cloudnative-pg/postgresql:16.3-bookworm
 superset_metadb: superset

@@ -27,5 +27,9 @@ SUPERSET_PORT={{ superset_http_port }}
 # Make sure you set this to a unique secure random value on production
 SUPERSET_SECRET_KEY='{{ superset_secret_key }}'
 
+# Auth
+LDAP_SERVER={{ stfc_ldap_server }}
+LDAP_CACERTFILE=/certs/stfc-ca.pem
+
 # Add our self-signed certificate to the bundle
-CA_CERT=/certs/cert.pem
+CA_CERT=/certs/domain-cert.pem

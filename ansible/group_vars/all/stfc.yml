@@ -1,0 +1,3 @@
+---
+stfc_ldap_server: "{{ vault_stfc_ldap_server }}"
+stfc_ca_cert: "{{ vault_stfc_ca_cert }}"

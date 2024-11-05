@@ -1,4 +1,9 @@
 ---
+- name: Create container network
+  become: true
+  community.docker.docker_network:
+    name: "{{ superset_container_network }}"
+
 - name: Ensure configuration directory exists
   become: true
   ansible.builtin.file:
@@ -23,6 +28,7 @@
     dest: "{{ superset_config_path }}/{{ superset_template.dest }}"
     mode: "{{ superset_template.mode|default('u=rw,g=r,o=r') }}"
   loop:
+    - { src: Dockerfile.j2, dest: Dockerfile }
     - { src: docker-compose.yml.j2, dest: docker-compose.yml }
     - { src: docker/dotenv.j2, dest: docker/.env }
     - {
@@ -33,11 +39,6 @@
   loop_control:
     loop_var: superset_template
 
-- name: Create container network
-  become: true
-  community.docker.docker_network:
-    name: "{{ superset_container_network }}"
-
 - name: Ensure certificates directory exists
   become: true
   ansible.builtin.file:
@@ -47,12 +48,21 @@
 
 - name: Ensure certificates are present
   become: true
+  no_log: true
   ansible.builtin.copy:
-    dest: "{{ superset_config_path }}/certs/cert.pem"
-    content: "{{ tls_certificate_cert }}"
+    dest: "{{ superset_config_path }}/certs/{{ certificate.filename }}"
+    content: "{{ certificate.content }}"
     owner: root
     group: root
     mode: "u=r,o=,g="
+  loop:
+    - {
+        filename: domain-cert.pem,
+        content: "{{ vault_tls_domain_certificate_cert }}",
+      }
+    - { filename: stfc-ca.pem, content: "{{ stfc_ca_cert }}" }
+  loop_control:
+    loop_var: certificate
 
 - name: Pull Superset sources
   become: true
@@ -62,21 +72,22 @@
     version: "{{ superset_build_git_ref }}"
   register: sources
 
-- name: Build docker image
+- name: Build base Superset docker image
   become: true
   community.docker.docker_image_build:
-    name: "{{ superset_image }}"
+    name: "{{ superset_base_image }}"
     path: "{{ superset_build_path }}"
     args:
       BASE_PATH: "{{ superset_base_path if (superset_base_path != '/') else '' }}"
       PY_VER: 3.10-slim-bookworm
     target: lean
     rebuild: always
-  when: sources.changed or (superset_rebuild_image | default(false))
+  when: sources.changed or (superset_rebuild_base_image | default(false))
 
 - name: Run Superset services
   become: true
   community.docker.docker_compose_v2:
     project_src: "{{ superset_config_path }}"
+    build: always
     recreate: always
     state: present
