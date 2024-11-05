@@ -56,10 +56,6 @@
     group: root
     mode: "u=r,o=,g="
   loop:
-    - {
-        filename: domain-cert.pem,
-        content: "{{ vault_tls_domain_certificate_cert }}",
-      }
     - { filename: stfc-ca.pem, content: "{{ stfc_ca_cert }}" }
   loop_control:
     loop_var: certificate
