@@ -4,7 +4,6 @@
   gather_facts: False
   vars:
     openstack_flavor: l3.small
-    openstack_image: ubuntu-noble-24.04-nogui
     openstack_server_name: jupyterhub
     openstack_security_groups: [default, "HTTP"]
     inventory_group: jupyterhub

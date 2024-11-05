@@ -2,7 +2,7 @@
 openstack_project_name: ISIS-DataArchitecture-Prototypes
 openstackclient_version: 7.2.0
 octaviaclient_version: 3.8.0
-openstack_image: ubuntu-focal-20.04-nogui
+openstack_image: ubuntu-noble-24.04-nogui
 openstack_python_interpreter: /usr/bin/python3
 openstack_vm_user: ubuntu
 
