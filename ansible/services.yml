@@ -1,8 +1,0 @@
----
-- import_playbook: playbooks/minio/setup.yml
-- import_playbook: playbooks/nessie/setup.yml
-- import_playbook: playbooks/spark/setup.yml
-- import_playbook: playbooks/jupyterhub/setup.yml
-- import_playbook: playbooks/trino/setup.yml
-- import_playbook: playbooks/superset/setup.yml
-- import_playbook: playbooks/traefik/setup.yml
