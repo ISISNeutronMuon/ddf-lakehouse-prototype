@@ -17,27 +17,6 @@
   loop_control:
     loop_var: traefik_dir
 
-- name: Ensure Traefik etc files are present
-  become: true
-  ansible.posix.synchronize:
-    use_ssh_args: true
-    src: ./etc/
-    dest: "{{ traefik_config_path }}/etc"
-    archive: false
-    recursive: true
-    delete: true
-
-- name: Regenerate Traefik template files
-  become: true
-  ansible.builtin.template:
-    src: "{{ traefik_template }}"
-    dest: "{{ traefik_config_path }}/{{ traefik_template | trim('.j2') }}"
-    mode: "u=rw,g=r,o=r"
-  loop:
-    - etc/traefik/dynamic/data-platform.yml.j2
-  loop_control:
-    loop_var: traefik_template
-
 - name: Ensure TLS certifcates are present
   become: true
   no_log: true
@@ -59,6 +38,18 @@
   loop_control:
     loop_var: traefik_tls
 
+- name: Regenerate Traefik template files
+  become: true
+  ansible.builtin.template:
+    src: "{{ traefik_template }}"
+    dest: "{{ traefik_config_path }}/{{ traefik_template | trim('.j2') }}"
+    mode: "u=rw,g=r,o=r"
+  loop:
+    - etc/traefik/traefik.yml.j2
+    - etc/traefik/dynamic/data-platform.yml.j2
+  loop_control:
+    loop_var: traefik_template
+
 - name: Ensure Traefik container is running
   become: true
   community.docker.docker_container:
@@ -74,6 +65,7 @@
       - "443:443"
       - "{{ spark_controller_port }}:{{ spark_controller_port }}"
       - "{{ trino_https_port }}:{{ trino_https_port }}"
+      - "{{ minio_console_https_port }}:{{ minio_console_https_port }}"
     mounts:
       - type: bind
         source: "{{ traefik_certs_root }}/dataplatform_cert.pem"

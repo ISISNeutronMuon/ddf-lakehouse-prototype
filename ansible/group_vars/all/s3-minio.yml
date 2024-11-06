@@ -1,7 +1,9 @@
 ---
 minio_data_path: "{{ cephfs_mount_mount_path }}/live/minio/data"
-minio_rest_port: 9000
-minio_console_port: 9001
+minio_rest_http_port: 9000
+minio_rest_https_port: 9000
+minio_console_http_port: 9001
+minio_console_https_port: 9443
 minio_root_user: admin
 minio_root_passwd: "{{ vault_minio_root_passwd }}"
 

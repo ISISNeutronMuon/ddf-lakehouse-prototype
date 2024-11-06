@@ -42,6 +42,11 @@ http:
       rule: PathPrefix(`/`)
       service: trino
       tls: {}
+    minio:
+      entryPoints: miniosecure
+      rule:  PathPrefix(`/`)
+      service: minio
+      tls: {}
 
   middlewares:
     dashboardauth:
@@ -70,6 +75,10 @@ http:
       loadBalancer:
         servers:
           - url: "{{ trino_coordinator_url }}"
+    minio:
+      loadBalancer:
+        servers:
+          - url: "http://{{ groups['minio'][0] }}:{{ minio_console_http_port }}"
 
 tls:
   certificates:

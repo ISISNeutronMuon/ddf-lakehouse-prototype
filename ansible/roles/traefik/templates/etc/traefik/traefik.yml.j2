@@ -30,6 +30,8 @@ entryPoints:
     address: ":443"
   trinosecure:
     address: ":8443"
+  miniosecure:
+    address: ":{{ minio_console_https_port }}"
 
 providers:
   file:
