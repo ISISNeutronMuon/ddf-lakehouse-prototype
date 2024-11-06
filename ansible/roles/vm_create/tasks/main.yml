@@ -10,9 +10,10 @@
     key_name: "{{ openstack_key_name }}"
     network: "{{ openstack_virtual_network.name | default('Internal') }}"
     auto_floating_ip: false
-    security_groups: "{{ openstack_security_groups }}"
+    security_groups: "{{ openstack_security_groups | default(['default']) }}"
     timeout: 200
     state: present
+    sdk_log_level: "{{ openstack_sdk_log_level | default('INFO') }}"
   register: vm_info
 
 - name: Associate floating IP to instance
