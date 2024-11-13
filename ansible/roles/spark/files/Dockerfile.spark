@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile
-FROM python:3.10-bookworm
+# WARNING: This needs to match the version running in JupyterHub
+FROM python:3.12-bookworm
 
 # Arguments
 ARG SPARK_DOWNLOAD_BASE_URL=https://archive.apache.org/dist/spark

@@ -1,4 +1,5 @@
 ---
+# WARNING: This needs to match the version running in the Spark Dockerfile
 - name: Install required APT packages
   become: true
   ansible.builtin.apt:
