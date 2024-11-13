@@ -31,8 +31,7 @@
     mode: "u=rw,g=r,o=r"
   loop:
     - etc/config.properties.j2
-    - etc/catalog/accelerator.properties.j2
-    - etc/catalog/facility.properties.j2
+    - etc/catalog/isis.properties.j2
   loop_control:
     loop_var: trino_template
 
