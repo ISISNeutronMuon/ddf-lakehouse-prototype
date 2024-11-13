@@ -98,10 +98,21 @@
     mode: "u=rw,g=r,o=r"
   loop:
     - config/config.yaml.j2
-    - config/jupyterhub_config.d/00-logout.py.j2
+    - config/jupyterhub_config.d/00-spawner.py.j2
+    - config/jupyterhub_config.d/01-jupyterhub.py.j2
   loop_control:
     loop_var: jupyterhub_template
   register: jupyterhub_configs
+
+- name: Ensure Jupyter config files are present
+  become: true
+  ansible.posix.synchronize:
+    use_ssh_args: true
+    src: jupyter/
+    dest: /opt/tljh/notebook/
+    archive: false
+    recursive: true
+    delete: true
 
 - name: Reload JupyterHub
   become: true
