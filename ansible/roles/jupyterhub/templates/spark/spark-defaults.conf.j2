@@ -4,7 +4,8 @@ spark.jars.packages                           {{ jupyterhub_spark_packages | joi
 
 spark.hadoop.fs.s3.impl                       org.apache.hadoop.fs.s3a.S3AFileSystem
 spark.hadoop.fs.s3a.endpoint                  {{ s3_endpoint }}
-spark.hadoop.fs.s3a.endpoint.region           eu-west-1
+spark.hadoop.fs.s3a.endpoint.region           {{ s3_region }}
+spark.hadoop.fs.s3a.path.style.access         true
 
 spark.sql.session.timeZone                    UTC
 spark.sql.repl.eagerEval.enabled              true
@@ -13,5 +14,5 @@ spark.sql.catalogImplementation               in-memory
 
 spark.sql.catalog.isis                        org.apache.iceberg.spark.SparkCatalog
 spark.sql.catalog.isis.type                   rest
-spark.sql.catalog.isis.uri                    {{  nessie_iceberg_uri }}
+spark.sql.catalog.isis.uri                    {{  nessie_iceberg_catalog.uri }}
 spark.sql.catalog.isis.authentication.type    NONE

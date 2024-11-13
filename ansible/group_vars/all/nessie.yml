@@ -2,9 +2,10 @@
 nessie_image: ghcr.io/projectnessie/nessie:0.99.0
 nessie_container_network: nessie
 nessie_port: 19120
-nessie_iceberg_uri: "http://{{ groups['nessie'][0] }}:{{ nessie_port }}/iceberg/"
-nessie_iceberg_catalogs:
-  - isis
+nessie_iceberg_catalog:
+  name: isis
+  uri: "http://{{ groups['nessie'][0] }}:{{ nessie_port }}/iceberg/"
+  location: s3://warehouse-isis/
 
 nessie_store_port: 5432
 nessie_store_dbname: nessiedb

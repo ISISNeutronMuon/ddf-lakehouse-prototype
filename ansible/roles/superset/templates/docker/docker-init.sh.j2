@@ -59,10 +59,8 @@ superset init
 echo_step "3" "Complete" "Setting up roles and perms"
 
 # Create a database connection
-echo_step "4" "Starting" "Setting up data source database connection(s)"
-{% for catalog_name in nessie_iceberg_catalogs %}
+echo_step "4" "Starting" "Setting up Iceberg catalog connection"
 superset set-database-uri \
-  --database_name {{ catalog_name }} \
-  --uri "trino://{{ trino_admin_user }}:{{ trino_admin_passwd }}@{{ top_level_domain }}:{{ trino_https_port }}/{{ catalog_name }}"
-{% endfor %}
+  --database_name {{ nessie_iceberg_catalog.name }} \
+  --uri "trino://{{ trino_admin_user }}:{{ trino_admin_passwd }}@{{ top_level_domain }}:{{ trino_https_port }}/{{ nessie_iceberg_catalog.name }}"
 echo_step "4" "Complete" "Setting up data source database connection"

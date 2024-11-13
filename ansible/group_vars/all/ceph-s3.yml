@@ -1,0 +1,5 @@
+---
+ceph_s3_endpoint: https://s3.echo.stfc.ac.uk
+ceph_s3_region: eu-west-1 # required by API but unused
+ceph_s3_access_key_id: "{{ vault_echo_access_id }}"
+ceph_s3_access_secret: "{{ vault_echo_access_secret }}"
