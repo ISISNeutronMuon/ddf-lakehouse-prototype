@@ -1,4 +1,4 @@
-ansible==10.1
+ansible==10.6.0
 ansible-lint[lock]==24.7.0
 # Pinned bcrypt to avoid seeing the following warning. It's not an error but looks
 # too much like one. Fixed required in passlib: https://foss.heptapod.net/python-libs/passlib/-/issues/190
