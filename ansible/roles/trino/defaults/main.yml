@@ -1,5 +1,5 @@
 ---
-trino_image: trinodb/trino:452
+trino_image: trinodb/trino:464
 trino_config_path: /config/trino
 trino_data_path: /var/lib/trino/data
 trino_http_port: 8060
