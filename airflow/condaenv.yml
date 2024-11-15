@@ -1,0 +1,9 @@
+# Environment to build towards using Apache Airflow. This is a Conda environment
+# for local development of airflow tasks
+# Individual DAGs have folders with their own requirements in them
+name: ddf-lakehouse-prototype-airflow
+
+dependencies:
+  - python=3.12
+  - pip=24.0
+  - pip-tools=7.4.1

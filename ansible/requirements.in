@@ -1,6 +1,5 @@
-# Generate requirements.txt, e.g. with Docker:
-# docker run --rm -v $PWD:/src -w /src python:3.12-bookworm bash \
-#   -c "pip install pip-tools && pip-compile --quiet --strip-extras --no-annotate -o ./requirements.txt ./requirements.in"
+# Generate requirements.txt with:
+#   pip-compile --quiet --strip-extras --no-annotate -o ./requirements.txt ./requirements.in
 -c constraints.txt
 
 ansible==10.6.0
