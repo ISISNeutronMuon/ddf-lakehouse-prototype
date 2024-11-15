@@ -4,12 +4,12 @@
 
 An optional [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)
 environment file, `condaenv.yml`, is provided to setup a working Ansible version within Conda.
-For other Python installations a `ansible-install-requirements.txt` file is provided.
+For other Python installations a `requirements.txt` file is provided.
 
 Once Ansible is installed, install the additional Ansible Galaxy roles with:
 
 ```sh
-ansible-galaxy role install --roles-path galaxy_roles
+ansible-galaxy role install --roles-path galaxy_roles -r requirements-ansible-galaxy.yml
 ```
 
 The `galaxy_roles` path has been added to `.gitignore`.
