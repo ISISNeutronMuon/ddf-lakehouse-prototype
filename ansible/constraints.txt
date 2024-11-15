@@ -1,0 +1,11 @@
+# Pins for transitiive dependency issues
+
+# Pinned bcrypt to avoid seeing the following warning. It's not an error but looks
+# too much like one. Fixed required in passlib: https://foss.heptapod.net/python-libs/passlib/-/issues/190
+# Once this passlib issue is fixed upgrade passlib version and move brcypt to latest
+# (trapped) error reading bcrypt version
+#Traceback (most recent call last):
+#  File ".../lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+#    version = _bcrypt.__about__.__version__
+bcrypt==4.0.1
+passlib==1.7.4
