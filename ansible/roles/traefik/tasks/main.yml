@@ -62,10 +62,11 @@
     restart_policy: unless-stopped
     published_ports:
       - "80:80"
-      - "443:443"
       - "{{ spark_controller_port }}:{{ spark_controller_port }}"
+      - "443:443"
       - "{{ trino_https_port }}:{{ trino_https_port }}"
       - "{{ minio_console_https_port }}:{{ minio_console_https_port }}"
+      - "{{ spark_controller_ui_https_port }}:{{ spark_controller_ui_https_port }}"
     mounts:
       - type: bind
         source: "{{ traefik_certs_root }}/dataplatform_cert.pem"

@@ -16,7 +16,7 @@ http:
   routers:
     # TLS
     traefik:
-      entryPoints: websecure
+      entryPoints: web_tls
       rule: PathPrefix(`/traefik`) || HeaderRegexp(`Referer`, `/traefik`)
       service: api@internal
       middlewares:
@@ -24,12 +24,12 @@ http:
         - dashboardauth
       tls: {}
     jupyterhub:
-      entryPoints: websecure
+      entryPoints: web_tls
       rule: PathPrefix(`{{ jupyterhub_base_path }}`)
       service: jupyterhub
       tls: {}
     superset:
-      entryPoints: websecure
+      entryPoints: web_tls
       rule: PathPrefix(`{{ superset_base_path }}`)
       service: superset
 {% if superset_base_path != '/' %}
@@ -38,14 +38,19 @@ http:
 {% endif %}
       tls: {}
     trino:
-      entryPoints: trinosecure
+      entryPoints: trino_tls
       rule: PathPrefix(`/`)
       service: trino
       tls: {}
     minio:
-      entryPoints: miniosecure
+      entryPoints: minio_tls
       rule:  PathPrefix(`/`)
       service: minio
+      tls: {}
+    sparkcontrollerui:
+      entryPoints: sparkcontrollerui_tls
+      rule:  PathPrefix(`/`)
+      service: sparkcontrollerui
       tls: {}
 
   middlewares:
@@ -79,6 +84,10 @@ http:
       loadBalancer:
         servers:
           - url: "http://{{ groups['minio'][0] }}:{{ minio_console_http_port }}"
+    sparkcontrollerui:
+      loadBalancer:
+        servers:
+          - url: "http://{{ groups['spark'][0] }}:{{ spark_controller_ui_port }}"
 
 tls:
   certificates:

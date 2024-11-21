@@ -1,3 +1,4 @@
 ---
 spark_controller_port: 7077
 spark_controller_ui_port: 8080
+spark_controller_ui_https_port: 8843
