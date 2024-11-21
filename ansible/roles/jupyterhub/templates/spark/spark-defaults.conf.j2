@@ -1,5 +1,7 @@
 # Default system properties included when running spark-submit.
 # This is useful for setting default environmental settings.
+spark.ui.reverseProxy                         true
+spark.ui.reverseProxyUrl                      https://{{ top_level_domain }}:{{ spark_controller_ui_https_port }}"
 spark.jars.packages                           {{ jupyterhub_spark_packages | join(",") }}
 
 spark.hadoop.fs.s3.impl                       org.apache.hadoop.fs.s3a.S3AFileSystem

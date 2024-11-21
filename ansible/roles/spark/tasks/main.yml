@@ -46,7 +46,7 @@
       env: strict
     env:
       SPARK_MASTER_PORT: "{{ spark_controller_port | int }}"
-      SPARK_MASTER_OPTS: "-Dspark.deploy.defaultCores=8"
+      SPARK_MASTER_OPTS: "-Dspark.deploy.defaultCores=8 -Dspark.ui.reverseProxy=true -Dspark.ui.reverseProxyUrl=https://{{ top_level_domain }}:{{ spark_controller_ui_https_port }}"
       SPARK_NO_DAEMONIZE: "true"
     networks:
       - name: spark
@@ -75,6 +75,7 @@
       env: strict
     env:
       SPARK_NO_DAEMONIZE: "true"
+      SPARK_WORKER_OPTS: "-Dspark.ui.reverseProxy=true -Dspark.ui.reverseProxyUrl=https://{{ top_level_domain }}:{{ spark_controller_ui_https_port }}"
     networks:
       - name: spark
     mounts:
