@@ -4,6 +4,7 @@ import datetime as dt
 from enum import StrEnum
 from pathlib import Path
 import os
+from s3path import S3Path
 from typing import Mapping, Optional, Sequence
 
 from dotenv import load_dotenv
@@ -35,16 +36,14 @@ OPRALOGDB_URI = (
 # unique_key columnds are used to define an ordering for the table
 OPRALOGDB_TABLES: Mapping[str, Optional[Mapping[str, str]]] = dict(
     LOGBOOKS=dict(unique_keys=("LOGBOOK_ID",), partition_by=None),
-    LOGBOOK_ENTRIES=dict(
-        unique_keys=("LOGBOOK_ID", "ENTRY_ID"), partition_by=["LOGBOOK_ID"]
-    ),
+    LOGBOOK_ENTRIES=dict(unique_keys=("LOGBOOK_ID", "ENTRY_ID"), partition_by=None),
     ENTRIES=dict(unique_keys=["ENTRY_ID"], partition_by=None),
     MORE_ENTRY_COLUMNS=dict(
         unique_keys=["ENTRY_ID", "COLUMN_NO", "ENTRY_TYPE_ID"],
-        partition_by=["ENTRY_ID"],
+        partition_by=None,
     ),
     ADDITIONAL_COLUMNS=dict(
-        unique_keys=["COLUMN_NO", "ENTRY_TYPE_ID"], partition_by=["COLUMN_NO"]
+        unique_keys=["COLUMN_NO", "ENTRY_TYPE_ID"], partition_by=None
     ),
 )
 OPRALOGDB_LOGBOOKS = ["MCR_RUNNING_LOG"]
@@ -58,8 +57,9 @@ S3_STORAGE_OPTIONS = {
 }
 
 # Task Configuration
-STAGING_ROOT = Path(os.environ["STAGING_ROOT"]) / "opralog"
-INCOMING_DIR = "in"
+STAGING_ROOT = os.environ["STAGING_ROOT"]
+OPRALOG_DIR = "opralog"
+INCOMING_DIR = "incoming"
 PARQUET_COMPRESSION = "snappy"
 ##########
 
@@ -72,44 +72,51 @@ class SourceLoadType(StrEnum):
     Incremental = "incremental"
 
 
-def is_s3_storage(path: Path) -> bool:
-    """Return True if path is s3 storage"""
-    return str(path).startswith("s3")
-
-
 def write_parquet(
     target: Path, df: pl.DataFrame, partition_by: Optional[Sequence[str]] = None
-):
-    """Write the given DataFrame to the target path as a parquet file/dataset
+) -> Path:
+    """Write the given DataFrame to the target path as a parquet file/dataset.
 
     :param filepath: A target path for the file to write
     :param df: A Polars DataFrame
     :param partition_by: An optional list of column names
     """
-    if is_s3_storage(target):
+    if isinstance(target, S3Path):
         fs = S3FileSystem(client_kwargs=S3_STORAGE_OPTIONS)
-        # target path should not include protocol
-        target = "/".join(target.parts[1:])
     else:
         fs = LocalFileSystem(auto_mkdir=False)
+
+    # If a path with the target name exists we remove it. Existing paths can
+    # cause issues if for example a path is first stored using partition data in a directory
+    # and is then updated to a non-partitioned file. In an S3 bucket both a directory
+    # and file with the same name are allowed and this confuses the spark load steps
+    # and duplicates the data.
+    target_as_str = str(target)  ## the remaining calls require a string path
+    if fs.exists(target_as_str):
+        fs.rm(
+            target_as_str,
+            recursive=True,
+        )
 
     if partition_by is not None:
         pq.write_to_dataset(
             df.to_arrow(),
-            target,
+            target_as_str,
             partition_cols=partition_by,
             filesystem=fs,
             compression=PARQUET_COMPRESSION,
         )
     else:
         pq.write_table(
-            df.to_arrow(), target, filesystem=fs, compression=PARQUET_COMPRESSION
+            df.to_arrow(), target_as_str, filesystem=fs, compression=PARQUET_COMPRESSION
         )
+
+    return target
 
 
 def ensure_dirs(path: Path):
     """If the path is not an s3 path then ensure the directory structure exists"""
-    if not str(path).startswith("s3"):
+    if not isinstance(path, S3Path):
         os.makedirs(path, exist_ok=True)
 
     return path
@@ -127,11 +134,14 @@ def staging_filename(
     return f"{tablename}_{str(loadtype)}_{timestamp.strftime('%Y%m%d')}.parquet"
 
 
-def staging_path(root: Path, load_type: SourceLoadType, timestamp: dt.datetime) -> Path:
+def staging_path(
+    root: Path, tablename: str, load_type: SourceLoadType, timestamp: dt.datetime
+) -> Path:
     """Compute the path in the storage layer for this source load"""
     return (
         root
         / INCOMING_DIR
+        / tablename
         / str(load_type)
         / timestamp.strftime("%Y")
         / timestamp.strftime("%m")
@@ -145,7 +155,9 @@ def staging_path(root: Path, load_type: SourceLoadType, timestamp: dt.datetime) 
 # Tasks
 
 
-def stage(root_dir: Path, loadtype: SourceLoadType, ingestion_started: dt.datetime):
+def stage_opralog_tables(
+    root_dir: Path, loadtype: SourceLoadType, ingestion_started: dt.datetime
+) -> Sequence[Path]:
     """Pull tables from the Opralog source DB and place them in the staging area
     for loading into the Iceberg catalog.
 
@@ -153,32 +165,62 @@ def stage(root_dir: Path, loadtype: SourceLoadType, ingestion_started: dt.dateti
     relative to a given root directory:
 
     root/
-    |-- in
-    |   |-- full
-    |       |-- YYYY/
-    |           |-- MM/
-    |               |-- DD/
-    |                   |-- tablename_full_YYYYMMDD.parquet
-    |   |-- incremental
-    |       |-- YYYY/
-    |           |-- MM/
-    |               |-- DD/
-    |                   |-- tablename_incremental_YYYYMMDD.parquet
+    |-- incoming/
+    |   |-- [tablename]/
+    |       |-- full/
+    |       |    |-- YYYY/
+    |       |       |-- MM/
+    |       |           |-- DD/
+    |       |               |-- [tablename]_full_YYYYMMDD.parquet
+    |       |-- incremental/
+    |           |-- YYYY/
+    |               |-- MM/
+    |                   |-- DD/
+    |                       |-- [tablename]_incremental_YYYYMMDD.parquet
 
     where the date corresponds to the date of ingestion.
     """
     if loadtype != SourceLoadType.Full:
         raise NotImplementedError("load_type={loadtype} as it is not implemented.")
 
+    staged_paths = []
     for tablename, tableinfo in OPRALOGDB_TABLES.items():
-        unique_keys = tableinfo["unique_keys"]
-        query = f"SELECT TOP 100 * FROM {tablename} ORDER BY {','.join(unique_keys)}"
+        query = f"SELECT * FROM {tablename}"
         df = pl.read_database_uri(query=query, uri=OPRALOGDB_URI)
-        target_path = ensure_dirs(staging_path(root_dir, loadtype, ingestion_started))
+        target_path = ensure_dirs(
+            staging_path(root_dir, tablename, loadtype, ingestion_started)
+        )
         filename = staging_filename(tablename, loadtype, ingestion_started)
-        write_parquet(
-            target_path / filename, df, partition_by=tableinfo["partition_by"]
+        staged_paths.append(
+            write_parquet(
+                target_path / filename, df, partition_by=tableinfo["partition_by"]
+            )
         )
 
+    return staged_paths
 
-stage(STAGING_ROOT, SourceLoadType.Full, dt.datetime.now())
+
+def transform(staged_paths: Sequence[Path], iceberg_catalog: str, catalog_db: str):
+    """Loads the staged parquet files to temporary tables and computes a denormalized
+    table holding useful attributes for downstream data products.
+    The denormalized table is stored in the Iceberg catalog.
+
+    :param staged_paths: A list of ingested parquet files
+    """
+    # See logbooks_ingest_transform.pynb
+    pass
+
+
+##########
+# Pipeline
+##########
+staging_dir = (
+    S3Path.from_uri(STAGING_ROOT)
+    if STAGING_ROOT.startswith("s3:")
+    else Path(STAGING_ROOT)
+) / OPRALOG_DIR
+transform(
+    stage_opralog_tables(
+        staging_dir, SourceLoadType.Full, dt.datetime.now() - dt.timedelta(days=1)
+    )
+)
