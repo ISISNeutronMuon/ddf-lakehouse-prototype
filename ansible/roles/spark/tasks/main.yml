@@ -24,11 +24,6 @@
     dockerfile: Dockerfile.spark
     rebuild: always
 
-- name: Create container network
-  become: true
-  community.docker.docker_network:
-    name: spark
-
 - name: Run Spark controller
   become: true
   community.docker.docker_container:
@@ -42,17 +37,15 @@
     restart_policy: unless-stopped
     recreate: true
     comparisons:
-      networks: strict
       env: strict
     env:
       SPARK_MASTER_PORT: "{{ spark_controller_port | int }}"
       SPARK_MASTER_OPTS: "-Dspark.deploy.defaultCores=8 -Dspark.ui.reverseProxy=true -Dspark.ui.reverseProxyUrl=https://{{ top_level_domain }}:{{ spark_controller_ui_https_port }}"
       SPARK_NO_DAEMONIZE: "true"
-    networks:
-      - name: spark
-    published_ports:
-      - "{{ spark_controller_port }}:7077"
-      - "{{ spark_controller_ui_port }}:8080"
+    # Spark requires all elements of a cluster: controller, executor, driver to be able to communicate.
+    # Adding an extra layer of container networking complicates this greatly so we attach directly to the host network.
+    # Port forwarding at the VM level is still required.
+    network_mode: host
     mounts:
       - source: "{{ spark_config_path }}/log4j2.properties"
         target: /opt/spark/conf/log4j2.properties
@@ -71,13 +64,13 @@
     restart_policy: unless-stopped
     recreate: true
     comparisons:
-      networks: strict
       env: strict
     env:
       SPARK_NO_DAEMONIZE: "true"
+      SPARK_WORKER_PORT: "{{  spark_worker_ports[0] | int }}"
       SPARK_WORKER_OPTS: "-Dspark.ui.reverseProxy=true -Dspark.ui.reverseProxyUrl=https://{{ top_level_domain }}:{{ spark_controller_ui_https_port }}"
-    networks:
-      - name: spark
+    # See comment in controller configuration for the reasons for this choice.
+    network_mode: host
     mounts:
       - source: "{{ spark_config_path }}/log4j2.properties"
         target: /opt/spark/conf/log4j2.properties
