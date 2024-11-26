@@ -2,7 +2,7 @@
 # This is useful for setting default environmental settings.
 spark.ui.reverseProxy                         true
 spark.ui.reverseProxyUrl                      https://{{ top_level_domain }}:{{ spark_controller_ui_https_port }}
-spark.executor.memory                         64g
+spark.executor.memory                         16g
 spark.jars.packages                           {{ jupyterhub_spark_packages | join(",") }}
 
 spark.hadoop.fs.s3.impl                       org.apache.hadoop.fs.s3a.S3AFileSystem
