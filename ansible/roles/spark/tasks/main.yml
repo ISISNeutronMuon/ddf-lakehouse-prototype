@@ -40,7 +40,10 @@
       env: strict
     env:
       SPARK_MASTER_PORT: "{{ spark_controller_port | int }}"
-      SPARK_MASTER_OPTS: "-Dspark.deploy.defaultCores=8 -Dspark.ui.reverseProxy=true -Dspark.ui.reverseProxyUrl=https://{{ top_level_domain }}:{{ spark_controller_ui_https_port }}"
+      SPARK_MASTER_OPTS: >
+        -Dspark.deploy.defaultCores=8
+        -Dspark.ui.reverseProxy=true
+        -Dspark.ui.reverseProxyUrl=https://{{ top_level_domain }}:{{ spark_controller_ui_https_port }}
       SPARK_NO_DAEMONIZE: "true"
     # Spark requires all elements of a cluster: controller, executor, driver to be able to communicate.
     # Adding an extra layer of container networking complicates this greatly so we attach directly to the host network.
