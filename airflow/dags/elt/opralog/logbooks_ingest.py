@@ -122,26 +122,26 @@ def ensure_dirs(path: Path):
     return path
 
 
-def staging_filename(
-    tablename: str, loadtype: SourceLoadType, timestamp: dt.datetime
+def staging_filestem(
+    identifier: str, loadtype: SourceLoadType, timestamp: dt.datetime
 ) -> str:
     """Compute a filename for this source load
 
-    @param tablename The source table name
+    @param identifier An identifier to describe the file content, e.g. source table name
     @param loadtype Full or incremental load type
     @param timestamp Uses the date portion of the timestamp to label the file
     """
-    return f"{tablename}_{str(loadtype)}_{timestamp.strftime('%Y%m%d')}.parquet"
+    return f"{identifier}_{str(loadtype)}_{timestamp.strftime('%Y%m%d')}"
 
 
 def staging_path(
-    root: Path, tablename: str, load_type: SourceLoadType, timestamp: dt.datetime
+    root: Path, identifier: str, load_type: SourceLoadType, timestamp: dt.datetime
 ) -> Path:
     """Compute the path in the storage layer for this source load"""
     return (
         root
         / INCOMING_DIR
-        / tablename
+        / identifier
         / str(load_type)
         / timestamp.strftime("%Y")
         / timestamp.strftime("%m")
@@ -190,7 +190,7 @@ def stage_opralog_tables(
         target_path = ensure_dirs(
             staging_path(root_dir, tablename, loadtype, ingestion_started)
         )
-        filename = staging_filename(tablename, loadtype, ingestion_started)
+        filename = staging_filestem(tablename, loadtype, ingestion_started) + ".parquet"
         staged_paths.append(
             write_parquet(
                 target_path / filename, df, partition_by=tableinfo["partition_by"]
