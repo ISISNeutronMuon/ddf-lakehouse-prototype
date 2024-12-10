@@ -28,7 +28,8 @@ architecture decisions.
 The proof-of-concept will ingest data from the following sources:
 
 - Crew logs: Opralog DB
-- Vista/EPICS control system 2s data
+- Vista/EPICS control system 2s data: InfluxDB
+- Running schedule: ISIS status display [API](https://status.isis.stfc.ac.uk/api/schedule)
 
 ### Opralog
 
@@ -55,4 +56,67 @@ The following commands will restore the database to a new container with the dat
 
 ### Control system 2s data
 
-TODO after talking with Controls Team.
+The 2s control system data is stored in an InfluxDB instance managed by the accelerator controls team.
+
+For the purposes of testing a full backup of the database was obtained from the accelerator
+controls team copied to a [Manila share](https://openstack.stfc.ac.uk/project/shares/faae6094-4856-4322-bbc1-678e414e32dd/)
+under the path `[mount_point]/staging/influxdb/influxdbv2/data`
+
+### Running schedule
+
+The running schedule is available from the system supporting the physical
+status display screens around ISIS buildings. A JSON document with the schedule
+can be retrieved from <https://status.isis.stfc.ac.uk/api/schedule>.
+
+It currently contains dates from 2019/1 onwards.
+
+## Data Architecture
+
+The data layout follows a layered structure where each layer adds transformations
+taking the data the raw source data to modeled data with business rules applied,
+ready for consumption by downstream users such as BI (business intelligence) tools,
+ML tools etc.
+
+![Lakehouse data architecture](./images/lakehouse-data-architecture-layers.jpg)
+
+### Raw
+
+The raw layer is a source-aligned layer that preserves the source structure where
+possible. This layer does not consist of managed tables and is simply sets of files
+containing data exported from source systems.
+
+The files are stored in a object store on the SCD cloud in a bucket called
+`staging-isis` and contains exported files in various formats such as JSON, Parquet
+listed under directories named after the system from which the data originates, e.g:
+
+```txt
+staging-isis/
+|-- [sourcename]
+    |-- incoming/
+        |-- full/
+        |   |-- YYYY/
+        |       |-- MM/
+        |           |-- DD/
+        |               |-- [tablename]_full_YYYYMMDD.parquet
+        |-- incremental/
+            |-- YYYY/
+                |-- MM/
+                    |-- DD/
+                        |-- [tablename]_incremental_YYYYMMDD.parquet
+```
+
+The directory parts having the following meaning:
+
+```markdown
+TODO: DESCRIBE INGESTION directory structure
+```
+
+## Managed tables
+
+The remaining layers are stored within a catalog of
+[Apache Iceberg](https://iceberg.apache.org/) tables and apply structure through
+SQL transformations. Iceberg catalogs support the concept of schemas, a grouping
+of tables, to allow a structure to be imposed that aids with tasks such as
+discoverability and access control.
+
+TODO: DESCRIBE catalogs and schemas
