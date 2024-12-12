@@ -1,4 +1,6 @@
 ---
+trino_vm_flavor: l3.xsmall
+trino_jvm_xmx: 48G
 trino_data_path: "{{ cephfs_mount_mount_path }}/live/trino/data"
 trino_http_port: 8060
 trino_https_port: 8443
