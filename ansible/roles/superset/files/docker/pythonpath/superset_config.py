@@ -102,11 +102,14 @@ class InternallyManagedAdminRoleSecurityManager(SupersetSecurityManager):
         except (IndexError, KeyError):
             mail = ""
 
-        logger.debug(f"Calculating role for user with mail='{mail}'")
+        logger.debug(f"Calculating role(s) for user with mail='{mail}'")
         return (
             [self.find_role("Admin")]
             if mail in self.ADMIN_USERS
-            else [self.find_role(AUTH_USER_REGISTRATION_ROLE)]
+            else [
+                self.find_role(role_name)
+                for role_name in AUTH_USER_REGISTRATION_ROLE_NAMES
+            ]
         )
 
 
@@ -122,7 +125,7 @@ if os.getenv("LDAP_SERVER"):
     # registration configs
     AUTH_USER_REGISTRATION = True
     AUTH_ROLES_SYNC_AT_LOGIN = True
-    AUTH_USER_REGISTRATION_ROLE = "Gamma"
+    AUTH_USER_REGISTRATION_ROLE_NAMES = ["Gamma", "isis_catalog_schemas_unrestricted"]
     AUTH_LDAP_FIRSTNAME_FIELD = "givenName"
     AUTH_LDAP_LASTNAME_FIELD = "sn"
     AUTH_LDAP_EMAIL_FIELD = "mail"
