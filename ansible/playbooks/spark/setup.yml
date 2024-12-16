@@ -1,7 +1,17 @@
 ---
 - name: Configure Spark processing engine with Iceberg support
   hosts: spark
+  vars:
+    vm_has_gpu: "{{ spark_vm_flavor.startswith('g') }}"
+    # The required driver version depends heavily on the model and OS combination.
+    # See https://www.nvidia.com/en-gb/drivers/ to check the correct driver version
+    nvidia_driver_branch: "565"
+    nvidia_driver_ubuntu_install_from_cuda_repo: false
+    nvidia_driver_ubuntu_cuda_keyring_package: "cuda-keyring_1.1-1_all.deb"
   roles:
+    - role: nvidia.nvidia_driver
+      become: true
+      when: vm_has_gpu | bool
     - role: cephfs_mount
     - role: geerlingguy.pip
       become: true

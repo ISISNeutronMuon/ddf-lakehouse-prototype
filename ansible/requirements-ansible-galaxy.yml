@@ -4,3 +4,4 @@ collections:
 roles:
   - geerlingguy.docker
   - geerlingguy.pip
+  - nvidia.nvidia_driver
