@@ -1,0 +1,22 @@
+---
+- name: Run InfluxDB with a snapshot of the Influx DB database
+  hosts: datasources
+  tasks:
+    - name: Ensure Influx DB container is running
+      become: true
+      community.docker.docker_container:
+        name: "{{ datasources_influxdb_container_name }}"
+        image: influxdb:2.7.10
+        state: started
+        cleanup: true
+        detach: true
+        env:
+          GODEBUG: madvdontneed=1
+          INFLUXD_LOG_LEVEL: error
+        restart: true
+        restart_policy: unless-stopped
+        comparisons:
+          env: strict
+        network_mode: host
+        volumes:
+          - "{{ datasources_influxdb_data_dir }}:/var/lib/influxdb2"
