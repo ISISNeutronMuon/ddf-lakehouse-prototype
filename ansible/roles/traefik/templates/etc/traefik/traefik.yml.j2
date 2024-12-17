@@ -28,8 +28,10 @@ entryPoints:
   # TLS entrypoints
   web_tls:
     address: ":443"
+{% if 'minio' in groups %}
   minio_tls:
     address: ":{{ minio_console_https_port }}"
+{% endif %}
   sparkcontrollerui_tls:
     address: ":{{ spark_controller_ui_https_port }}"
   trino_tls:
