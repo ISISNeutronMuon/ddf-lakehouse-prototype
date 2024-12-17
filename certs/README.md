@@ -3,7 +3,8 @@
 The subdirectories contain the certificate request configurations for the
 project. Each subdirectory is named by the `YYYY-MM` that the request was made.
 
-The keys and certificates are stored in a shared folder in Keeper.
+The keys and certificates are stored in a shared folder in Keeper and the latest
+is stored in the Ansible vault.
 
 ## Generate a new certificate request
 
