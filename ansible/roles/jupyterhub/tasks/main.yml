@@ -9,6 +9,28 @@
       - python3-dev
     state: present
 
+# TLJH with the first-time authenticator creates new users and home directories
+# for each new user. If our home directories persist on a shared volume the
+# uid/gid of each home directory keeps their original value. TLJH offers no
+# control over uid/gid assignment for the new users and this may end up differing
+# from the persistent home directories. We set a uid_min/gid_min to a high range
+# to avoid conflicts with any users the cloud setup creates and create new users
+# with matching uid/gid values to the existing directories
+
+- name: Ensure new TLJH users get uids that won't conflict with existing users on a new machine
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: "^UID_MIN\\s+"
+    line: "UID_MIN\t10000"
+
+- name: Ensure new TLJH users get gids that won't conflict with existing users on a new machine
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: "^GID_MIN\\s+"
+    line: "GID_MIN\t10000"
+
 - name: Ensure persistent home directory root exists
   become: true
   ansible.builtin.file:
@@ -40,6 +62,23 @@
     recursive: true
     delete: true
 
+- name: Check for any existing Jupyterhub user home directories
+  ansible.builtin.find:
+    paths: "{{ jupyterhub_home_root_path }}"
+    patterns: "jupyter-*"
+    recurse: no
+    file_type: directory
+  register: jupyter_user_home_dirs
+
+- name: Create any users that don't yet exist on the system but have home directories
+  become: true
+  ansible.builtin.user:
+    name: "{{ jupyter_user_home_dir.path.split('/')[-1] }}"
+    create_home: false
+  loop: "{{ jupyter_user_home_dirs['files'] }}"
+  loop_control:
+    loop_var: jupyter_user_home_dir
+
 - name: Download The Littlest JupyterHub bootstrap script
   ansible.builtin.get_url:
     url: https://github.com/jupyterhub/the-littlest-jupyterhub/raw/refs/tags/2.0.0/bootstrap/bootstrap.py
@@ -54,24 +93,36 @@
     cmd: python3 /tmp/bootstrap.py
     creates: /opt/tljh/installer.log
 
-- name: Ensure common set of pip packages are present in tljh user environment
+- name: Copy user-requirements template
+  become: true
+  vars:
+    user_req_dest:
+  ansible.builtin.copy:
+    src: user-requirements.in
+    dest: /opt/tljh/tljh-user-requirements.in
+    mode: u=rw,g=rw,o=r
+
+- name: Install pip tools
   become: true
   ansible.builtin.pip:
     executable: /opt/tljh/user/bin/pip
     name:
-      - fsspec==2024.9.0
-      - influxdb==5.3.2
-      - jupyter-scheduler==2.10.0
-      - lxml==5.3.0
-      - matplotlib==3.9.1
-      - pandas==2.2.2
-      - polars==1.15.0
-      - prettytable==3.10.2
-      - pyarrow==17.0.0
-      - pyspark==3.5.2
-      - python-dotenv==1.0.1
-      - s3fs==2024.9.0
-      - tabulate==0.9.0
+      - pip-tools==7.4.1
+
+- name: Generate user-requirements.txt
+  become: true
+  ansible.builtin.command:
+    cmd: |-
+      /opt/tljh/user/bin/pip-compile
+        --quiet --strip-extras --no-annotate -o tljh-user-requirements.txt tljh-user-requirements.in
+    chdir: /opt/tljh
+    creates: /opt/tljh/tljh-user-requirements.txt
+
+- name: Install user-requirements.txt
+  become: true
+  ansible.builtin.pip:
+    executable: /opt/tljh/user/bin/pip
+    requirements: /opt/tljh/tljh-user-requirements.txt
 
 - name: Query location of PySpark root (SPARK_HOME)
   become: true
