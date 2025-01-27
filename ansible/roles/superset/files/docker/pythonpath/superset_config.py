@@ -17,25 +17,6 @@ from superset.security import SupersetSecurityManager
 logger = logging.getLogger()
 
 #####
-# Application setup
-# If BASE_PATH is set we are assumed to be proxyed at this prefix location
-base_path = os.getenv("BASE_PATH", "")
-asset_base = os.getenv("ASSET_BASE_URL") if os.getenv("ASSET_BASE_URL") else base_path
-if base_path:
-    ENABLE_PROXY_FIX = True
-    # Change x_port to 1 if the we are on the same port as the proxy server
-    PROXY_FIX_CONFIG = {
-        "x_for": 1,
-        "x_proto": 1,
-        "x_host": 1,
-        "x_port": 0,
-        "x_prefix": 1,
-    }
-if asset_base:
-    STATIC_ASSETS_PREFIX = asset_base
-    APP_ICON = f"{STATIC_ASSETS_PREFIX}/static/assets/images/superset-logo-horiz.png"
-
-#####
 # Supersets own database details
 SUPERSET_DB_DIALECT = os.getenv("SUPERSET_DB_DIALECT")
 SUPERSET_DB_USER = os.getenv("SUPERSET_DB_USER")
@@ -187,10 +168,23 @@ class CeleryConfig:
 
 
 CELERY_CONFIG = CeleryConfig
+WEBDRIVER_BASEURL = f"http://localhost:8088{os.environ.get('SUPERSET_APP_ROOT', '')}/"
+# The base URL for the email report hyperlinks.
+WEBDRIVER_BASEURL_USER_FRIENDLY = (
+    "https://{{ top_level_domain }}{os.environ.get('SUPERSET_APP_ROOT', '')}/"
+)
+
 #####
 
 #####
 # Misc features
-FEATURE_FLAGS = {"ALERT_REPORTS": True, "ENABLE_TEMPLATE_PROCESSING": True}
+# fmt: off
+FEATURE_FLAGS = {
+    "ALERT_REPORTS": True,
+    "ENABLE_TEMPLATE_PROCESSING": True,
+    "TAGGING_SYSTEM": True
+}
+# fmt: on
 ALERT_REPORTS_NOTIFICATION_DRY_RUN = True
+SQLLAB_CTAS_NO_LIMIT = True
 #####

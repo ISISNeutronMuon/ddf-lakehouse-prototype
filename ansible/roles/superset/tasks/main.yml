@@ -74,8 +74,8 @@
     name: "{{ superset_base_image }}"
     path: "{{ superset_build_path }}"
     args:
-      BASE_PATH: "{{ superset_base_path if (superset_base_path != '/') else '' }}"
-      PY_VER: 3.10-slim-bookworm
+      DEV_MODE: false
+      INCLUDE_FIREFOX: true
     target: lean
     rebuild: always
   when: sources.changed or (superset_rebuild_base_image | default(false))

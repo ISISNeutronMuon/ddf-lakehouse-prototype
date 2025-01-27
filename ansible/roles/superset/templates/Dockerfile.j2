@@ -1,22 +1,14 @@
 # syntax=docker/dockerfile
 FROM {{ superset_base_image }}
 
-# Install required APT packages for building Python wheels
-#   python-ldap: build-essential
-USER root
-RUN apt-get update && \
-  apt-get install -y --no-install-recommends \
-  build-essential &&\
-  apt-get clean && \
-  rm -rf /var/lib/apt/lists/*
-
 # Install Python requirements
-RUN pip install --no-cache-dir \
+USER root
+RUN /app/docker/pip-install.sh --requires-build-essential \
   openpyxl==3.1.5 \
-  psycopg2-binary==2.9.9 \
+  psycopg2-binary==2.9.10 \
   prophet==1.1.5 \
   python-ldap==3.4.4 \
-  trino[sqlalchemy]==0.330.0
+  trino[sqlalchemy]==0.332.0
 
 # Run as superset
 USER superset
