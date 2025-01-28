@@ -2,14 +2,29 @@
 
 ## Setup Ansible
 
-An optional [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)
-environment file, `condaenv.yml`, is provided to setup a working Ansible version within Conda.
-For other Python installations a `requirements.txt` file is provided.
+It is recommended to use a virtual environment to set up Ansible but you can use
+any Python installation that has `pip` installed. The version of Python required
+is recorded in [./python-version](./python-version).
 
-Once Ansible is installed, install the additional Ansible Galaxy roles with:
+[uv](https://docs.astral.sh/uv/pip/environments/) is a popular and fast tool
+for managing Python environments and is the recommended tool to use.
+
+Create a virtual environment
 
 ```sh
-ansible-galaxy role install --roles-path galaxy_roles -r requirements-ansible-galaxy.yml
+uv venv
+```
+
+Install the requirements using `requirements-python.txt`
+
+```sh
+uv pip install -r ./requirements-python.txt
+```
+
+Install the additional Ansible Galaxy roles with:
+
+```sh
+uv run ansible-galaxy role install --roles-path galaxy_roles -r requirements-ansible-galaxy.yml
 ```
 
 The `galaxy_roles` path has been added to `.gitignore`.

@@ -1,8 +1,0 @@
-name: ddf-lakehouse-prototype-ansible
-
-dependencies:
-  - python=3.12
-  - pip=24.0
-  - pip-tools=7.4.1
-  - pip:
-      - -r requirements.txt

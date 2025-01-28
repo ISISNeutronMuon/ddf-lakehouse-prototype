@@ -10,7 +10,7 @@
 #    version = _bcrypt.__about__.__version__
 
 ansible==10.6.0
-ansible-lint[lock]==24.7.0
+ansible-lint==24.7.0
 bcrypt==4.0.1
 jmespath==1.0.1
 python-openstackclient==7.2.0

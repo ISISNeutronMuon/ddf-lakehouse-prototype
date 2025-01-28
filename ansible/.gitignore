@@ -1,3 +1,4 @@
 .vault_pass
 condaenv/
+.venv/
 galaxy_roles
