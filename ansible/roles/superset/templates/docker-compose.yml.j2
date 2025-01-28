@@ -8,6 +8,7 @@ x-superset-env: &superset-env
     required: true
 x-superset-volumes: &superset-volumes
   - {{ superset_config_path }}/docker/docker-init.sh:/app/docker/docker-init.sh:ro
+  - {{ superset_config_path }}/docker/pythonpath:/app/docker/pythonpath:ro
   - superset_home:/app/superset_home
   - {{ superset_config_path }}/certs:/certs:ro
 x-networks: &superset-networks
