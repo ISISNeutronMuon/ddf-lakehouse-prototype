@@ -3,3 +3,4 @@ inventory.txt
 *.ini
 clouds.yaml
 .env
+.venv/
