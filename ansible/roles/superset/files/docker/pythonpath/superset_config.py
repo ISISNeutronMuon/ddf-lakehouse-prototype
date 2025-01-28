@@ -95,32 +95,31 @@ class InternallyManagedAdminRoleSecurityManager(SupersetSecurityManager):
 
 
 # LDAP authentication
-if os.getenv("LDAP_SERVER"):
-    SILENCE_FAB = False
-    AUTH_TYPE = AUTH_LDAP
-    AUTH_LDAP_SERVER = os.getenv("LDAP_SERVER")
-    AUTH_LDAP_USE_TLS = False
-    AUTH_LDAP_TLS_DEMAND = True
-    AUTH_LDAP_TLS_CACERTFILE = os.getenv("LDAP_CACERTFILE")
+SILENCE_FAB = False
+AUTH_TYPE = AUTH_LDAP
+AUTH_LDAP_SERVER = os.getenv("LDAP_SERVER")
+AUTH_LDAP_USE_TLS = False
+AUTH_LDAP_TLS_DEMAND = True
+AUTH_LDAP_TLS_CACERTFILE = os.getenv("LDAP_CACERTFILE")
 
-    # registration configs
-    AUTH_USER_REGISTRATION = True
-    AUTH_ROLES_SYNC_AT_LOGIN = True
-    AUTH_USER_REGISTRATION_ROLE_NAMES = ["Gamma", "isis_catalog_schemas_unrestricted"]
-    AUTH_LDAP_FIRSTNAME_FIELD = "givenName"
-    AUTH_LDAP_LASTNAME_FIELD = "sn"
-    AUTH_LDAP_EMAIL_FIELD = "mail"
+# registration configs
+AUTH_USER_REGISTRATION = True
+AUTH_ROLES_SYNC_AT_LOGIN = True
+AUTH_USER_REGISTRATION_ROLE_NAMES = ["Gamma", "isis_catalog_schemas_unrestricted"]
+AUTH_LDAP_FIRSTNAME_FIELD = "givenName"
+AUTH_LDAP_LASTNAME_FIELD = "sn"
+AUTH_LDAP_EMAIL_FIELD = "mail"
 
-    # search configs using email (userPrincipalName in AD) as username
-    AUTH_LDAP_SEARCH = "OU=FBU,DC=fed,DC=cclrc,DC=ac,DC=uk"
-    AUTH_LDAP_SEARCH_FILTER = (
-        "(memberOf=CN=Isis,OU=Automatic Groups,DC=fed,DC=cclrc,DC=ac,DC=uk)"
-    )
-    AUTH_LDAP_UID_FIELD = "userPrincipalName"
-    AUTH_LDAP_BIND_USER = "anonymous"
-    AUTH_LDAP_BIND_PASSWORD = ""
+# search configs using email (userPrincipalName in AD) as username
+AUTH_LDAP_SEARCH = "OU=FBU,DC=fed,DC=cclrc,DC=ac,DC=uk"
+AUTH_LDAP_SEARCH_FILTER = (
+    "(memberOf=CN=Isis,OU=Automatic Groups,DC=fed,DC=cclrc,DC=ac,DC=uk)"
+)
+AUTH_LDAP_UID_FIELD = "userPrincipalName"
+AUTH_LDAP_BIND_USER = "anonymous"
+AUTH_LDAP_BIND_PASSWORD = ""
 
-    CUSTOM_SECURITY_MANAGER = InternallyManagedAdminRoleSecurityManager
+CUSTOM_SECURITY_MANAGER = InternallyManagedAdminRoleSecurityManager
 
 #####
 # Caching layer
