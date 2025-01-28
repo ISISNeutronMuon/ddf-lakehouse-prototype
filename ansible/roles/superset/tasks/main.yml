@@ -4,6 +4,26 @@
   community.docker.docker_network:
     name: "{{ superset_container_network }}"
 
+- name: Pull Superset sources
+  become: true
+  ansible.builtin.git:
+    repo: https://github.com/martyngigg/superset/
+    dest: "{{ superset_build_path }}"
+    version: "{{ superset_build_git_ref }}"
+  register: sources
+
+- name: Build base Superset docker image
+  become: true
+  community.docker.docker_image_build:
+    name: "{{ superset_base_image }}"
+    path: "{{ superset_build_path }}"
+    args:
+      DEV_MODE: false
+      INCLUDE_FIREFOX: true
+    target: lean
+    rebuild: always
+  when: sources.changed or (superset_rebuild_base_image | default(false))
+
 - name: Ensure configuration directory exists
   become: true
   ansible.builtin.file:
@@ -59,26 +79,6 @@
     - { filename: stfc-ca.pem, content: "{{ stfc_ca_cert }}" }
   loop_control:
     loop_var: certificate
-
-- name: Pull Superset sources
-  become: true
-  ansible.builtin.git:
-    repo: https://github.com/martyngigg/superset/
-    dest: "{{ superset_build_path }}"
-    version: "{{ superset_build_git_ref }}"
-  register: sources
-
-- name: Build base Superset docker image
-  become: true
-  community.docker.docker_image_build:
-    name: "{{ superset_base_image }}"
-    path: "{{ superset_build_path }}"
-    args:
-      DEV_MODE: false
-      INCLUDE_FIREFOX: true
-    target: lean
-    rebuild: always
-  when: sources.changed or (superset_rebuild_base_image | default(false))
 
 - name: Run Superset services
   become: true
