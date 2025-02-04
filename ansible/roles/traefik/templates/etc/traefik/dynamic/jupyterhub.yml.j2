@@ -1,0 +1,14 @@
+http:
+  routers:
+    # TLS
+    jupyterhub:
+      entryPoints: web_tls
+      rule: PathPrefix(`{{ jupyterhub_base_path }}`)
+      service: jupyterhub
+      tls: {}
+
+  services:
+    jupyterhub:
+      loadBalancer:
+        servers:
+          - url: "http://{{ groups['jupyterhub'][0] }}:{{ jupyterhub_http_port }}"

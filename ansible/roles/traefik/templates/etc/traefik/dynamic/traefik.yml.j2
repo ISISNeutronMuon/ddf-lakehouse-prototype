@@ -1,0 +1,20 @@
+http:
+  routers:
+    # TLS
+    traefik:
+      entryPoints: web_tls
+      rule: PathPrefix(`/traefik`) || HeaderRegexp(`Referer`, `/traefik`)
+      service: api@internal
+      middlewares:
+        - traefik-strip-prefix
+        - dashboardauth
+      tls: {}
+
+  middlewares:
+    dashboardauth:
+      basicauth:
+        users: admin:$2y$10$xRntwpemRqOvRaDz6kLt1ed3d5JcHZSjTdlO3tCiKmnN42hdrQsA6
+    traefik-strip-prefix:
+      stripPrefix:
+        prefixes:
+          - "/traefik"

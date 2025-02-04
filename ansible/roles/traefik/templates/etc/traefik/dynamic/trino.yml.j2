@@ -1,0 +1,14 @@
+http:
+  routers:
+    # TLS
+    trino:
+      entryPoints: trino_tls
+      rule: PathPrefix(`/`)
+      service: trino
+      tls: {}
+
+  services:
+    trino:
+      loadBalancer:
+        servers:
+          - url: "{{ trino_coordinator_url }}"

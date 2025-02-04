@@ -1,3 +1,5 @@
 ---
-traefik_config_path: /config
+traefik_config_root: /config
+traefik_etc_path_relative: "etc/traefik"
+traefik_etc_dynamic_path_relative: "{{ traefik_etc_path_relative }}/dynamic"
 traefik_certs_root: /certs

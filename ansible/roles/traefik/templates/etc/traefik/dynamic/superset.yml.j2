@@ -1,0 +1,14 @@
+http:
+  routers:
+    # TLS
+    superset:
+      entryPoints: web_tls
+      rule: PathPrefix(`{{ superset_app_root }}`)
+      service: superset
+      tls: {}
+
+  services:
+    superset:
+      loadBalancer:
+        servers:
+          - url: "http://{{ groups['superset'][0] }}:{{ superset_http_port }}"
