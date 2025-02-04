@@ -20,6 +20,7 @@
     args:
       DEV_MODE: false
       INCLUDE_FIREFOX: true
+      INCLUDE_CHROMIUM: false
     target: lean
     rebuild: always
   when: sources.changed or (superset_rebuild_base_image | default(false))
