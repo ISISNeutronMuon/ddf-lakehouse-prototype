@@ -43,7 +43,8 @@
     timeout: 300
   delegate_to: "{{ vm_ip_address }}"
   vars:
-    ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q {{ openstack_vm_user }}@{{ openstack_jump_host }}"'
+    ansible_ssh_common_args: '-o ProxyCommand="ssh -q -W %h:%p {{ openstack_vm_user }}@{{ openstack_jump_host }}"'
+    ansible_user: "{{ openstack_vm_user }}"
 
 - name: Ensure instance is associated with a group
   ansible.builtin.add_host:
@@ -59,4 +60,5 @@
       delegate_to: "{{ vm_ip_address }}"
   when: vm_create_package_update
   vars:
-    ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q {{ openstack_vm_user }}@{{ openstack_jump_host }}"'
+    ansible_ssh_common_args: '-o ProxyCommand="ssh -q -W %h:%p {{ openstack_vm_user }}@{{ openstack_jump_host }}"'
+    ansible_user: "{{ openstack_vm_user }}"
