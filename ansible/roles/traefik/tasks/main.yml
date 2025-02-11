@@ -8,9 +8,12 @@
     owner: "root"
     group: "root"
   loop:
-    - { path: "{{ traefik_config_path }}/etc", mode: "u=rwx,g=rx,o=rx" }
     - {
-        path: "{{ traefik_config_path }}/logs/traefik",
+        path: "{{ traefik_config_root }}/{{ traefik_etc_path_relative }}",
+        mode: "u=rwx,g=rx,o=rx",
+      }
+    - {
+        path: "{{ traefik_config_root }}/logs/traefik",
         mode: "u=rwx,g=rx,o=rx",
       }
     - { path: "{{ traefik_certs_root }}", mode: "u=rwx,g=,o=" }
