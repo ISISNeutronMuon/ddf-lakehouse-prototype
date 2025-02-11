@@ -9,8 +9,8 @@
       - direction: ingress
         ether_type: IPv4
         protocol: tcp
-        port_range_min: "{{ nessie_port }}"
-        port_range_max: "{{ nessie_port }}"
+        port_range_min: "{{ nessie_http_port }}"
+        port_range_max: "{{ nessie_http_port }}"
     openstack_flavor: l3.nano
     openstack_server_name: nessie
     openstack_security_groups: [default, "{{ openstack_security_group_name }}"]

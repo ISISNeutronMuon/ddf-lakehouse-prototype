@@ -1,0 +1,13 @@
+http:
+  routers:
+    nessie_tls:
+      entryPoints: nessie_tls
+      rule:  PathPrefix(`/`)
+      service: nessie
+      tls: {}
+
+  services:
+    nessie:
+      loadBalancer:
+        servers:
+          - url: "http://{{ groups['nessie'][0] }}:{{ nessie_http_port }}"

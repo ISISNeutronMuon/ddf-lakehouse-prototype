@@ -3,6 +3,6 @@ spark_vm_flavor: l3.small
 
 spark_controller_port: 7077
 spark_controller_ui_port: 8080
-spark_controller_ui_https_port: 8843
+spark_controller_ui_https_port: 8445
 spark_worker_ports:
   - 42000

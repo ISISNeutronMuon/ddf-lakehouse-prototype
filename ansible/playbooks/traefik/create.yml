@@ -29,6 +29,11 @@
         protocol: tcp
         port_range_min: "{{ spark_controller_ui_https_port }}"
         port_range_max: "{{ spark_controller_ui_https_port }}"
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ nessie_https_port }}"
+        port_range_max: "{{ nessie_https_port }}"
     openstack_security_groups: [default, "traefik", "HTTP", "HTTPS"]
     inventory_group: traefik
   roles:

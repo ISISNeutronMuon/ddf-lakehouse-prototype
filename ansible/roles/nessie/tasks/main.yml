@@ -11,7 +11,7 @@
     recreate: true
     published_ports:
       # API port
-      - "{{ nessie_port }}:19120"
+      - "{{ nessie_http_port }}:19120"
     env:
       # comment to keep formatter moving this up one line
       nessie.version.store.type=JDBC2
