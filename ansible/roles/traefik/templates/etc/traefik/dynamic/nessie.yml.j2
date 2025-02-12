@@ -1,11 +1,22 @@
 http:
   routers:
     nessie_tls:
-      entryPoints: nessie_tls
-      rule:  PathPrefix(`/`)
+      entryPoints: web_tls
+      rule: PathPrefix(`{{ nessie_base_path }}`)
       service: nessie
+{% if nessie_base_path != '/' %}
+      middlewares:
+        - nessie-strip-prefix
       tls: {}
+{% endif %}
 
+{% if nessie_base_path != '/' %}
+  middlewares:
+    nessie-strip-prefix:
+      stripPrefix:
+        prefixes:
+          - "{{ nessie_base_path }}"
+{% endif %}
   services:
     nessie:
       loadBalancer:

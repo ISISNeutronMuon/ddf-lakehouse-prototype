@@ -14,6 +14,10 @@
       - "{{ nessie_http_port }}:19120"
     env:
       # comment to keep formatter moving this up one line
+      quarkus.http.proxy.proxy-address-forwarding=true
+      quarkus.http.proxy.allow-x-forwarded=true
+      quarkus.http.proxy.enable-forwarded-host=true
+      quarkus.http.proxy.enable-forwarded-prefix=true
       nessie.version.store.type=JDBC2
       nessie.version.store.persist.jdbc.datasource=postgresql
       quarkus.datasource.postgresql.jdbc.url="jdbc:postgresql://postgres:{{ nessie_store_port }}/{{ nessie_store_dbname }}"
