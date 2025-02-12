@@ -9,6 +9,3 @@ description = "A set of common utility routines for data pipelines."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = ["pyiceberg>=0.8.1"]
-
-[tool.uv.pip]
-config-settings = { editable-mode = "strict" }
