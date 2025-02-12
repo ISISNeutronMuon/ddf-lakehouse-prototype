@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pipelines-common"
+version = "0.1.0"
+description = "A set of common utility routines for data pipelines."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["pyiceberg>=0.8.1"]
+
+[tool.uv.pip]
+config-settings = { editable-mode = "strict" }
