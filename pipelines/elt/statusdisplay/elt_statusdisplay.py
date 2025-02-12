@@ -6,7 +6,7 @@ from dlt.extract import DltSource
 from dlt.sources.rest_api import rest_api_source
 from dlt.common.typing import TDataItems
 from dlt.common.schema import TTableSchema
-
+import humanize
 import pyarrow.parquet as pq
 
 from pipelines_common.destinations import iceberg
@@ -78,3 +78,9 @@ pipeline = dlt.pipeline(
 )
 load_info = pipeline.run(statusdisplay(), write_disposition="replace")
 logger.info(load_info)
+logger.info(
+    f"Pipeline run completed in {
+    humanize.precisedelta(
+        pipeline.last_trace.finished_at - pipeline.last_trace.started_at
+    )}"
+)
