@@ -1,9 +1,10 @@
 import logging
 
 import dlt
+from dlt.sources.sql_database import sql_database
 import humanize
 
-from dlt.sources.sql_database import sql_database
+from pipelines_common.destinations.pyiceberg import pyiceberg
 
 PIPELINE_NAME = "elt_opralog"
 
@@ -13,14 +14,16 @@ def main() -> None:
     logger = logging.getLogger(__name__)
 
     pipeline = dlt.pipeline(
-        destination="filesystem",
+        destination=pyiceberg(),
         pipeline_name=PIPELINE_NAME,
         progress="log",
-        #        dataset_name=dlt.config["destination.namespace_name"],
     )
 
     # Table names are configured in config.toml
-    source = sql_database()
+    source = sql_database(
+        backend="pyarrow",
+        backend_kwargs={"tz": "UTC"},
+    )
     info = pipeline.run(source, write_disposition="replace")
     logger.info(info)
     logger.info(

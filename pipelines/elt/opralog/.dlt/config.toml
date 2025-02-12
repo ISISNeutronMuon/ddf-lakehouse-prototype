@@ -13,3 +13,8 @@ table_names = [
   "MORE_ENTRY_COLUMNS",
   "ADDITIONAL_COLUMNS",
 ]
+
+[destination]
+catalog_name = "isis"
+namespace_name = "scratch"
+catalog_uri = "https://data-accelerator.isis.cclrc.ac.uk/nessie/iceberg/"
