@@ -1,9 +1,0 @@
-# Generate requirements.txt with:
-#   pip-compile --quiet --strip-extras --no-annotate -o ./requirements.txt ./requirements.in
-
-fsspec==2024.10.0
-python-dotenv==1.0.1
-polars==1.21.0
-requests==2.32.3
-s3fs==2024.10.0
-s3path==0.6.0

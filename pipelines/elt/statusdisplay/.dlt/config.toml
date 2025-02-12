@@ -1,0 +1,12 @@
+[runtime]
+dlthub_telemetry = false
+log_level = "WARNING"
+
+[sources]
+base_url = "https://status.isis.stfc.ac.uk/api"
+resources = ["schedule"]
+
+[destination]
+catalog_name = "isis"
+namespace_name = "scratch"
+catalog_uri = "https://data-accelerator.isis.cclrc.ac.uk/nessie/iceberg/"
