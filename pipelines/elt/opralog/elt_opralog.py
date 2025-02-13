@@ -4,6 +4,7 @@ import dlt
 from dlt.sources.sql_database import sql_database
 import humanize
 
+from pipelines_common.constants import SOURCE_NAMESPACE_PREFIX, SOURCE_TABLE_PREFIX
 from pipelines_common.destinations.pyiceberg import pyiceberg
 
 PIPELINE_NAME = "elt_opralog"
@@ -21,9 +22,15 @@ def main() -> None:
 
     # Table names are configured in config.toml
     source = sql_database(
+        table_names=dlt.config.value,
         backend="pyarrow",
         backend_kwargs={"tz": "UTC"},
     )
+    for table_name in dlt.config["sources.sql_database.table_names"]:
+        getattr(source, table_name).apply_hints(
+            table_name=f"{SOURCE_TABLE_PREFIX}{table_name.lower()}"
+        )
+
     info = pipeline.run(source, write_disposition="replace")
     logger.info(info)
     logger.info(

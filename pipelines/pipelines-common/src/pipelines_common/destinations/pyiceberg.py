@@ -43,11 +43,15 @@ def pyiceberg(filename: TDataItems, table: TTableSchema) -> None:
     )
     namespace = dlt.config["destination.namespace_name"]
     catalog.create_namespace_if_not_exists(namespace)
+    table_id = iceberg.table_identifier(namespace, table_name)
+    if catalog.table_exists(table_id):
+        catalog.drop_table(table_id)
 
     # batch=0 gives filename of extracted data in loader_file_format
     extracted_table_data = pq.read_table(filename)
-    destination_table = catalog.create_table_if_not_exists(
-        iceberg.table_identifier(namespace, table_name),
+    table_id = (table_id[0], table_id[1])
+    destination_table = catalog.create_table(
+        table_id,
         extracted_table_data.schema,
     )
-    destination_table.overwrite(extracted_table_data)
+    destination_table.append(extracted_table_data)
