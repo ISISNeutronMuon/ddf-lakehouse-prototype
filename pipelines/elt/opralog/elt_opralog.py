@@ -8,6 +8,7 @@ from pipelines_common.constants import SOURCE_NAMESPACE_PREFIX, SOURCE_TABLE_PRE
 from pipelines_common.destinations.pyiceberg import pyiceberg
 
 PIPELINE_NAME = "elt_opralog"
+NAMESPACE_NAME = f"{SOURCE_NAMESPACE_PREFIX}opralog"
 
 
 def main() -> None:
@@ -15,7 +16,7 @@ def main() -> None:
     logger = logging.getLogger(__name__)
 
     pipeline = dlt.pipeline(
-        destination=pyiceberg(),
+        destination=pyiceberg(namespace_name=NAMESPACE_NAME),
         pipeline_name=PIPELINE_NAME,
         progress="log",
     )

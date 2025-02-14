@@ -15,7 +15,13 @@ import pipelines_common.utils.iceberg as iceberg
     naming_convention="snake_case",
     max_table_nesting=1,
 )
-def pyiceberg(filename: TDataItems, table: TTableSchema) -> None:
+def pyiceberg(
+    filename: TDataItems,
+    table: TTableSchema,
+    catalog_name: str = dlt.config.value,
+    catalog_uri: str = dlt.config.value,
+    namespace_name: str = dlt.config.value,
+) -> None:
     """Dlt destination using pyiceberg to write tables to an Iceberg catalog.
 
     This currently only supports the `replace` write_disposition as it does not understand
@@ -38,12 +44,11 @@ def pyiceberg(filename: TDataItems, table: TTableSchema) -> None:
         )
 
     catalog = iceberg.catalog_get_or_create(
-        dlt.config["destination.catalog_name"],
-        dlt.config["destination.catalog_uri"],
+        catalog_name,
+        catalog_uri,
     )
-    namespace = dlt.config["destination.namespace_name"]
-    catalog.create_namespace_if_not_exists(namespace)
-    table_id = iceberg.table_identifier(namespace, table_name)
+    catalog.create_namespace_if_not_exists(namespace_name)
+    table_id = iceberg.table_identifier(namespace_name, table_name)
     if catalog.table_exists(table_id):
         catalog.drop_table(table_id)
 

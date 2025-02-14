@@ -5,10 +5,11 @@ from dlt.extract import DltSource
 from dlt.sources.rest_api import rest_api_source
 import humanize
 
+from pipelines_common.constants import SOURCE_NAMESPACE_PREFIX, SOURCE_TABLE_PREFIX
 from pipelines_common.destinations.pyiceberg import pyiceberg
 
-# Constants
-PIPELINE_NAME = "elt_opralog"
+PIPELINE_NAME = "elt_statusdisplay"
+NAMESPACE_NAME = f"{SOURCE_NAMESPACE_PREFIX}statusdisplay"
 
 
 # dlt pipeline
@@ -30,11 +31,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 pipeline = dlt.pipeline(
-    destination=pyiceberg(),
+    destination=pyiceberg(namespace_name=NAMESPACE_NAME),
     pipeline_name=PIPELINE_NAME,
-    dataset_name=dlt.config["destination.namespace_name"],
+    progress="log",
 )
-load_info = pipeline.run(statusdisplay(), write_disposition="replace")
+source = statusdisplay()
+for name, resource in source.resources.items():
+    resource.apply_hints(table_name=f"{SOURCE_TABLE_PREFIX}{name}")
+
+load_info = pipeline.run(source, write_disposition="replace")
 logger.info(load_info)
 logger.info(
     f"Pipeline run completed in {

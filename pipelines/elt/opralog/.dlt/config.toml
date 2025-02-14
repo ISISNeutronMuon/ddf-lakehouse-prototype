@@ -16,5 +16,4 @@ table_names = [
 
 [destination]
 catalog_name = "isis"
-namespace_name = "scratch"
 catalog_uri = "https://data-accelerator.isis.cclrc.ac.uk/nessie/iceberg/"
