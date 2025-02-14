@@ -84,6 +84,10 @@ case "$1" in
   identify)
     identify
     ;;
+  show)
+    shift
+    docker_run show ${NESSIE_GC_JDBC_ARGS} $*
+    ;;
   sweep-no-delete)
     # Second script argument is file containing content ID
     sweep "$2" --defer-deletes
