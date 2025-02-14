@@ -1,0 +1,36 @@
+- name: Ensure docs source directory exists
+  ansible.builtin.file:
+    path: "{{ docs_target_dir }}"
+    state: directory
+
+- name: Synchronize docs source
+  ansible.posix.synchronize:
+    use_ssh_args: true
+    src: "{{ docs_source_dir }}/"
+    dest: "{{ docs_target_dir }}"
+    archive: false
+    recursive: true
+    delete: true
+
+- name: Build documentation
+  community.docker.docker_container:
+    name: docs-build
+    image: python:3.12
+    command: ["bash", "/work/build.sh", "{{ docs_build_dir_relpath }}"]
+    state: started
+    cleanup: true
+    volumes:
+      - "{{ docs_target_dir }}:/work"
+    working_dir: /work
+
+- name: Ensure nginx container is running
+  community.docker.docker_container:
+    name: docs-srv
+    image: nginx:latest
+    state: started
+    cleanup: true
+    restart_policy: unless-stopped
+    ports:
+      - 8088:80
+    volumes:
+      - "{{ docs_target_dir }}/{{ docs_build_dir_relpath }}:/usr/share/nginx/html:ro"
