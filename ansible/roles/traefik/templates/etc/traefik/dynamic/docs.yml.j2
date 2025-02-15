@@ -1,0 +1,34 @@
+http:
+  routers:
+    # TLS
+    docs-no-trailing-slash:
+      entryPoints: web_tls
+      rule: PathRegexp(`^/docs$`)
+      middlewares:
+        - docs-redirect-to-index
+      service: docs
+      tls: {}
+    docs:
+      entryPoints: web_tls
+      rule: PathPrefix(`/docs`)
+      service: docs
+      middlewares:
+        - docs-strip-prefix
+      tls: {}
+
+  middlewares:
+    # This only works for the docs-no-trailing-slash entrypoint
+    docs-redirect-to-index:
+      redirectRegex:
+        regex: "(.*)"
+        replacement: "${1}/"
+    docs-strip-prefix:
+      stripPrefix:
+        prefixes:
+          - "/docs"
+
+  services:
+    docs:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8088"

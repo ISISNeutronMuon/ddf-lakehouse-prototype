@@ -6,6 +6,6 @@
       become: true
     - role: geerlingguy.docker
       become: true
-    - role: traefik
     - role: docs
       become: true
+    - role: traefik
