@@ -1,0 +1,16 @@
+http:
+  routers:
+    # TLS
+    root:
+      entryPoints: web_tls
+      rule: PathRegexp(`^/?$`)
+      middlewares:
+        - root-redirect-to-docs
+      service: docs
+      tls: {}
+
+  middlewares:
+    root-redirect-to-docs:
+      redirectRegex:
+        regex: "^(https?)://([^/]+)/?"
+        replacement: "${1}://${2}/docs/"
