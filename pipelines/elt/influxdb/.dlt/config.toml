@@ -1,0 +1,10 @@
+[runtime]
+dlthub_telemetry = false
+log_level = "WARNING"
+
+[sources]
+base_url = "http://172.16.103.105:8086"
+
+[destination]
+catalog_name = "isis"
+catalog_uri = "https://data-accelerator.isis.cclrc.ac.uk/nessie/iceberg/"

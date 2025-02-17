@@ -1,0 +1,3 @@
+-r ../../requirements/base.in
+-e ../../pipelines-common
+pandas==2.2.3

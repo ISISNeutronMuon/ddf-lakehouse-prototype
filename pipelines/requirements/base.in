@@ -1,3 +1,4 @@
 dlt==1.6.1
 humanize==4.11.0
+psutil==6.1.1
 pyiceberg[s3fs]==0.8.1
