@@ -1,4 +1,5 @@
 -r ../../requirements/base.in
+-e ../../pipelines-common
+
 dlt[sql-database]
 pymssql==2.3.2
-psutil==6.1.1
