@@ -131,7 +131,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 pipeline = dlt.pipeline(
-    destination=pyiceberg(namespace_name="scratch"),
+    destination=pyiceberg(namespace_name=NAMESPACE_NAME),
     pipeline_name=PIPELINE_NAME,
     progress="log",
 )
