@@ -1,20 +1,22 @@
-from typing import Optional, Tuple
+from typing import Dict, Optional
 
-import pyiceberg.exceptions as piexc
 from pyiceberg.typedef import Identifier
 from pyiceberg.catalog.rest import Catalog, RestCatalog
-from pyiceberg.schema import Schema
-from pyiceberg.table import Table as IcebergTable
+from pyiceberg.catalog.sql import SqlCatalog
 
 _catalog: Optional[Catalog] = None
 
 
 # Iceberg
-def catalog_get_or_create(name: str, uri: str) -> Catalog:
-    """Connect to an iceberg REST catalog on a given uri"""
+def catalog_get_or_create(catalog_properties: Dict[str, str]) -> Catalog:
+    """Connect to an iceberg catalog on a given uri"""
     global _catalog
     if _catalog is None:
-        _catalog = RestCatalog(name, **{"uri": uri})
+        uri = catalog_properties["uri"]
+        if uri.startswith("sqlite:///"):
+            _catalog = SqlCatalog(**catalog_properties)
+        else:
+            _catalog = RestCatalog(**catalog_properties)
 
     return _catalog
 

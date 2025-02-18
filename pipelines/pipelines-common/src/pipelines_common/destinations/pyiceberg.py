@@ -1,4 +1,4 @@
-from typing import cast
+from typing import cast, Dict
 
 import dlt
 from dlt.common.typing import TDataItems
@@ -18,9 +18,8 @@ import pipelines_common.utils.iceberg as iceberg
 def pyiceberg(
     filename: TDataItems,
     table: TTableSchema,
-    catalog_name: str = dlt.config.value,
-    catalog_uri: str = dlt.config.value,
     namespace_name: str = dlt.config.value,
+    catalog_properties: Dict[str, str] = dlt.config.value,
 ) -> None:
     """Dlt destination using pyiceberg to write tables to an Iceberg catalog.
 
@@ -43,10 +42,7 @@ def pyiceberg(
             f" but `{write_disposition}` was provided."
         )
 
-    catalog = iceberg.catalog_get_or_create(
-        catalog_name,
-        catalog_uri,
-    )
+    catalog = iceberg.catalog_get_or_create(catalog_properties)
     catalog.create_namespace_if_not_exists(namespace_name)
     table_id = iceberg.table_identifier(namespace_name, table_name)
     if catalog.table_exists(table_id):
