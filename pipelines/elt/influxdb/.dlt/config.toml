@@ -5,6 +5,12 @@ log_level = "WARNING"
 [sources]
 base_url = "http://172.16.103.105:8086"
 
-[destination]
-catalog_name = "isis"
-catalog_uri = "https://data-accelerator.isis.cclrc.ac.uk/nessie/iceberg/"
+[elt_influxdb.destination.pyiceberg.catalog_properties]
+name = "isis"
+uri = "https://data-accelerator.isis.cclrc.ac.uk/nessie/iceberg/"
+
+[dev_elt_influxdb.destination.pyiceberg.catalog_properties]
+name = "isis"
+uri = "sqlite:///iceberg-catalog.db"
+warehouse = "./warehouse"
+py-io-impl = "pyiceberg.io.pyarrow.PyArrowFileIO"

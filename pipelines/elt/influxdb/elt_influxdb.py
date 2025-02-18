@@ -17,7 +17,8 @@ from pipelines_common.destinations.pyiceberg import pyiceberg
 LOGGER = logging.getLogger(__name__)
 
 
-PIPELINE_NAME = "elt_influxdb"
+DEVEL = os.environ.get("DEVEL", "true") == "true"
+PIPELINE_NAME = f"{"dev_" if DEVEL else ""}elt_influxdb"
 NAMESPACE_NAME = f"{SOURCE_NAMESPACE_PREFIX}influxdb"
 
 # Source
