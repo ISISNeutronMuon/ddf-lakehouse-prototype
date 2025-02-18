@@ -2,8 +2,7 @@ from pathlib import Path
 import threading
 from typing import Dict, Optional
 
-from pyiceberg.catalog.rest import Catalog, RestCatalog
-from pyiceberg.catalog.sql import SqlCatalog
+from pyiceberg.catalog import Catalog
 from pyiceberg.typedef import Identifier
 
 
@@ -21,11 +20,15 @@ def catalog_get_or_create(catalog_properties: Dict[str, str]) -> Catalog:
         if _catalog is None:
             uri = catalog_properties["uri"]
             if uri.startswith("sqlite:///"):
+                from pyiceberg.catalog.sql import SqlCatalog  # noqa: E402
+
                 init_catalog_tables = "false" if Path(uri[10:]).exists() else "true"
                 _catalog = SqlCatalog(
                     init_catalog_tables=init_catalog_tables, **catalog_properties
                 )
             else:
+                from pyiceberg.catalog.rest import RestCatalog  # noqa: E402
+
                 _catalog = RestCatalog(**catalog_properties)
 
     return _catalog
