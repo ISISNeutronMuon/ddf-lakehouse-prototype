@@ -2,6 +2,7 @@ import argparse
 from collections.abc import Generator
 import datetime as dt
 import logging
+import os
 from typing import Dict, List, Optional
 from zoneinfo import ZoneInfo
 
@@ -11,7 +12,8 @@ import humanize
 import pandas as pd
 import requests
 
-from pipelines_common.constants import SOURCE_NAMESPACE_PREFIX, SOURCE_TABLE_PREFIX
+from pyiceberg.transforms import YEAR
+
 from pipelines_common.constants import (
     MICROSECONDS,
     MICROSECONDS_INFLUX,
@@ -113,12 +115,16 @@ def machinestate(
     )
 
     # first, load all measurement data
+    additional_table_hints = {"x-partition-spec": [("time", YEAR)]}
+
     for measurement in measurements_to_load:
         channel_name = measurement["name"]
         table_name = f"{SOURCE_TABLE_PREFIX}{bucket_name}_{channel_name}"
         yield influxdb_get_measurement(
             bucket_name, channel_name, time_start, time_stop
-        ).with_name(table_name).apply_hints(table_name=table_name)
+        ).with_name(table_name).apply_hints(
+            table_name=table_name, additional_table_hints=additional_table_hints
+        )
 
     # finally load table of measurement names that have been loaded
     yield dlt.resource(
