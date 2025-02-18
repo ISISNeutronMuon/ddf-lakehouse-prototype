@@ -12,10 +12,16 @@ import pandas as pd
 import requests
 
 from pipelines_common.constants import SOURCE_NAMESPACE_PREFIX, SOURCE_TABLE_PREFIX
+from pipelines_common.constants import (
+    MICROSECONDS,
+    MICROSECONDS_INFLUX,
+    SOURCE_NAMESPACE_PREFIX,
+    SOURCE_TABLE_PREFIX,
+)
 from pipelines_common.destinations.pyiceberg import pyiceberg
 
-LOGGER = logging.getLogger(__name__)
 
+LOGGER = logging.getLogger(__name__)
 
 DEVEL = os.environ.get("DEVEL", "true") == "true"
 PIPELINE_NAME = f"{"dev_" if DEVEL else ""}elt_influxdb"
@@ -61,14 +67,14 @@ def influxdb_get_measurement(
     base_url: str = dlt.config.value,
     auth_token: str = dlt.secrets.value,
 ):
-    chunk_t0, chunk_t1 = time_start, time_start + dt.timedelta(weeks=52)
+    chunk_t0, chunk_t1 = time_start, min(time_start + dt.timedelta(weeks=52), time_stop)
     while chunk_t0 < time_stop:
         qt0, qt1 = to_utc_str(chunk_t0), to_utc_str(chunk_t1)
         query = f"SELECT \"value\" FROM /^{channel_name}$/ WHERE time >= '{qt0}' AND time < '{qt1}'"
         resp = requests.get(
             f"{base_url}/query",
             headers={"Authorization": f"Token {auth_token}"},
-            params={"db": bucket_name, "q": query},
+            params={"db": bucket_name, "epoch": MICROSECONDS_INFLUX, "q": query},
         )
         resp_json = resp.json()
         for all_series in resp_json["results"]:
@@ -76,9 +82,12 @@ def influxdb_get_measurement(
             if "series" not in all_series:
                 break
             for series in all_series["series"]:
-                yield pd.DataFrame.from_records(
+                df = pd.DataFrame.from_records(
                     series["values"], columns=series["columns"]
                 )
+                df["time"] = pd.to_datetime(df["time"], unit=MICROSECONDS)
+                yield df
+
         # next chunk
         chunk_t0 = chunk_t1
         chunk_t1 = min(chunk_t1 + dt.timedelta(weeks=52), time_stop)
