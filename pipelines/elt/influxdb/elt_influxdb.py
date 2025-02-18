@@ -38,6 +38,7 @@ INFLUXDB_MACHINESTATE_TIME_START, INFLUXDB_MACHINESTATE_TIME_STOP = (
 
 # Destination
 COLUMN_CHANNEL_NAME = "channel_name"
+PARTITION_HINT = "x-partition-spec"
 
 
 def to_utc_str(timestamp: dt.datetime) -> str:
@@ -88,6 +89,7 @@ def influxdb_get_measurement(
                     series["values"], columns=series["columns"]
                 )
                 df["time"] = pd.to_datetime(df["time"], unit=MICROSECONDS)
+                df[COLUMN_CHANNEL_NAME] = channel_name
                 yield df
 
         # next chunk
@@ -115,7 +117,7 @@ def machinestate(
     )
 
     # first, load all measurement data
-    additional_table_hints = {"x-partition-spec": [("time", YEAR)]}
+    additional_table_hints = {PARTITION_HINT: [("time", YEAR)]}
 
     for measurement in measurements_to_load:
         channel_name = measurement["name"]
