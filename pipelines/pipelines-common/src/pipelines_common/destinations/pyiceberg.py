@@ -4,6 +4,7 @@ import dlt
 from dlt.common.typing import TDataItems
 from dlt.common.schema import TTableSchema
 import pyarrow.parquet as pq
+from pyiceberg.transforms import parse_transform
 
 import pipelines_common.utils.iceberg as iceberg
 
@@ -51,8 +52,21 @@ def pyiceberg(
     # batch=0 gives filename of extracted data in loader_file_format
     extracted_table_data = pq.read_table(filename)
     table_id = (table_id[0], table_id[1])
-    destination_table = catalog.create_table(
+    partition_spec = table.get("x-partition-spec", None)
+
+    with catalog.create_table_transaction(
         table_id,
         extracted_table_data.schema,
-    )
-    destination_table.append(extracted_table_data)
+    ) as txn:
+        if partition_spec is not None:
+            with txn.update_spec() as update_spec:
+                for spec in partition_spec:
+                    if isinstance(spec, str):
+                        update_spec.add_identity(spec)
+                    else:
+                        partition_field_name = spec[2] if len(spec) == 3 else None
+                        update_spec.add_field(
+                            spec[0], parse_transform(spec[1]), partition_field_name
+                        )
+        # add data
+        txn.append(extracted_table_data)
