@@ -43,7 +43,7 @@ def pyiceberg(
             f" but `{write_disposition}` was provided."
         )
 
-    catalog = iceberg.catalog_get_or_create(catalog_properties)
+    catalog = iceberg.catalog_create(catalog_properties)
     catalog.create_namespace_if_not_exists(namespace_name)
     table_id = iceberg.table_identifier(namespace_name, table_name)
     if catalog.table_exists(table_id):
