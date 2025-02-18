@@ -118,7 +118,6 @@ def machinestate(
 
     # first, load all measurement data
     additional_table_hints = {PARTITION_HINT: [("time", YEAR)]}
-
     for measurement in measurements_to_load:
         channel_name = measurement["name"]
         table_name = f"{SOURCE_TABLE_PREFIX}{bucket_name}_{channel_name}"
