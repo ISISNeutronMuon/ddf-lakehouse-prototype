@@ -164,7 +164,7 @@ load_info = pipeline.run(
             else None
         ),
     ),
-    write_disposition="replace",
+    write_disposition="skip",
 )
 
 LOGGER.info(load_info)
