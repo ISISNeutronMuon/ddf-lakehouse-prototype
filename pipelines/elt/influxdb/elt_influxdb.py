@@ -45,6 +45,10 @@ def to_utc_str(timestamp: dt.datetime) -> str:
     return timestamp.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
+def measurement_list_table_name(bucket_name):
+    return f"{SOURCE_TABLE_PREFIX}{bucket_name}_measurement_name"
+
+
 def influxdb_measurement_names(
     bucket_name: str,
     base_url: str = dlt.config.value,
@@ -105,7 +109,6 @@ def machinestate(
     time_stop: dt.datetime,
     selected_measurements: Optional[List[Dict[str, str]]] = None,
 ) -> Generator[DltResource]:
-    #
     measurements_to_load = (
         influxdb_measurement_names(
             bucket_name=bucket_name,
@@ -130,7 +133,7 @@ def machinestate(
     # finally load table of measurement names that have been loaded
     yield dlt.resource(
         measurements_to_load,
-        name=f"{SOURCE_TABLE_PREFIX}{bucket_name}_measurement",
+        name=measurement_list_table_name(bucket_name),
     )
 
 
