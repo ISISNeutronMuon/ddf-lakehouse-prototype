@@ -1,5 +1,5 @@
 ---
-nessie_image: ghcr.io/projectnessie/nessie:0.99.0
+nessie_image: ghcr.io/projectnessie/nessie:0.103.0
 nessie_container_network: nessie
 nessie_http_port: 19120
 nessie_base_path: /nessie
