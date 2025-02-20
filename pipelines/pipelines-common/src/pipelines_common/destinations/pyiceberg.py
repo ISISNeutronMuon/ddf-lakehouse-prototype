@@ -35,17 +35,15 @@ def pyiceberg(
     assert "write_disposition" in table
 
     write_disposition = cast(str, table["write_disposition"])
-    if write_disposition not in ("append", "replace", "skip"):
+    if write_disposition not in ("append", "replace"):
         raise ValueError(
-            "`write_disposition must be one of (`append`, `replace`, `skip`)"
+            "`write_disposition must be one of (`append`, `replace`)"
             f" but `{write_disposition}` was provided."
         )
 
     catalog = iceberg.catalog_create(catalog_properties)
     table_name = cast(str, table["name"])
     table_id = iceberg.table_identifier(namespace_name, table_name)
-    if write_disposition == "skip" and catalog.table_exists(table_id):
-        return
 
     # batch=0 gives filename of extracted data in loader_file_format
     extracted_table_data = pq.read_table(filename)
