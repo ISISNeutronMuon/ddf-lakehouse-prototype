@@ -238,6 +238,8 @@ def main():
     args = parse_args()
     logging.basicConfig(level=logging.INFO)
 
+    LOGGER.info(f"-- {PIPELINE_NAME} --")
+    LOGGER.debug(f"Querying channels to load...")
     channels_to_load = (
         args.channels
         if args.channels
@@ -247,14 +249,19 @@ def main():
             dlt.secrets["sources.auth_token"],
         )
     )
+    channels_total_size = len(channels_to_load)
+    LOGGER.debug(f"Found {channels_total_size} to load.")
+
+    LOGGER.debug(f"Determining range of previously loaded data...")
     query_last_loaded_times_started_at = dt.datetime.now()
     channel_last_loaded_times = measurement_channel_last_times(
         PIPELINE_NAME, NAMESPACE_NAME, INFLUXDB_MACHINESTATE_BUCKET, channels_to_load
     )
     query_last_loaded_times_finished_at = dt.datetime.now()
-    LOGGER.info(
+    LOGGER.debug(
         f"Queried existing channel times took {humanize.precisedelta(query_last_loaded_times_finished_at - query_last_loaded_times_started_at)}"
     )
+    LOGGER.debug(f"Found {len(channel_last_loaded_times)} channels loaded previously.")
 
     # Begin pipeline
     pipeline = dlt.pipeline(
@@ -264,7 +271,6 @@ def main():
     )
     backfill_started_at = dt.datetime.now()
     channels_batch_size = dlt.config["sources.channel_batch_size"]
-    channels_total_size = len(channels_to_load)
     channels_total_batches = int(channels_total_size / channels_batch_size) + (
         1 if channels_total_size % channels_batch_size > 0 else 0
     )
