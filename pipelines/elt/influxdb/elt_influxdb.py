@@ -93,7 +93,9 @@ def influxdb_channel_names(
     resp_json = resp.json()
     try:
         series = resp_json["results"][0]["series"][0]
-        return flatten(series["values"])
+        return list(
+            filter(lambda x: not x.startswith("aws"), flatten(series["values"]))
+        )
     except (IndexError, KeyError):
         raise ValueError(
             f"Error querying Influx for available channel names. Unexpected result structure:\n '{resp_json}'"
