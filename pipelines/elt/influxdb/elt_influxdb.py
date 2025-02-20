@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 import dlt
 from dlt.extract import DltResource
 import dlt.common.normalizers.naming.snake_case as snake_case
+import dlt.pipeline.exceptions as dlt_exc
 import humanize
 import pandas as pd
 import requests
@@ -282,19 +283,19 @@ def main():
         LOGGER.info(f"Beginning pipeline run {batch_number}/{channels_total_batches}")
         chunk_channels = channels_to_load[index_start:index_end]
 
-        load_info = pipeline.run(
-            machinestate(
-                INFLUXDB_MACHINESTATE_BUCKET,
-                measurements_to_load=chunk_channels,
-                default_backfill_times=INFLUXDB_MACHINESTATE_TIMES,
-                last_loaded_times=channel_last_loaded_times,
-            ),
-            write_disposition="append",
-        )
-        LOGGER.debug(load_info)
-        for load_package in load_info.load_packages:
-            for failed_job in load_package.jobs["failed_jobs"]:
-                LOGGER.info(f"Load job failed for '{failed_job.file_path}'")
+        try:
+            load_info = pipeline.run(
+                machinestate(
+                    INFLUXDB_MACHINESTATE_BUCKET,
+                    measurements_to_load=chunk_channels,
+                    default_backfill_times=INFLUXDB_MACHINESTATE_TIMES,
+                    last_loaded_times=channel_last_loaded_times,
+                ),
+                write_disposition="append",
+            )
+            LOGGER.debug(load_info)
+        except dlt_exc.PipelineStepFailed as exc:
+            LOGGER.info(f"Pipeline step failed with error: {str(exc)}. Skipping")
         # If any packages failed to load we don't want to load them again.
         pipeline.drop_pending_packages(with_partial_loads=True)
 
