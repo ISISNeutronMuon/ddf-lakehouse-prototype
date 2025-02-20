@@ -8,8 +8,7 @@ channel_batch_size = 5
 
 [load]
 delete_completed_jobs = true
-raise_on_failed_jobs = false
-raise_on_max_retries = 0
+raise_on_max_retries = 1
 
 [elt_influxdb.destination.pyiceberg.catalog_properties]
 name = "isis"
