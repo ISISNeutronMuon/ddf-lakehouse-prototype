@@ -279,6 +279,7 @@ def main():
     while index_start < index_end:
         LOGGER.info(f"Beginning pipeline run {batch_number}/{channels_total_batches}")
         chunk_channels = channels_to_load[index_start:index_end]
+
         load_info = pipeline.run(
             machinestate(
                 INFLUXDB_MACHINESTATE_BUCKET,
@@ -288,9 +289,13 @@ def main():
             ),
             write_disposition="append",
         )
-        LOGGER.info(load_info)
-        if load_info.has_failed_jobs:
-            LOGGER.info(f"Some packages failed to load.")
+        LOGGER.debug(load_info)
+        for load_package in load_info.load_packages:
+            for failed_job in load_package.jobs["failed_jobs"]):
+                LOGGER.info(f"Load job failed for '{failed_job.file_path}'")
+        # If any packages failed to load we don't want to load them again.
+        pipeline.drop_pending_packages(with_partial_loads=True)
+
         LOGGER.info(
             f"Pipeline run for channels ({chunk_channels}) completed in {
             humanize.precisedelta(
