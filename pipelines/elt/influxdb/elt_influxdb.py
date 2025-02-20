@@ -291,7 +291,7 @@ def main():
         )
         LOGGER.debug(load_info)
         for load_package in load_info.load_packages:
-            for failed_job in load_package.jobs["failed_jobs"]):
+            for failed_job in load_package.jobs["failed_jobs"]:
                 LOGGER.info(f"Load job failed for '{failed_job.file_path}'")
         # If any packages failed to load we don't want to load them again.
         pipeline.drop_pending_packages(with_partial_loads=True)
