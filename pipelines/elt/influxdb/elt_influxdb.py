@@ -289,6 +289,8 @@ def main():
             write_disposition="append",
         )
         LOGGER.info(load_info)
+        if load_info.has_failed_jobs:
+            LOGGER.info(f"Some packages failed to load.")
         LOGGER.info(
             f"Pipeline run for channels ({chunk_channels}) completed in {
             humanize.precisedelta(
