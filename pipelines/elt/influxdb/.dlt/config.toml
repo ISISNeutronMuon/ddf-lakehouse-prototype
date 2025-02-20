@@ -4,6 +4,7 @@ log_level = "WARNING"
 
 [sources]
 base_url = "http://172.16.103.105:8086"
+channel_batch_size = 5
 
 [load]
 delete_completed_jobs = true

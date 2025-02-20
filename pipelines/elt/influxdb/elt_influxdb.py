@@ -79,20 +79,25 @@ def measurement_list_table_name(bucket_name):
     return f"{SOURCE_TABLE_PREFIX}{bucket_name}_measurement_name"
 
 
-def influxdb_measurement_names(
-    bucket_name: str,
-    base_url: str = dlt.config.value,
-    auth_token: str = dlt.secrets.value,
-):
+def influxdb_channel_names(
+    bucket_name: str, base_url: str, auth_token: str
+) -> List[str]:
+    def flatten(nested):
+        return [subitem for item in nested for subitem in item]
+
     resp = requests.get(
         f"{base_url}/query",
         headers={"Authorization": f"Token {auth_token}"},
         params={"db": bucket_name, "q": f"SHOW MEASUREMENTS"},
     )
     resp_json = resp.json()
-    for all_series in resp_json["results"]:
-        for series in all_series["series"]:
-            yield pd.DataFrame.from_records(series["values"], columns=series["columns"])
+    try:
+        series = resp_json["results"][0]["series"][0]
+        return flatten(series["values"])
+    except (IndexError, KeyError):
+        raise ValueError(
+            f"Error querying Influx for available channel names. Unexpected result structure:\n '{resp_json}'"
+        )
 
 
 def influxdb_get_channel_start(
@@ -218,7 +223,12 @@ def machinestate(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--channels", nargs="+", default=[])
+    parser.add_argument(
+        "--channels",
+        nargs="+",
+        default=[],
+        help="A whitespace-separate list of channel names to load to the warehouse. By default all channels from the source will be loaded.",
+    )
 
     return parser.parse_args()
 
@@ -228,20 +238,41 @@ def main():
     args = parse_args()
     logging.basicConfig(level=logging.INFO)
 
+    channels_to_load = (
+        args.channels
+        if args.channels
+        else influxdb_channel_names(
+            INFLUXDB_MACHINESTATE_BUCKET,
+            dlt.config["sources.base_url"],
+            dlt.secrets["sources.auth_token"],
+        )
+    )
+    query_last_loaded_times_started_at = dt.datetime.now()
+    channel_last_loaded_times = measurement_channel_last_times(
+        PIPELINE_NAME, NAMESPACE_NAME, INFLUXDB_MACHINESTATE_BUCKET, channels_to_load
+    )
+    query_last_loaded_times_finished_at = dt.datetime.now()
+    LOGGER.info(
+        f"Queried existing channel times took {humanize.precisedelta(query_last_loaded_times_finished_at - query_last_loaded_times_started_at)}"
+    )
+
+    # Begin pipeline
     pipeline = dlt.pipeline(
         destination=pyiceberg(namespace_name=NAMESPACE_NAME),
         pipeline_name=PIPELINE_NAME,
         progress="log",
     )
-
-    channel_last_loaded_times = measurement_channel_last_times(
-        PIPELINE_NAME, NAMESPACE_NAME, INFLUXDB_MACHINESTATE_BUCKET, args.channels
-    )
-
     backfill_started_at = dt.datetime.now()
-    index_start, index_end = 0, min(5, len(args.channels))
+    channels_batch_size = dlt.config["sources.channel_batch_size"]
+    channels_total_size = len(channels_to_load)
+    channels_total_batches = int(channels_total_size / channels_batch_size) + (
+        1 if channels_total_size % channels_batch_size > 0 else 0
+    )
+    index_start, index_end = 0, min(channels_batch_size, channels_total_size)
+    batch_number = 1
     while index_start < index_end:
-        chunk_channels = args.channels[index_start:index_end]
+        LOGGER.info(f"Beginning pipeline run {batch_number}/{channels_total_batches}")
+        chunk_channels = channels_to_load[index_start:index_end]
         load_info = pipeline.run(
             machinestate(
                 INFLUXDB_MACHINESTATE_BUCKET,
@@ -260,7 +291,10 @@ def main():
         )
         # next chunk
         index_start = index_end
-        index_end = index_start + min(5, len(args.channels) - index_start)
+        index_end = index_start + min(
+            channels_batch_size, channels_total_size - index_start
+        )
+        batch_number += 1
 
     backfill_ended_at = dt.datetime.now()
     LOGGER.info(
