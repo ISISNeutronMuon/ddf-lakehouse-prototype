@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 import dlt
 from dlt.extract import DltResource
 import dlt.common.normalizers.naming.snake_case as snake_case
-import dlt.pipeline.exceptions as dlt_exc
+from dlt.pipeline.exceptions import PipelineStepFailed
 import humanize
 import pandas as pd
 import requests
@@ -294,7 +294,7 @@ def main():
                 write_disposition="append",
             )
             LOGGER.debug(load_info)
-        except dlt_exc.PipelineStepFailed as exc:
+        except PipelineStepFailed as exc:
             LOGGER.info(f"Pipeline step failed with error: {str(exc)}. Skipping")
         # If any packages failed to load we don't want to load them again.
         pipeline.drop_pending_packages(with_partial_loads=True)
