@@ -1,6 +1,7 @@
 [runtime]
 dlthub_telemetry = false
 log_level = "WARNING"
+request_max_attempts = 2
 
 [sources]
 base_url = "http://172.16.103.105:8086"
