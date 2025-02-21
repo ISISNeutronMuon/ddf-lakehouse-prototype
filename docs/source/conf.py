@@ -6,10 +6,9 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "docs"
+project = "ISIS Accelerator Data"
 copyright = "2025, ISIS Computing Division"
 author = "ISIS Computing Division"
-release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -23,6 +22,7 @@ templates_path = ["_templates"]
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
+html_css_files = ["custom.css"]
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
 html_logo = "_static/logo.svg"

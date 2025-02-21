@@ -4,6 +4,12 @@
 Superset
 ========
 
+.. toctree::
+   :glob:
+   :hidden:
+
+   *
+
 Quick links
 -----------
 
@@ -12,13 +18,13 @@ Quick links
 Getting started
 ---------------
 
-`Apache Superset <apache-superset_>`_ is a data exploration and visualization tool,
-allowing users to create charts and dashboards to explore data.
+`Apache Superset <apache-superset_>`_ is a data exploration and visualization tool
+allowing users to explore their data by create charts and dashboards without writing code.
 It is an off-the-shelf, open-source tool used extensively by the analytics community
 and is not a custom tool built for ISIS.
 
 ISIS hosts its own `instance of this tool <isis-superset_>`_ with the available
-:ref:`data sets <data-catalog>` preconfigured.
+datasets preconfigured.
 
 Logging in
 ^^^^^^^^^^
@@ -57,5 +63,11 @@ buttons:
 
 To view all items of that type within the system click the ``View All >>`` link
 on the right-hand side of the section header.
+
+Charts
+^^^^^^
+
+Charts are one of the central features of Superset.
+Please see the :ref:`superset-charts` documentation for more detail.
 
 .. include:: ../common_links.rst

@@ -10,7 +10,7 @@ Accelerator Data Platform
    :maxdepth: 2
    :caption: Contents:
 
-   superset/*
+   superset/index
 
 
 Welcome to the landing page for the accelerator data platform. This project aims
