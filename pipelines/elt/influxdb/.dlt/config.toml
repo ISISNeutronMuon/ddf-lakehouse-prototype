@@ -10,12 +10,19 @@ channel_batch_size = 5
 delete_completed_jobs = true
 raise_on_max_retries = 1
 
-[elt_influxdb.destination.pyiceberg.catalog_properties]
-name = "isis"
-uri = "https://data-accelerator.isis.cclrc.ac.uk/nessie/iceberg/"
+# extract and normalize stages
+[data_writer]
+file_max_bytes = 10000000
 
-[dev_elt_influxdb.destination.pyiceberg.catalog_properties]
-name = "isis"
-uri = "sqlite:///iceberg-catalog.db"
-warehouse = "./warehouse"
-py-io-impl = "pyiceberg.io.pyarrow.PyArrowFileIO"
+[destination.filesystem]
+layout = "{schema_name}/{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
+
+[dev_influxdb.destination.filesystem]
+bucket_url = './prod-warehouse-isis-staging/sources/'
+auto_mkdir = true
+
+[influxdb.destination.filesystem]
+bucket_url = 's3://prod-warehouse-isis-staging/sources/'
+
+[transform]
+combined_machinestate_table = "accelerator.clean_machinestate"
