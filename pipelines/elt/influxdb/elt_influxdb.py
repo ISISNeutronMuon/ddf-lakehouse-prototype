@@ -265,6 +265,10 @@ def merge_into_combined_machinestate(load_info: LoadInfo):
     for package in load_info.load_packages:
         for job_info in package.jobs["completed_jobs"]:
             table_name = job_info.job_file_info.table_name
+            # Skip any internal dlt tables that may have been loaded
+            if table_name.startswith("_dlt"):
+                LOGGER.debug(f"Skipping merge of internal dlt table {table_name}.")
+                continue
             created_at = job_info.created_at
             glob_pattern = f"{staging_prefix}/{package.schema_name}/{table_name}/{created_at.year:02}/{created_at.month:02}/{created_at.day:02}/{package.load_id}*.{LOADER_FILE_FORMAT}"
             LOGGER.debug(f"Searching for loaded files using glob '{glob_pattern}'")
