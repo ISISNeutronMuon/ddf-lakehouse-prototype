@@ -241,7 +241,7 @@ def ensure_combined_machinestate_table_exists() -> str:
     return combined_machinestate_table
 
 
-def transform(load_info: LoadInfo):
+def merge_into_combined_machinestate(load_info: LoadInfo):
     """Takes a set of staged packages and applies further transforms to the loaded files.
 
     Note: This only works for the filesystem destination.
@@ -249,7 +249,7 @@ def transform(load_info: LoadInfo):
     """
     # Quick exit if there is nothing loaded, e.g. an incremental load that has nothing new
     if len(load_info.load_packages) == 0:
-        LOGGER.debug(f"Skipping transform step as no new packages have been loaded.")
+        LOGGER.debug(f"Skipping merge step as no new packages have been loaded.")
         return
 
     staging_prefix = (
@@ -370,7 +370,15 @@ def main():
             pipeline, chunk_channels, args.on_pipeline_step_failure
         )
         if load_info is not None:
-            transform(load_info)
+            try:
+                merge_into_combined_machinestate(load_info)
+            except Exception as exc:
+                if args.on_pipeline_step_failure:
+                    raise
+                else:
+                    LOGGER.info(
+                        f"Error merging loaded data with combined table:\n{str(exc)}"
+                    )
 
         # next chunk
         index_start = index_end
