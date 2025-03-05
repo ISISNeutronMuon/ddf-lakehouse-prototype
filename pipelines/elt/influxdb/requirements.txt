@@ -2,25 +2,11 @@
 #    uv pip compile ./requirements.in
 -e ../../pipelines-common
     # via -r ./requirements.in
-aiobotocore==2.19.0
-    # via s3fs
-aiohappyeyeballs==2.4.6
-    # via aiohttp
-aiohttp==3.11.12
-    # via
-    #   aiobotocore
-    #   s3fs
-aioitertools==0.12.0
-    # via aiobotocore
-aiosignal==1.3.2
-    # via aiohttp
 annotated-types==0.7.0
     # via pydantic
-attrs==25.1.0
-    # via aiohttp
-botocore==1.36.3
-    # via aiobotocore
-cachetools==5.5.1
+botocore==1.37.6
+    # via -r ./requirements.in
+cachetools==5.5.2
     # via pyiceberg
 certifi==2025.1.31
     # via requests
@@ -32,15 +18,10 @@ click==8.1.8
     #   pyiceberg
 dlt==1.6.1
     # via -r ./../../requirements/base.in
-frozenlist==1.5.0
-    # via
-    #   aiohttp
-    #   aiosignal
 fsspec==2025.2.0
     # via
     #   dlt
     #   pyiceberg
-    #   s3fs
 gitdb==4.0.12
     # via gitpython
 gitpython==3.1.44
@@ -54,13 +35,9 @@ humanize==4.11.0
     #   -r ./../../requirements/base.in
     #   dlt
 idna==3.10
-    # via
-    #   requests
-    #   yarl
+    # via requests
 jmespath==1.0.1
-    # via
-    #   aiobotocore
-    #   botocore
+    # via botocore
 jsonpath-ng==1.7.0
     # via dlt
 makefun==1.15.6
@@ -71,11 +48,6 @@ mdurl==0.1.2
     # via markdown-it-py
 mmh3==5.1.0
     # via pyiceberg
-multidict==6.1.0
-    # via
-    #   aiobotocore
-    #   aiohttp
-    #   yarl
 numpy==2.2.3
     # via pandas
 orjson==3.10.15
@@ -94,11 +66,11 @@ pluggy==1.5.0
     # via dlt
 ply==3.11
     # via jsonpath-ng
-propcache==0.2.1
-    # via
-    #   aiohttp
-    #   yarl
 psutil==6.1.1
+    # via -r ./../../requirements/base.in
+py4j==0.10.9.7
+    # via pyspark
+pyarrow==19.0.1
     # via -r ./../../requirements/base.in
 pydantic==2.10.6
     # via pyiceberg
@@ -106,15 +78,16 @@ pydantic-core==2.27.2
     # via pydantic
 pygments==2.19.1
     # via rich
-pyiceberg==0.8.1
+pyiceberg==0.9.0
     # via
     #   -r ./../../requirements/base.in
     #   pipelines-common
 pyparsing==3.2.1
     # via pyiceberg
+pyspark==3.5.2
+    # via -r ./../../requirements/base.in
 python-dateutil==2.9.0.post0
     # via
-    #   aiobotocore
     #   botocore
     #   pandas
     #   pendulum
@@ -138,12 +111,12 @@ rich==13.9.4
     #   rich-argparse
 rich-argparse==1.7.0
     # via dlt
-s3fs==2025.2.0
-    # via pyiceberg
 semver==3.0.4
     # via dlt
-setuptools==75.8.0
-    # via dlt
+setuptools==75.8.2
+    # via
+    #   dlt
+    #   types-setuptools
 simplejson==3.20.1
     # via dlt
 six==1.17.0
@@ -162,7 +135,7 @@ time-machine==2.16.0
     # via pendulum
 tomlkit==0.13.2
     # via dlt
-types-setuptools==75.8.0.20250210
+types-setuptools==75.8.2.20250305
     # via requirements-parser
 typing-extensions==4.12.2
     # via
@@ -176,10 +149,5 @@ tzdata==2025.1
     #   pendulum
 urllib3==2.3.0
     # via
-    #   aiobotocore
     #   botocore
     #   requests
-wrapt==1.17.2
-    # via aiobotocore
-yarl==1.18.3
-    # via aiohttp
