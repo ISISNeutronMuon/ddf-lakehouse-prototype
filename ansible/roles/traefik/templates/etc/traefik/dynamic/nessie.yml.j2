@@ -7,8 +7,8 @@ http:
 {% if nessie_base_path != '/' %}
       middlewares:
         - nessie-strip-prefix
-      tls: {}
 {% endif %}
+      tls: {}
 
 {% if nessie_base_path != '/' %}
   middlewares:
