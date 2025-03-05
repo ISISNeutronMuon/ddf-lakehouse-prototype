@@ -5,7 +5,7 @@ from pyiceberg.catalog import Catalog
 from pyiceberg.typedef import Identifier
 
 
-def catalog_create(catalog_properties: Dict[str, str]) -> Catalog:
+def create_catalog(catalog_properties: Dict[str, str]) -> Catalog:
     """Connect to an iceberg catalog on a given uri"""
     uri = catalog_properties["uri"]
     if uri.startswith("sqlite:///"):

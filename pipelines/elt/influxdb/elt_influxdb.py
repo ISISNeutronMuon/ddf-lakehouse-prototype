@@ -1,11 +1,10 @@
 import argparse
 from collections.abc import Generator
-import datetime as dt
 import logging
 import os
 import pandas as pd
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 import dlt
@@ -15,84 +14,35 @@ from dlt.pipeline.exceptions import PipelineStepFailed
 
 import humanize
 import pandas as pd
-from pyspark.sql import SparkSession
+import pendulum
 import requests
 
-
 from pipelines_common.constants import (
-    MICROSECONDS_PER_SEC,
     MICROSECONDS_STR,
     MICROSECONDS_STR_INFLUX,
-    SOURCE_TABLE_PREFIX,
 )
 
-# from pipelines_common.destinations.pyiceberg import pyiceberg
-from pipelines_common.utils.iceberg import Catalog, catalog_create
+from pipelines_common.utils.iceberg import create_catalog
+from pipelines_common.utils.spark import create_spark_session
 
 LOGGER = logging.getLogger(__name__)
 
+# Runtime
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 
 # Source
 INFLUXDB_MACHINESTATE_BUCKET = "machinestate"
-INFLUXDB_MACHINESTATE_TIMES = (
-    dt.datetime(2018, 1, 1, tzinfo=dt.timezone.utc),
-    dt.datetime(2025, 1, 1, tzinfo=dt.timezone.utc),
+INFLUXDB_MACHINESTATE_BACKFILL_START = pendulum.DateTime(
+    2018, 1, 1, tzinfo=pendulum.UTC
 )
 
 # Staging destination
 COLUMN_CHANNEL_NAME = "channel"
 LOADER_FILE_FORMAT = "parquet"
-# PARTITION_HINT = "x-partition-spec"
 
 
-def create_spark_session():
-    """Create Spark session using the current dlt.secrets values."""
-    spark = (
-        SparkSession.builder.master(dlt.secrets["transform.spark.controller_url"])  # type: ignore
-        .config(map=dlt.secrets["transform.spark.config"])
-        .appName(Path(__file__).name)
-        .getOrCreate()
-    )
-    spark.sparkContext.setLogLevel("WARN")
-    return spark
-
-
-def to_utc_str(timestamp: dt.datetime) -> str:
+def _to_utc_str(timestamp: pendulum.DateTime) -> str:
     return timestamp.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-
-
-def measurement_channel_table_name(
-    bucket_name: str, channel_name: str, normalized: bool = False
-):
-    """Compute the table name for a given channel in a bucket with optional normalization"""
-    return channel_name
-    # unnormalized_name = f"{SOURCE_TABLE_PREFIX}{bucket_name}_{channel_name}"
-    # return (
-    #     snake_case.NamingConvention().normalize_identifier(unnormalized_name)
-    #     if normalized
-    #     else unnormalized_name
-    # )
-
-
-def measurement_channel_last_times(
-    pipeline_name: str, namespace_name: str, bucket_name: str, channels: List[str]
-):
-    last_loaded_times = {}
-    # destination_catalog = catalog_create(
-    #     dlt.config[f"{pipeline_name}.destination.pyiceberg.catalog_properties"]
-    # )
-    # for channel_name in channels:
-    #     table_id = f"{namespace_name}.{measurement_channel_table_name(bucket_name, channel_name, normalized=True)}"
-    #     last_time_value = destination_last_time_value(destination_catalog, table_id)
-    #     if last_time_value is not None:
-    #         last_loaded_times[channel_name] = last_time_value
-
-    return last_loaded_times
-
-
-def measurement_list_table_name(bucket_name):
-    return f"{SOURCE_TABLE_PREFIX}{bucket_name}_measurement_name"
 
 
 def influxdb_channel_names(
@@ -118,45 +68,6 @@ def influxdb_channel_names(
         )
 
 
-def influxdb_get_channel_start(
-    bucket_name: str,
-    channel_name: str,
-    base_url: str,
-    auth_token: str,
-) -> Optional[dt.datetime]:
-    """Return the timestamp of the first recorded value for the given bucket and channel.
-
-    None is returned if a value cannot be determined
-    """
-    query = f'SELECT "value" FROM /^{channel_name}$/ LIMIT 1'
-    resp = requests.get(
-        f"{base_url}/query",
-        headers={"Authorization": f"Token {auth_token}"},
-        params={"db": bucket_name, "epoch": MICROSECONDS_STR_INFLUX, "q": query},
-    )
-    resp_json = resp.json()
-    try:
-        return dt.datetime.fromtimestamp(
-            resp_json["results"][0]["series"][0]["values"][0][0] / MICROSECONDS_PER_SEC
-        )
-    except (IndexError, KeyError):
-        return None
-
-
-def destination_last_time_value(catalog, table_id: str) -> Optional[dt.datetime]:
-    """Peek into the loaded table and return the timestamp of the latest piece of data"""
-    if catalog.table_exists(table_id):
-        table = catalog.load_table(table_id)
-        last_value = (
-            table.scan(selected_fields=("time",)).to_arrow().sort_by("time")["time"][-1]
-        )
-        return dt.datetime.fromtimestamp(
-            last_value.value / MICROSECONDS_PER_SEC, tz=dt.timezone.utc
-        )
-    else:
-        return None
-
-
 @dlt.resource()
 def influxdb_get_measurement(
     bucket_name: str,
@@ -165,17 +76,28 @@ def influxdb_get_measurement(
     base_url: str = dlt.config.value,
     auth_token: str = dlt.secrets.value,
 ):
-    """Load all data for a given channel, yielding in yearly chunks"""
+    """Load data for a given channel.
+
+    The start time of the load is determined through the dlt.incremental mechanism tracking the
+    value of the last load. If no end time is specified the current date/time is used.
+    """
+
+    def next_chunk_start(ts: pendulum.DateTime) -> pendulum.DateTime:
+        # A bug in Pendulum drops the timezone on addition with days:
+        # https://github.com/python-pendulum/pendulum/issues/669
+        return (ts.add(weeks=52)).astimezone(pendulum.UTC)
+
     time_start = time.start_value
     time_end = (
-        time.end_value
-        if time.end_value is not None
-        else time.start_value + dt.datetime.now()
+        time.end_value if time.end_value is not None else pendulum.now(pendulum.UTC)
+    )
+    LOGGER.debug(
+        f"Pulling measurement '{channel_name}' for time range [{time_start}, {time_end})"
     )
 
-    chunk_start, chunk_end = time_start, time_start + dt.timedelta(weeks=52)
+    chunk_start, chunk_end = time_start, min(next_chunk_start(time_start), time_end)
     while chunk_start < chunk_end:
-        query_t0, query_t1 = to_utc_str(chunk_start), to_utc_str(chunk_end)
+        query_t0, query_t1 = _to_utc_str(chunk_start), _to_utc_str(chunk_end)
         query = f"SELECT \"value\" FROM /^{channel_name}$/ WHERE time >= '{query_t0}' AND time < '{query_t1}'"
         LOGGER.debug(query)
         resp = requests.get(
@@ -200,10 +122,12 @@ def influxdb_get_measurement(
                 )
                 df["value"] = df["value"].astype("float64")
                 df[COLUMN_CHANNEL_NAME] = channel_name
+                # Sort by time so the incremental loading mechanism gets the correct "last value"
+                df.sort_values(by=["time"], inplace=True)
                 yield df
         # next chunk
         chunk_start = chunk_end
-        chunk_end = min(chunk_start + dt.timedelta(weeks=52), time_end)
+        chunk_end = min(next_chunk_start(chunk_end), time_end)
 
 
 # "name" defines the name of the destination schema, either folder inside
@@ -212,33 +136,21 @@ def influxdb_get_measurement(
 def machinestate(
     bucket_name: str,
     measurements_to_load: List[str],
-    default_backfill_times: Tuple[dt.datetime, dt.datetime],
-    last_loaded_times: Optional[Dict[str, dt.datetime]] = None,
+    backfill_range: Tuple[pendulum.DateTime, Optional[pendulum.DateTime]],
 ) -> Generator[DltResource]:
-    def increment(t: dt.datetime) -> dt.datetime:
-        return t + dt.timedelta(microseconds=1)
 
-    # load all measurement data
-    last_time_values = last_loaded_times if last_loaded_times is not None else {}
-    additional_table_hints = {}  # {PARTITION_HINT: [("time", YEAR)]}
+    time_end_value = backfill_range[1] if backfill_range[1] is not None else None
     for channel_name in measurements_to_load:
-        initial_time_value = (
-            increment(last_time_values[channel_name])
-            if channel_name in last_time_values
-            else default_backfill_times[0]
-        )
-        end_time_value = default_backfill_times[1]
+        initial_time_value = backfill_range[0]
         time_args = {
             "time": dlt.sources.incremental(
-                initial_value=initial_time_value, end_value=end_time_value
+                initial_value=initial_time_value, end_value=time_end_value
             )
         }
-        table_name = measurement_channel_table_name(bucket_name, channel_name)
+        table_name = channel_name
         yield influxdb_get_measurement(
             bucket_name, channel_name, **time_args
-        ).with_name(table_name).apply_hints(
-            table_name=table_name, additional_table_hints=additional_table_hints
-        )
+        ).with_name(table_name).apply_hints(table_name=table_name)
 
 
 def extract_and_load_machinestate(
@@ -256,11 +168,10 @@ def extract_and_load_machinestate(
             machinestate(
                 INFLUXDB_MACHINESTATE_BUCKET,
                 measurements_to_load=channels,
-                default_backfill_times=INFLUXDB_MACHINESTATE_TIMES,
-                last_loaded_times=None,
+                backfill_range=(INFLUXDB_MACHINESTATE_BACKFILL_START, None),
             ),
             loader_file_format=LOADER_FILE_FORMAT,
-            write_disposition="replace",
+            write_disposition="append",
         )
         LOGGER.debug(load_info)
     except PipelineStepFailed as exc:
@@ -314,7 +225,7 @@ def ensure_combined_machinestate_table_exists() -> str:
     # Sort on the time field
     sort_order = SortOrder(SortField(source_id=1, transform=IdentityTransform()))
 
-    catalog = catalog_create(dlt.secrets["transform.pyiceberg"])
+    catalog = create_catalog(dlt.secrets["transform.pyiceberg"])
     combined_machinestate_table = dlt.config["transform.combined_machinestate_table"]
     namespace_name, table_name = combined_machinestate_table.split(".")
     LOGGER.debug(f"Creating namespace '{namespace_name}' if it doesn't exist.")
@@ -336,12 +247,21 @@ def transform(load_info: LoadInfo):
     Note: This only works for the filesystem destination.
     :param load_info: A dlt LoadInfo object describing the completed load jobs
     """
+    # Quick exit if there is nothing loaded, e.g. an incremental load that has nothing new
+    if len(load_info.load_packages) == 0:
+        LOGGER.debug(f"Skipping transform step as no new packages have been loaded.")
+        return
+
     staging_prefix = (
         f"{load_info.destination_displayable_credentials}/{load_info.dataset_name}"
     )
     catalog_name = dlt.secrets["transform.pyiceberg.name"]
     combined_machinestate_table = ensure_combined_machinestate_table_exists()
-    spark = create_spark_session()
+    spark = create_spark_session(
+        app_name=Path(__file__).name,
+        controller_url=dlt.secrets["transform.spark.controller_url"],
+        config=dlt.secrets["transform.spark.config"],
+    )
     for package in load_info.load_packages:
         for job_info in package.jobs["completed_jobs"]:
             table_name = job_info.job_file_info.table_name
@@ -408,7 +328,7 @@ def configure_logging(root_level: int):
 
 def main():
     args = parse_args()
-    configure_logging(logging.INFO)
+    configure_logging(logging.DEBUG)
 
     pipeline_name_fq = pipeline_name("influxdb")
     LOGGER.info(f"-- Pipeline={pipeline_name_fq} --")
@@ -425,18 +345,6 @@ def main():
     channels_total_size = len(channels_to_load)
     LOGGER.debug(f"Found {channels_total_size} to load.")
 
-    #    LOGGER.debug(f"Determining range of previously loaded data...")
-    #    query_last_loaded_times_started_at = dt.datetime.now()
-    #    channel_last_loaded_times = {}
-    # channel_last_loaded_times = measurement_channel_last_times(
-    #     PIPELINE_NAME, NAMESPACE_NAME, INFLUXDB_MACHINESTATE_BUCKET, channels_to_load
-    # )
-    #    query_last_loaded_times_finished_at = dt.datetime.now()
-    #    LOGGER.debug(
-    #        f"Queried existing channel times took {humanize.precisedelta(query_last_loaded_times_finished_at - query_last_loaded_times_started_at)}"
-    #    )
-    #    LOGGER.debug(f"Found {len(channel_last_loaded_times)} channels loaded previously.")
-
     # Begin pipeline
     pipeline = dlt.pipeline(
         destination="filesystem",
@@ -445,7 +353,7 @@ def main():
         progress="log",
     )
 
-    backfill_started_at = dt.datetime.now()
+    elt_started_at = pendulum.now()
     channels_batch_size = dlt.config["sources.channel_batch_size"]
     channels_total_batches = int(channels_total_size / channels_batch_size) + (
         1 if channels_total_size % channels_batch_size > 0 else 0
@@ -471,11 +379,11 @@ def main():
         )
         batch_number += 1
 
-    backfill_ended_at = dt.datetime.now()
+    elt_ended_at = pendulum.now()
     LOGGER.info(
-        f"Backfill completed in {
+        f"ELT completed in {
         humanize.precisedelta(
-            backfill_ended_at - backfill_started_at
+            elt_ended_at - elt_started_at
         )}"
     )
 
