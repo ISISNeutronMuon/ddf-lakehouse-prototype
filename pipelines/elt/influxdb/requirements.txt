@@ -2,10 +2,27 @@
 #    uv pip compile ./requirements.in
 -e ../../pipelines-common
     # via -r ./requirements.in
+aiobotocore==2.21.1
+    # via s3fs
+aiohappyeyeballs==2.4.8
+    # via aiohttp
+aiohttp==3.11.13
+    # via
+    #   aiobotocore
+    #   s3fs
+aioitertools==0.12.0
+    # via aiobotocore
+aiosignal==1.3.2
+    # via aiohttp
 annotated-types==0.7.0
     # via pydantic
-botocore==1.37.6
-    # via -r ./requirements.in
+attrs==25.1.0
+    # via aiohttp
+botocore==1.37.1
+    # via
+    #   -r ./requirements.in
+    #   aiobotocore
+    #   dlt
 cachetools==5.5.2
     # via pyiceberg
 certifi==2025.1.31
@@ -16,12 +33,17 @@ click==8.1.8
     # via
     #   dlt
     #   pyiceberg
-dlt==1.6.1
+dlt==1.8.0
     # via -r ./../../requirements/base.in
+frozenlist==1.5.0
+    # via
+    #   aiohttp
+    #   aiosignal
 fsspec==2025.2.0
     # via
     #   dlt
     #   pyiceberg
+    #   s3fs
 gitdb==4.0.12
     # via gitpython
 gitpython==3.1.44
@@ -35,9 +57,13 @@ humanize==4.11.0
     #   -r ./../../requirements/base.in
     #   dlt
 idna==3.10
-    # via requests
+    # via
+    #   requests
+    #   yarl
 jmespath==1.0.1
-    # via botocore
+    # via
+    #   aiobotocore
+    #   botocore
 jsonpath-ng==1.7.0
     # via dlt
 makefun==1.15.6
@@ -48,6 +74,11 @@ mdurl==0.1.2
     # via markdown-it-py
 mmh3==5.1.0
     # via pyiceberg
+multidict==6.1.0
+    # via
+    #   aiobotocore
+    #   aiohttp
+    #   yarl
 numpy==2.2.3
     # via pandas
 orjson==3.10.15
@@ -61,11 +92,17 @@ pandas==2.2.3
 pathvalidate==3.2.3
     # via dlt
 pendulum==3.0.0
-    # via dlt
+    # via
+    #   -r ./../../requirements/base.in
+    #   dlt
 pluggy==1.5.0
     # via dlt
 ply==3.11
     # via jsonpath-ng
+propcache==0.3.0
+    # via
+    #   aiohttp
+    #   yarl
 psutil==6.1.1
     # via -r ./../../requirements/base.in
 py4j==0.10.9.7
@@ -88,6 +125,7 @@ pyspark==3.5.2
     # via -r ./../../requirements/base.in
 python-dateutil==2.9.0.post0
     # via
+    #   aiobotocore
     #   botocore
     #   pandas
     #   pendulum
@@ -110,6 +148,8 @@ rich==13.9.4
     #   pyiceberg
     #   rich-argparse
 rich-argparse==1.7.0
+    # via dlt
+s3fs==2025.2.0
     # via dlt
 semver==3.0.4
     # via dlt
@@ -151,3 +191,7 @@ urllib3==2.3.0
     # via
     #   botocore
     #   requests
+wrapt==1.17.2
+    # via aiobotocore
+yarl==1.18.3
+    # via aiohttp
