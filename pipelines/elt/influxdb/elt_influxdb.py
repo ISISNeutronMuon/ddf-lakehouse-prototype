@@ -3,12 +3,10 @@ from collections.abc import Generator
 import logging
 import os
 import pandas as pd
-from pathlib import Path
 from typing import List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 import dlt
-from dlt.common.pipeline import LoadInfo
 from dlt.extract import DltResource
 from dlt.pipeline.exceptions import PipelineStepFailed
 
@@ -21,9 +19,6 @@ from pipelines_common.constants import (
     MICROSECONDS_STR,
     MICROSECONDS_STR_INFLUX,
 )
-
-from pipelines_common.utils.iceberg import create_catalog
-from pipelines_common.utils.spark import create_spark_session
 
 LOGGER = logging.getLogger(__name__)
 
@@ -191,110 +186,6 @@ def extract_and_load_machinestate(
     return load_info
 
 
-def ensure_combined_machinestate_table_exists() -> str:
-    """Create the combined machinestate table in Iceberg if it doesn't exist.
-
-    Return the name of the table qualified with a namespace."""
-    # We use pyiceberg so we can specify a sort order field as Spark didn't support this at the
-    # time of writing
-    from pyiceberg.schema import Schema
-    from pyiceberg.types import (
-        TimestamptzType,
-        DoubleType,
-        StringType,
-        NestedField,
-    )
-    from pyiceberg.partitioning import PartitionSpec, PartitionField
-    from pyiceberg.table.sorting import SortOrder, SortField
-    from pyiceberg.transforms import IdentityTransform, MonthTransform
-
-    schema = Schema(
-        NestedField(
-            field_id=1, name="channel", field_type=StringType(), required=False
-        ),
-        NestedField(
-            field_id=1, name="time", field_type=TimestamptzType(), required=True
-        ),
-        NestedField(field_id=3, name="value", field_type=DoubleType(), required=True),
-    )
-    partition_spec = PartitionSpec(
-        PartitionField(
-            source_id=1, field_id=1000, transform=MonthTransform(), name="time_month"
-        )
-    )
-    # Sort on the time field
-    sort_order = SortOrder(SortField(source_id=1, transform=IdentityTransform()))
-
-    catalog = create_catalog(dlt.secrets["transform.pyiceberg"])
-    combined_machinestate_table = dlt.config["transform.combined_machinestate_table"]
-    namespace_name, table_name = combined_machinestate_table.split(".")
-    LOGGER.debug(f"Creating namespace '{namespace_name}' if it doesn't exist.")
-    catalog.create_namespace_if_not_exists(namespace_name)
-    LOGGER.debug(f"Creating table '{table_name}' if it doesn't exist.")
-    catalog.create_table_if_not_exists(
-        identifier=(namespace_name, table_name),
-        schema=schema,
-        partition_spec=partition_spec,
-        sort_order=sort_order,
-    )
-
-    return combined_machinestate_table
-
-
-def merge_into_combined_machinestate(load_info: LoadInfo):
-    """Takes a set of staged packages and applies further transforms to the loaded files.
-
-    Note: This only works for the filesystem destination.
-    :param load_info: A dlt LoadInfo object describing the completed load jobs
-    """
-    # Quick exit if there is nothing loaded, e.g. an incremental load that has nothing new
-    if len(load_info.load_packages) == 0:
-        LOGGER.debug(f"Skipping merge step as no new packages have been loaded.")
-        return
-
-    staging_prefix = (
-        f"{load_info.destination_displayable_credentials}/{load_info.dataset_name}"
-    )
-    catalog_name = dlt.secrets["transform.pyiceberg.name"]
-    combined_machinestate_table = ensure_combined_machinestate_table_exists()
-    spark = create_spark_session(
-        app_name=Path(__file__).name,
-        controller_url=dlt.secrets["transform.spark.controller_url"],
-        config=dlt.secrets["transform.spark.config"],
-    )
-    for package in load_info.load_packages:
-        for job_info in package.jobs["completed_jobs"]:
-            table_name = job_info.job_file_info.table_name
-            # Skip any internal dlt tables that may have been loaded
-            if table_name.startswith("_dlt"):
-                LOGGER.debug(f"Skipping merge of internal dlt table {table_name}.")
-                continue
-            created_at = job_info.created_at
-            glob_pattern = f"{staging_prefix}/{package.schema_name}/{table_name}/{created_at.year:02}/{created_at.month:02}/{created_at.day:02}/{package.load_id}*.{LOADER_FILE_FORMAT}"
-            LOGGER.debug(f"Searching for loaded files using glob '{glob_pattern}'")
-            df = spark.read.format("parquet").load(
-                path=glob_pattern,
-            )
-            # eliminate duplicates - this can occur when ns -> us conversion occurs
-            df = df.dropDuplicates(subset=["channel", "time"])
-            temp_table = f"elt_staged_{table_name}"
-            df.createOrReplaceTempView(temp_table)
-            try:
-                spark.sql(
-                    f"""MERGE INTO {catalog_name}.{combined_machinestate_table} t
-                        USING (SELECT * FROM {temp_table}) s
-                        ON t.channel = s.channel AND t.time = s.time
-                        WHEN MATCHED THEN UPDATE SET t.value = s.value
-                        WHEN NOT MATCHED THEN INSERT *
-                    """
-                )
-            finally:
-                spark.sql(f"DROP TABLE IF EXISTS {table_name}")
-            LOGGER.info(
-                f"Updated data into table '{combined_machinestate_table}' in catalog '{catalog_name}'."
-            )
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -374,15 +265,9 @@ def main():
             pipeline, chunk_channels, args.on_pipeline_step_failure
         )
         if load_info is not None:
-            try:
-                merge_into_combined_machinestate(load_info)
-            except Exception as exc:
-                if args.on_pipeline_step_failure:
-                    raise
-                else:
-                    LOGGER.info(
-                        f"Error merging loaded data with combined table:\n{str(exc)}"
-                    )
+            if LOGGER.level == logging.DEBUG:
+                for load_id in load_info.loads_ids:
+                    LOGGER.debug(pipeline.get_load_package_info(load_id))
 
         # next chunk
         index_start = index_end

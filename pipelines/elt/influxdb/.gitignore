@@ -8,3 +8,6 @@ secrets.toml
 # ignore duckdb
 *.duckdb
 *.wal
+
+# Ignore local staging assets
+prod-warehouse-isis-staging/**
