@@ -1,11 +1,10 @@
-# put your configuration values here
-
 [runtime]
 log_level = "WARNING" # the system log level of dlt
 # use the dlthub_telemetry setting to enable/disable anonymous usage data reporting, see https://dlthub.com/docs/reference/telemetry
 dlthub_telemetry = true
 
 [sources.sql_database]
+schema = "dbo"
 table_names = [
   "LOGBOOKS",
   "LOGBOOK_ENTRIES",
@@ -14,6 +13,23 @@ table_names = [
   "ADDITIONAL_COLUMNS",
 ]
 
-[destination]
-catalog_name = "isis"
-catalog_uri = "https://data-accelerator.isis.cclrc.ac.uk/nessie/iceberg/"
+[sources.data_writer]
+file_max_items = 100000
+
+[normalize]
+workers = 3
+
+[load]
+delete_completed_jobs = true
+raise_on_max_retries = 1
+workers = 5
+
+[destination.filesystem]
+layout = "{schema_name}/{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
+
+[dev_opralog.destination.filesystem]
+bucket_url = './dev-warehouse-isis-staging/sources/'
+auto_mkdir = true
+
+[opralog.destination.filesystem]
+bucket_url = 's3://prod-warehouse-isis-staging/sources/'

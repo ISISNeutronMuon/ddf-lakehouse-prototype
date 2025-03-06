@@ -4,43 +4,62 @@ import dlt
 from dlt.sources.sql_database import sql_database
 import humanize
 
-from pipelines_common.constants import SOURCE_NAMESPACE_PREFIX, SOURCE_TABLE_PREFIX
-from pipelines_common.destinations.pyiceberg import pyiceberg
+from pipelines_common.pipeline import pipeline_name
 
-PIPELINE_NAME = "elt_opralog"
-NAMESPACE_NAME = f"{SOURCE_NAMESPACE_PREFIX}opralog"
+# Runtime
+LOGGER = logging.getLogger(__name__)
+PIPELINE_BASENAME = "opralog"
+
+# Staging destination
+LOADER_FILE_FORMAT = "parquet"
 
 
-def main() -> None:
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
+def configure_logging(root_level: int):
+    class FilterUnwantedRecords:
+        def filter(self, record):
+            return record.name == "__main__"
+
+    logging.basicConfig(level=root_level)
+    for handler in logging.getLogger().handlers:
+        handler.addFilter(FilterUnwantedRecords())
+
+
+def extract_and_load():
+    pipeline_name_fq = pipeline_name(PIPELINE_BASENAME)
+    LOGGER.info(f"-- Pipeline={pipeline_name_fq} --")
 
     pipeline = dlt.pipeline(
-        destination=pyiceberg(namespace_name=NAMESPACE_NAME),
-        pipeline_name=PIPELINE_NAME,
+        destination="filesystem",
+        pipeline_name=pipeline_name_fq,
+        dataset_name=pipeline_name_fq,
         progress="log",
     )
 
     # Table names are configured in config.toml
     source = sql_database(
+        schema=dlt.config.value,
         table_names=dlt.config.value,
         backend="pyarrow",
         backend_kwargs={"tz": "UTC"},
     )
-    for table_name in dlt.config["sources.sql_database.table_names"]:
-        getattr(source, table_name).apply_hints(
-            table_name=f"{SOURCE_TABLE_PREFIX}{table_name.lower()}"
-        )
-
-    info = pipeline.run(source, write_disposition="replace")
-    logger.info(info)
-    logger.info(
-        f"Pipeline run completed in {
+    info = pipeline.run(
+        source, loader_file_format=LOADER_FILE_FORMAT, write_disposition="replace"
+    )
+    LOGGER.info(info)
+    LOGGER.info(
+        f"Pipeline {pipeline_name_fq} run completed in {
         humanize.precisedelta(
             pipeline.last_trace.finished_at - pipeline.last_trace.started_at
         )}"
     )
 
+
+def main():
+    configure_logging(logging.DEBUG)
+    extract_and_load()
+
+
+# ------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     main()
