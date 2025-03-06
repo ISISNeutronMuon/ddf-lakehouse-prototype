@@ -22,7 +22,7 @@ workers = 5
 layout = "{schema_name}/{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
 
 [dev_influxdb.destination.filesystem]
-bucket_url = './prod-warehouse-isis-staging/sources/'
+bucket_url = './dev-warehouse-isis-staging/sources/'
 auto_mkdir = true
 
 [influxdb.destination.filesystem]

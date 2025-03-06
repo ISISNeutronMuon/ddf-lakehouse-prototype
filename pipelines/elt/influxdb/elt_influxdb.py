@@ -1,7 +1,6 @@
 import argparse
 from collections.abc import Generator
 import logging
-import os
 import pandas as pd
 from typing import List, Optional, Tuple
 from zoneinfo import ZoneInfo
@@ -20,10 +19,11 @@ from pipelines_common.constants import (
     MICROSECONDS_STR_INFLUX,
 )
 
-LOGGER = logging.getLogger(__name__)
+from pipelines_common.pipeline import pipeline_name
 
 # Runtime
-ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
+LOGGER = logging.getLogger(__name__)
+PIPELINE_BASENAME = "influxdb"
 
 # Source
 INFLUXDB_MACHINESTATE_BUCKET = "machinestate"
@@ -205,11 +205,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def pipeline_name(basename: str) -> str:
-    """Given an unqualified pipeline name, optionally prefix it depending on the ENVIRONMENT settings"""
-    return f"{'' if ENVIRONMENT == 'prod' else ENVIRONMENT + "_"}{basename}"
-
-
 # ------------------------------------------------------------------------------
 def configure_logging(root_level: int):
     class FilterUnwantedRecords:
@@ -225,7 +220,7 @@ def main():
     args = parse_args()
     configure_logging(logging.DEBUG)
 
-    pipeline_name_fq = pipeline_name("influxdb")
+    pipeline_name_fq = pipeline_name(PIPELINE_BASENAME)
     LOGGER.info(f"-- Pipeline={pipeline_name_fq} --")
     LOGGER.debug(f"Querying channels to load...")
     channels_to_load = (

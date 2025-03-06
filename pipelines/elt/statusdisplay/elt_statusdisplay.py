@@ -1,24 +1,23 @@
 import logging
-import os
 
 import dlt
 from dlt.extract import DltSource
 from dlt.sources.rest_api import rest_api_source
 import humanize
 
-from pipelines_common.constants import SOURCE_NAMESPACE_PREFIX, SOURCE_TABLE_PREFIX
-from pipelines_common.destinations.pyiceberg import pyiceberg
+from pipelines_common.pipeline import pipeline_name
 
-DEVEL = os.environ.get("DEVEL", "false") == "true"
+# Runtime
 LOGGER = logging.getLogger(__name__)
-NAMESPACE_NAME = f"{SOURCE_NAMESPACE_PREFIX}statusdisplay"
-PIPELINE_NAME = f"{"dev_" if DEVEL else ""}elt_statusdisplay"
+PIPELINE_BASENAME = "statusdisplay"
+
+# Staging destination
+LOADER_FILE_FORMAT = "parquet"
 
 
-# dlt pipeline
-@dlt.source()
 def statusdisplay() -> DltSource:
     return rest_api_source(
+        name="statusdisplay",
         config={
             "client": {
                 "base_url": dlt.config["sources.base_url"],
@@ -29,20 +28,21 @@ def statusdisplay() -> DltSource:
 
 
 def extract_and_load():
+    pipeline_name_fq = pipeline_name(PIPELINE_BASENAME)
+    LOGGER.info(f"-- Pipeline={pipeline_name_fq} --")
+
     pipeline = dlt.pipeline(
-        destination=pyiceberg(namespace_name=NAMESPACE_NAME),
-        pipeline_name=PIPELINE_NAME,
+        pipeline_name=pipeline_name_fq,
+        dataset_name=pipeline_name_fq,
+        destination="filesystem",
         progress="log",
     )
     source = statusdisplay()
-    for name, resource in source.resources.items():
-        resource.apply_hints(table_name=f"{SOURCE_TABLE_PREFIX}{name}")
-
-    pipeline.run(source, write_disposition="replace")
+    pipeline.run(source, loader_file_format="jsonl", write_disposition="replace")
     LOGGER.debug(pipeline.last_trace.last_extract_info)
     LOGGER.debug(pipeline.last_trace.last_load_info)
     LOGGER.info(
-        f"Pipeline run completed in {
+        f"Pipeline {pipeline_name_fq} completed in {
         humanize.precisedelta(
             pipeline.last_trace.finished_at - pipeline.last_trace.started_at
         )}"
@@ -50,9 +50,21 @@ def extract_and_load():
     return pipeline
 
 
-# ------------------------------------------------------------------------------
-# Main
-logging.basicConfig(level=logging.INFO)
+def configure_logging(root_level: int):
+    class FilterUnwantedRecords:
+        def filter(self, record):
+            return record.name == "__main__"
 
-pipeline = extract_and_load()
-# transform(pipeline)
+    logging.basicConfig(level=root_level)
+    for handler in logging.getLogger().handlers:
+        handler.addFilter(FilterUnwantedRecords())
+
+
+def main():
+    configure_logging(logging.DEBUG)
+    extract_and_load()
+
+
+# ------------------------------------------------------------------------------
+if __name__ == "__main__":
+    main()

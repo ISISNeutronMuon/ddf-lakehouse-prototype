@@ -6,12 +6,23 @@ log_level = "WARNING"
 base_url = "https://status.isis.stfc.ac.uk/api"
 resources = ["schedule"]
 
-[elt_statusdisplay.destination.pyiceberg.catalog_properties]
-name = "isis"
-uri = "https://data-accelerator.isis.cclrc.ac.uk/nessie/iceberg/"
+[sources.data_writer]
+file_max_items = 100000
 
-[dev_elt_statusdisplay.destination.pyiceberg.catalog_properties]
-name = "isis"
-uri = "sqlite:///:memory:"
-warehouse = "./warehouse"
-py-io-impl = "pyiceberg.io.pyarrow.PyArrowFileIO"
+[normalize]
+workers = 3
+
+[load]
+delete_completed_jobs = true
+raise_on_max_retries = 1
+workers = 5
+
+[destination.filesystem]
+layout = "{schema_name}/{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
+
+[dev_statusdisplay.destination.filesystem]
+bucket_url = './dev-warehouse-isis-staging/sources/'
+auto_mkdir = true
+
+[statusdisplay.destination.filesystem]
+bucket_url = 's3://prod-warehouse-isis-staging/sources/'
