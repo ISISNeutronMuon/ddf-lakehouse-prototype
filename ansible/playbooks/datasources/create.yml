@@ -16,6 +16,11 @@
         protocol: tcp
         port_range_min: "{{ datasources_influxdb_port }}"
         port_range_max: "{{ datasources_influxdb_port }}"
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ datasources_spark_port_min }}"
+        port_range_max: "{{ datasources_spark_port_max }}"
     openstack_server_name: datasources
     openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
     openstack_virtual_network:
