@@ -12,7 +12,7 @@ incremental_id = "LOGBOOK_ID"
 
 [[sources.sql_database.tables]]
 name = "LOGBOOK_ENTRIES"
-incremental_id = "LOGBOOK_ID"
+incremental_id = "ENTRY_ID"
 
 [[sources.sql_database.tables]]
 name = "ENTRIES"
