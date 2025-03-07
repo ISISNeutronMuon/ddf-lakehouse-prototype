@@ -1,6 +1,8 @@
+from collections.abc import Generator
 import logging
 
 import dlt
+from dlt.sources import DltResource
 from dlt.sources.sql_database import sql_database
 import humanize
 
@@ -24,6 +26,23 @@ def configure_logging(root_level: int):
         handler.addFilter(FilterUnwantedRecords())
 
 
+@dlt.source(name="opralog")
+def opralog() -> Generator[DltResource]:
+    """Pull the configured tables from the database backing the Opralog application"""
+    tables = dlt.config["sources.sql_database.tables"]
+    source = sql_database(
+        schema=dlt.config.value,
+        backend="pyarrow",
+        backend_kwargs={"tz": "UTC"},
+    ).with_resources(*(table_info["name"] for table_info in tables))
+    for table_info in tables:
+        resource = getattr(source, table_info["name"])
+        resource.apply_hints(
+            incremental=dlt.sources.incremental(table_info["incremental_id"])
+        )
+        yield resource
+
+
 def extract_and_load():
     pipeline_name_fq = pipeline_name(PIPELINE_BASENAME)
     LOGGER.info(f"-- Pipeline={pipeline_name_fq} --")
@@ -35,15 +54,8 @@ def extract_and_load():
         progress="log",
     )
 
-    # Table names are configured in config.toml
-    source = sql_database(
-        schema=dlt.config.value,
-        table_names=dlt.config.value,
-        backend="pyarrow",
-        backend_kwargs={"tz": "UTC"},
-    )
     info = pipeline.run(
-        source, loader_file_format=LOADER_FILE_FORMAT, write_disposition="replace"
+        opralog(), loader_file_format=LOADER_FILE_FORMAT, write_disposition="append"
     )
     LOGGER.info(info)
     LOGGER.info(

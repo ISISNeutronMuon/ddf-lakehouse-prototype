@@ -5,13 +5,26 @@ dlthub_telemetry = true
 
 [sources.sql_database]
 schema = "dbo"
-table_names = [
-  "LOGBOOKS",
-  "LOGBOOK_ENTRIES",
-  "ENTRIES",
-  "MORE_ENTRY_COLUMNS",
-  "ADDITIONAL_COLUMNS",
-]
+
+[[sources.sql_database.tables]]
+name = "LOGBOOKS"
+incremental_id = "LOGBOOK_ID"
+
+[[sources.sql_database.tables]]
+name = "LOGBOOK_ENTRIES"
+incremental_id = "LOGBOOK_ID"
+
+[[sources.sql_database.tables]]
+name = "ENTRIES"
+incremental_id = "ENTRY_ID"
+
+[[sources.sql_database.tables]]
+name = "MORE_ENTRY_COLUMNS"
+incremental_id = "ENTRY_ID"
+
+[[sources.sql_database.tables]]
+name = "ADDITIONAL_COLUMNS"
+incremental_id = "COLUMN_NO"
 
 [sources.data_writer]
 file_max_items = 100000
