@@ -1,8 +1,12 @@
 import argparse
 from collections.abc import Generator
+import itertools
 import logging
 import pandas as pd
+from pathlib import Path
 from typing import List, Optional, Tuple
+import subprocess as subp
+import sys
 from zoneinfo import ZoneInfo
 
 import dlt
@@ -24,6 +28,7 @@ from pipelines_common.pipeline import pipeline_name
 # Runtime
 LOGGER = logging.getLogger(__name__)
 PIPELINE_BASENAME = "influxdb"
+POST_SUBPROCESS_SCRIPT = Path(__file__).parent / "restart-docker.sh"
 
 # Source
 INFLUXDB_MACHINESTATE_BUCKET = "machinestate"
@@ -149,7 +154,7 @@ def machinestate(
 
 
 def extract_and_load_machinestate(
-    pipeline: dlt.Pipeline, channels: List[str], on_pipline_step_failed: str
+    pipeline: dlt.Pipeline, channels: List[str], on_pipeline_step_failed: str
 ):
     """Extract and load the Influxdb machinestate channels to the destination
 
@@ -170,7 +175,7 @@ def extract_and_load_machinestate(
         )
         LOGGER.debug(load_info)
     except PipelineStepFailed as exc:
-        if on_pipline_step_failed == "raise":
+        if on_pipeline_step_failed == "raise":
             raise
         else:
             LOGGER.info(f"Pipeline step failed with error: {str(exc)}. Skipping")
@@ -195,6 +200,13 @@ def parse_args() -> argparse.Namespace:
         help="A whitespace-separate list of channel names to load to the warehouse. By default all channels from the source will be loaded.",
     )
     parser.add_argument(
+        "--num-per-process",
+        type=int,
+        default=1000,
+        help="The number of channels to handle in a single process."
+        "If more channels than this are found then the processing is split into multiple processes to keep memory usage under control.",
+    )
+    parser.add_argument(
         "--on-pipeline-step-failure",
         type=str,
         default="raise",
@@ -216,25 +228,9 @@ def configure_logging(root_level: int):
         handler.addFilter(FilterUnwantedRecords())
 
 
-def main():
-    args = parse_args()
-    configure_logging(logging.DEBUG)
-
-    pipeline_name_fq = pipeline_name(PIPELINE_BASENAME)
-    LOGGER.info(f"-- Pipeline={pipeline_name_fq} --")
-    LOGGER.debug(f"Querying channels to load...")
-    channels_to_load = (
-        args.channels
-        if args.channels
-        else influxdb_channel_names(
-            INFLUXDB_MACHINESTATE_BUCKET,
-            dlt.config["sources.base_url"],
-            dlt.secrets["sources.auth_token"],
-        )
-    )
-    channels_total_size = len(channels_to_load)
-    LOGGER.debug(f"Found {channels_total_size} to load.")
-
+def create_and_run_pipeline(
+    pipeline_name_fq: str, channels_to_load: List[str], on_pipeline_step_failure: str
+):
     # Begin pipeline
     pipeline = dlt.pipeline(
         destination="filesystem",
@@ -245,6 +241,7 @@ def main():
 
     elt_started_at = pendulum.now()
     channels_batch_size = dlt.config["sources.channel_batch_size"]
+    channels_total_size = len(channels_to_load)
     channels_total_batches = int(channels_total_size / channels_batch_size) + (
         1 if channels_total_size % channels_batch_size > 0 else 0
     )
@@ -257,7 +254,7 @@ def main():
         chunk_channels = channels_to_load[index_start:index_end]
 
         load_info = extract_and_load_machinestate(
-            pipeline, chunk_channels, args.on_pipeline_step_failure
+            pipeline, chunk_channels, on_pipeline_step_failure
         )
         if load_info is not None:
             if LOGGER.level == logging.DEBUG:
@@ -280,6 +277,60 @@ def main():
     )
 
     return pipeline
+
+
+def main():
+    args = parse_args()
+    configure_logging(logging.DEBUG)
+
+    pipeline_name_fq = pipeline_name(PIPELINE_BASENAME)
+    LOGGER.info(f"-- Pipeline={pipeline_name_fq} --")
+    channels_to_load = (
+        args.channels
+        if args.channels
+        else influxdb_channel_names(
+            INFLUXDB_MACHINESTATE_BUCKET,
+            dlt.config["sources.base_url"],
+            dlt.secrets["sources.auth_token"],
+        )
+    )
+    channels_total_size = len(channels_to_load)
+    LOGGER.debug(f"Found {channels_total_size} to load.")
+
+    # Keep memory under control for a large number of channels by
+    # running in subprocesses
+    num_channels_per_process = args.num_per_process
+    if channels_total_size <= num_channels_per_process:
+        # Run a single process
+        LOGGER.debug(f"Using single process to load all requested channels.")
+        LOGGER.debug(f"Loading channels {channels_to_load}")
+        create_and_run_pipeline(
+            pipeline_name_fq, channels_to_load, args.on_pipeline_step_failure
+        )
+    else:
+        # Batch up in subprocesses
+        LOGGER.debug(
+            f"Using a subprocesses to load {num_channels_per_process} channels per process."
+        )
+        channels_batched = list(
+            itertools.batched(channels_to_load, num_channels_per_process)
+        )
+        for subp_index, channels_per_process in enumerate(channels_batched):
+            LOGGER.info(f"Starting subprocess {subp_index+1}/{len(channels_batched)}")
+            LOGGER.debug(f"Loading channels {channels_per_process}")
+            cmd = [
+                sys.executable,
+                __file__,
+                "--on-pipeline-step-failure",
+                args.on_pipeline_step_failure,
+                "--channels",
+            ]
+            cmd.extend(channels_per_process)
+            subp.run(cmd, check=True)
+            LOGGER.info(f"Completed subprocess {subp_index+1}/{len(channels_batched)}")
+            if POST_SUBPROCESS_SCRIPT.exists():
+                LOGGER.debug("Running post-processing script.")
+                subp.run([POST_SUBPROCESS_SCRIPT], check=True)
 
 
 if __name__ == "__main__":
