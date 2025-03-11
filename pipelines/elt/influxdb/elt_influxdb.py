@@ -397,20 +397,20 @@ def main():
         )
         for subp_index, channels_per_process in enumerate(channels_batched):
             LOGGER.info(f"Starting subprocess {subp_index+1}/{len(channels_batched)}")
-            LOGGER.debug(f"Loading channels {channels_per_process}")
             cmd = [
                 sys.executable,
                 __file__,
                 "--on-pipeline-step-failure",
                 args.on_pipeline_step_failure,
-                "--skip-existing",
-                args.skip_existing,
-                "--channels",
             ]
+            if args.skip_existing:
+                cmd.append("--skip-existing")
+            cmd.append("--channels")
             cmd.extend(channels_per_process)
             LOGGER.debug(f"Executing '{cmd}'")
             subp.run(cmd, check=True)
             LOGGER.info(f"Completed subprocess {subp_index+1}/{len(channels_batched)}")
+
             if POST_SUBPROCESS_SCRIPT.exists():
                 LOGGER.debug("Running post-processing script.")
                 subp.run([POST_SUBPROCESS_SCRIPT], check=True)
