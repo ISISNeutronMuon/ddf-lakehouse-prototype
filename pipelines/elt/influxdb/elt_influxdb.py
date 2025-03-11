@@ -34,7 +34,6 @@ PIPELINE_BASENAME = "influxdb"
 POST_SUBPROCESS_SCRIPT = Path(__file__).parent / "restart-docker.sh"
 
 # Source
-INFLUXDB_MACHINESTATE_BUCKET = "machinestate"
 INFLUXDB_MACHINESTATE_BACKFILL_START = pendulum.DateTime(
     2018, 1, 1, tzinfo=pendulum.UTC
 )
@@ -60,9 +59,47 @@ class InfluxQuery:
         def flatten(nested):
             return itertools.chain.from_iterable(nested)
 
-        return list(flatten(self._influxdb_query("SHOW MEASUREMENTS")["values"]))
+        return list(flatten(self._query("SHOW MEASUREMENTS")["values"]))
 
-    def _influxdb_query(self, query: str) -> Any:
+    def last_time(
+        self,
+        channel_name: str,
+    ) -> pendulum.DateTime:
+        query = f'SELECT LAST("value") FROM /^{channel_name}$/'
+        timestamp_us = self._query(query)["values"][0][0]
+        return pendulum.from_timestamp(
+            timestamp_us / MICROSECONDS_PER_SEC,
+            tz="UTC",
+        )
+
+    def select_channel(
+        self,
+        channel_name: str,
+        time_start: pendulum.DateTime,
+        time_end: pendulum.DateTime,
+    ) -> Optional[pd.DataFrame]:
+        query_t0, query_t1 = _to_utc_str(time_start), _to_utc_str(time_end)
+        query = f"SELECT \"value\" FROM /^{channel_name}$/ WHERE time >= '{query_t0}' AND time < '{query_t1}'"
+        try:
+            series = self._query(query)
+            df = pd.DataFrame.from_records(series["values"], columns=series["columns"])
+        except ValueError:
+            return None
+
+        df["time"] = pd.to_datetime(
+            df["time"],
+            origin="unix",
+            unit=MICROSECONDS_STR,
+            utc=True,
+        )
+        df["value"] = df["value"].astype("float64")
+        df[COLUMN_CHANNEL_NAME] = channel_name
+        # Sort by time so the incremental loading mechanism gets the correct "last value"
+        df.sort_values(by=["time"], inplace=True)
+        return df
+
+    # Private
+    def _query(self, query: str) -> Any:
         """Perform a query against the REST api of the influx database. Returns the series field if present"""
         LOGGER.debug(query)
         resp = requests.get(
@@ -83,72 +120,9 @@ class InfluxQuery:
             )
 
 
-# Remove this after we migrate everything to the query class
-def influxdb_query(bucket_name: str, query: str, base_url, auth_token) -> Any:
-    """Perform a query against the REST api of the influx database. Returns the series field if present"""
-    LOGGER.debug(query)
-    resp = requests.get(
-        f"{base_url}/query",
-        headers={"Authorization": f"Token {auth_token}"},
-        params={"db": bucket_name, "epoch": MICROSECONDS_STR_INFLUX, "q": query},
-    )
-    resp_json = resp.json()
-    try:
-        return resp_json["results"][0]["series"][0]
-    except (IndexError, KeyError):
-        raise ValueError(
-            f"Error querying Influx. Unexpected result structure:\n '{resp_json}'"
-        )
-
-
-def influxdb_last_time(
-    bucket_name: str,
-    channel_name: str,
-    base_url: str,
-    auth_token: str,
-) -> pendulum.DateTime:
-    query = f'SELECT LAST("value") FROM /^{channel_name}$/'
-    timestamp_us = influxdb_query(bucket_name, query, base_url, auth_token)["values"][
-        0
-    ][0]
-    return pendulum.from_timestamp(
-        timestamp_us / MICROSECONDS_PER_SEC,
-        tz="UTC",
-    )
-
-
-def influxdb_select_channel(
-    bucket_name: str,
-    channel_name: str,
-    time_start: pendulum.DateTime,
-    time_end: pendulum.DateTime,
-    base_url: str,
-    auth_token: str,
-) -> Optional[pd.DataFrame]:
-    query_t0, query_t1 = _to_utc_str(time_start), _to_utc_str(time_end)
-    query = f"SELECT \"value\" FROM /^{channel_name}$/ WHERE time >= '{query_t0}' AND time < '{query_t1}'"
-    try:
-        series = influxdb_query(bucket_name, query, base_url, auth_token)
-        df = pd.DataFrame.from_records(series["values"], columns=series["columns"])
-    except ValueError:
-        return None
-
-    df["time"] = pd.to_datetime(
-        df["time"],
-        origin="unix",
-        unit=MICROSECONDS_STR,
-        utc=True,
-    )
-    df["value"] = df["value"].astype("float64")
-    df[COLUMN_CHANNEL_NAME] = channel_name
-    # Sort by time so the incremental loading mechanism gets the correct "last value"
-    df.sort_values(by=["time"], inplace=True)
-    return df
-
-
 @dlt.resource()
 def influxdb_get_measurement(
-    bucket_name: str,
+    influx: InfluxQuery,
     channel_name: str,
     time: dlt.sources.incremental = dlt.sources.incremental("time"),
     base_url: str = dlt.config.value,
@@ -172,9 +146,7 @@ def influxdb_get_measurement(
     time_end = (
         time.end_value
         if time.end_value is not None
-        else next_microsecond(
-            influxdb_last_time(bucket_name, channel_name, base_url, auth_token)
-        )
+        else next_microsecond(influx.last_time(channel_name))
     )
     LOGGER.debug(
         f"Pulling measurement '{channel_name}' for time range [{time_start}, {time_end})"
@@ -182,9 +154,7 @@ def influxdb_get_measurement(
 
     chunk_start, chunk_end = time_start, min(next_chunk_start(time_start), time_end)
     while chunk_start < chunk_end:
-        df = influxdb_select_channel(
-            bucket_name, channel_name, chunk_start, chunk_end, base_url, auth_token
-        )
+        df = influx.select_channel(channel_name, chunk_start, chunk_end)
         yield df
         # next chunk
         chunk_start = chunk_end
@@ -193,9 +163,9 @@ def influxdb_get_measurement(
 
 # "name" defines the name of the destination schema, either folder inside
 # dataset on filesystem or schema in destination DB
-@dlt.source(parallelized=True, name=INFLUXDB_MACHINESTATE_BUCKET)
+@dlt.source(parallelized=True, name="machinestate")
 def machinestate(
-    bucket_name: str,
+    influx: InfluxQuery,
     measurements_to_load: Sequence[str],
     backfill_range: Tuple[pendulum.DateTime, Optional[pendulum.DateTime]],
 ) -> Generator[DltResource]:
@@ -209,13 +179,16 @@ def machinestate(
             )
         }
         table_name = channel_name
-        yield influxdb_get_measurement(
-            bucket_name, channel_name, **time_args
-        ).with_name(table_name).apply_hints(table_name=table_name)
+        yield influxdb_get_measurement(influx, channel_name, **time_args).with_name(
+            table_name
+        ).apply_hints(table_name=table_name)
 
 
 def extract_and_load_machinestate(
-    pipeline: dlt.Pipeline, channels: Sequence[str], on_pipeline_step_failed: str
+    pipeline: dlt.Pipeline,
+    influx: InfluxQuery,
+    channels: Sequence[str],
+    on_pipeline_step_failed: str,
 ):
     """Extract and load the Influxdb machinestate channels to the destination
 
@@ -227,7 +200,7 @@ def extract_and_load_machinestate(
     try:
         load_info = pipeline.run(
             machinestate(
-                INFLUXDB_MACHINESTATE_BUCKET,
+                influx,
                 measurements_to_load=channels,
                 backfill_range=(INFLUXDB_MACHINESTATE_BACKFILL_START, None),
             ),
@@ -263,6 +236,7 @@ def create_pipeline(pipeline_name_fq: str):
 
 def run_pipeline(
     pipeline: dlt.Pipeline,
+    influx: InfluxQuery,
     channels_to_load: Sequence[str],
     on_pipeline_step_failure: str,
 ):
@@ -281,7 +255,7 @@ def run_pipeline(
         chunk_channels = channels_to_load[index_start:index_end]
 
         load_info = extract_and_load_machinestate(
-            pipeline, chunk_channels, on_pipeline_step_failure
+            pipeline, influx, chunk_channels, on_pipeline_step_failure
         )
         if load_info is not None:
             if LOGGER.level == logging.DEBUG:
@@ -335,7 +309,9 @@ def get_channels_to_load(
                     lambda x: x.replace("_", "::", 1).replace("_", ":"), existing_tables
                 )
             )
-            channels_to_load = list(set(channels_to_load) - set(existing_channels))
+            channels_to_load = list(
+                set(map(lambda x: x.lower(), channels_to_load)) - set(existing_channels)
+            )
 
     return channels_to_load
 
@@ -398,16 +374,19 @@ def main():
         args.channels, influx, pipeline, args.skip_existing
     )
     channels_total_size = len(channels_to_load)
-    LOGGER.debug(f"Found {channels_total_size} to load.")
+    if channels_total_size == 0:
+        LOGGER.info("No channels have been found to load. Exiting.")
+        return
 
     # Keep memory under control for a large number of channels by
     # running in subprocesses
+    LOGGER.debug(f"Found {channels_total_size} to load.")
     num_channels_per_process = args.num_per_process
     if channels_total_size <= num_channels_per_process:
         # Run a single process
         LOGGER.debug(f"Using single process to load all requested channels.")
         LOGGER.debug(f"Loading channels {channels_to_load}")
-        run_pipeline(pipeline, channels_to_load, args.on_pipeline_step_failure)
+        run_pipeline(pipeline, influx, channels_to_load, args.on_pipeline_step_failure)
     else:
         # Batch up in subprocesses
         LOGGER.debug(
