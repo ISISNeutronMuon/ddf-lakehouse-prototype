@@ -4,7 +4,7 @@ import itertools
 import logging
 import pandas as pd
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 import subprocess as subp
 import sys
 from zoneinfo import ZoneInfo
@@ -21,6 +21,7 @@ import requests
 from pipelines_common.constants import (
     MICROSECONDS_STR,
     MICROSECONDS_STR_INFLUX,
+    MICROSECONDS_PER_SEC,
 )
 
 from pipelines_common.pipeline import pipeline_name
@@ -45,27 +46,81 @@ def _to_utc_str(timestamp: pendulum.DateTime) -> str:
     return timestamp.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
+def influxdb_query(bucket_name: str, query: str, base_url, auth_token) -> Any:
+    """Perform a query against the REST api of the influx database. Returns the series field if present"""
+    LOGGER.debug(query)
+    resp = requests.get(
+        f"{base_url}/query",
+        headers={"Authorization": f"Token {auth_token}"},
+        params={"db": bucket_name, "epoch": MICROSECONDS_STR_INFLUX, "q": query},
+    )
+    resp_json = resp.json()
+    try:
+        return resp_json["results"][0]["series"][0]
+    except (IndexError, KeyError):
+        raise ValueError(
+            f"Error querying Influx. Unexpected result structure:\n '{resp_json}'"
+        )
+
+
 def influxdb_channel_names(
     bucket_name: str, base_url: str, auth_token: str
 ) -> List[str]:
     def flatten(nested):
-        return [subitem for item in nested for subitem in item]
+        return itertools.chain.from_iterable(nested)
 
-    resp = requests.get(
-        f"{base_url}/query",
-        headers={"Authorization": f"Token {auth_token}"},
-        params={"db": bucket_name, "q": f"SHOW MEASUREMENTS"},
+    return list(
+        flatten(
+            influxdb_query(bucket_name, "SHOW MEASUREMENTS", base_url, auth_token)[
+                "values"
+            ]
+        )
     )
-    resp_json = resp.json()
+
+
+def influxdb_last_time(
+    bucket_name: str,
+    channel_name: str,
+    base_url: str,
+    auth_token: str,
+) -> pendulum.DateTime:
+    query = f'SELECT LAST("value") FROM /^{channel_name}$/'
+    timestamp_us = influxdb_query(bucket_name, query, base_url, auth_token)["values"][
+        0
+    ][0]
+    return pendulum.from_timestamp(
+        timestamp_us / MICROSECONDS_PER_SEC,
+        tz="UTC",
+    )
+
+
+def influxdb_select_channel(
+    bucket_name: str,
+    channel_name: str,
+    time_start: pendulum.DateTime,
+    time_end: pendulum.DateTime,
+    base_url: str,
+    auth_token: str,
+) -> Optional[pd.DataFrame]:
+    query_t0, query_t1 = _to_utc_str(time_start), _to_utc_str(time_end)
+    query = f"SELECT \"value\" FROM /^{channel_name}$/ WHERE time >= '{query_t0}' AND time < '{query_t1}'"
     try:
-        series = resp_json["results"][0]["series"][0]
-        return list(
-            filter(lambda x: not x.startswith("aws"), flatten(series["values"]))
-        )
-    except (IndexError, KeyError):
-        raise ValueError(
-            f"Error querying Influx for available channel names. Unexpected result structure:\n '{resp_json}'"
-        )
+        series = influxdb_query(bucket_name, query, base_url, auth_token)
+        df = pd.DataFrame.from_records(series["values"], columns=series["columns"])
+    except ValueError:
+        return None
+
+    df["time"] = pd.to_datetime(
+        df["time"],
+        origin="unix",
+        unit=MICROSECONDS_STR,
+        utc=True,
+    )
+    df["value"] = df["value"].astype("float64")
+    df[COLUMN_CHANNEL_NAME] = channel_name
+    # Sort by time so the incremental loading mechanism gets the correct "last value"
+    df.sort_values(by=["time"], inplace=True)
+    return df
 
 
 @dlt.resource()
@@ -76,20 +131,27 @@ def influxdb_get_measurement(
     base_url: str = dlt.config.value,
     auth_token: str = dlt.secrets.value,
 ):
-    """Load data for a given channel.
-
-    The start time of the load is determined through the dlt.incremental mechanism tracking the
-    value of the last load. If no end time is specified the current date/time is used.
-    """
+    """Load data for a given channel."""
 
     def next_chunk_start(ts: pendulum.DateTime) -> pendulum.DateTime:
         # A bug in Pendulum drops the timezone on addition with days:
         # https://github.com/python-pendulum/pendulum/issues/669
         return (ts.add(weeks=52)).astimezone(pendulum.UTC)
 
+    def next_microsecond(ts: pendulum.DateTime) -> pendulum.DateTime:
+        return (ts.add(microseconds=1)).astimezone(pendulum.UTC)
+
+    # The start time of the load is determined through the dlt.incremental mechanism tracking the
+    # value of the last load. If no end time is specified the last time within Influx
+    # is queried and a microsecond is added to ensure we capture all values
+
     time_start = time.start_value
     time_end = (
-        time.end_value if time.end_value is not None else pendulum.now(pendulum.UTC)
+        time.end_value
+        if time.end_value is not None
+        else next_microsecond(
+            influxdb_last_time(bucket_name, channel_name, base_url, auth_token)
+        )
     )
     LOGGER.debug(
         f"Pulling measurement '{channel_name}' for time range [{time_start}, {time_end})"
@@ -97,34 +159,10 @@ def influxdb_get_measurement(
 
     chunk_start, chunk_end = time_start, min(next_chunk_start(time_start), time_end)
     while chunk_start < chunk_end:
-        query_t0, query_t1 = _to_utc_str(chunk_start), _to_utc_str(chunk_end)
-        query = f"SELECT \"value\" FROM /^{channel_name}$/ WHERE time >= '{query_t0}' AND time < '{query_t1}'"
-        LOGGER.debug(query)
-        resp = requests.get(
-            f"{base_url}/query",
-            headers={"Authorization": f"Token {auth_token}"},
-            params={"db": bucket_name, "epoch": MICROSECONDS_STR_INFLUX, "q": query},
+        df = influxdb_select_channel(
+            bucket_name, channel_name, chunk_start, chunk_end, base_url, auth_token
         )
-        resp_json = resp.json()
-        for all_series in resp_json["results"]:
-            # Do we have any results for this time regime
-            if "series" not in all_series:
-                break
-            for series in all_series["series"]:
-                df = pd.DataFrame.from_records(
-                    series["values"], columns=series["columns"]
-                )
-                df["time"] = pd.to_datetime(
-                    df["time"],
-                    origin="unix",
-                    unit=MICROSECONDS_STR,
-                    utc=True,
-                )
-                df["value"] = df["value"].astype("float64")
-                df[COLUMN_CHANNEL_NAME] = channel_name
-                # Sort by time so the incremental loading mechanism gets the correct "last value"
-                df.sort_values(by=["time"], inplace=True)
-                yield df
+        yield df
         # next chunk
         chunk_start = chunk_end
         chunk_end = min(next_chunk_start(chunk_end), time_end)
