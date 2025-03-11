@@ -403,6 +403,8 @@ def main():
                 __file__,
                 "--on-pipeline-step-failure",
                 args.on_pipeline_step_failure,
+                "--skip-existing",
+                args.skip_existing,
                 "--channels",
             ]
             cmd.extend(channels_per_process)
