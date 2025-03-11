@@ -65,7 +65,7 @@ class InfluxQuery:
         self,
         channel_name: str,
     ) -> pendulum.DateTime:
-        query = f'SELECT LAST("value") FROM /^{channel_name}$/'
+        query = f'SELECT LAST("value") FROM "{channel_name}"'
         timestamp_us = self._query(query)["values"][0][0]
         return pendulum.from_timestamp(
             timestamp_us / MICROSECONDS_PER_SEC,
@@ -79,7 +79,7 @@ class InfluxQuery:
         time_end: pendulum.DateTime,
     ) -> Optional[pd.DataFrame]:
         query_t0, query_t1 = _to_utc_str(time_start), _to_utc_str(time_end)
-        query = f"SELECT \"value\" FROM /^{channel_name}$/ WHERE time >= '{query_t0}' AND time < '{query_t1}'"
+        query = f"SELECT \"value\" FROM \"{channel_name}\" WHERE time >= '{query_t0}' AND time < '{query_t1}'"
         try:
             series = self._query(query)
             df = pd.DataFrame.from_records(series["values"], columns=series["columns"])
