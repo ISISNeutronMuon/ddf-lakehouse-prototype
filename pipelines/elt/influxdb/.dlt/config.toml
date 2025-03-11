@@ -4,6 +4,7 @@ log_level = "WARNING"
 
 [sources]
 base_url = "http://172.16.103.105:8086"
+bucket_name = "machinestate"
 channel_batch_size = 5
 
 [sources.data_writer]

@@ -4,12 +4,14 @@ import itertools
 import logging
 import pandas as pd
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
 import subprocess as subp
 import sys
 from zoneinfo import ZoneInfo
 
 import dlt
+from dlt.common.configuration.resolve import inject_section
+from dlt.common.configuration.specs import ConfigSectionContext
 from dlt.extract import DltResource
 from dlt.pipeline.exceptions import PipelineStepFailed
 
@@ -46,6 +48,42 @@ def _to_utc_str(timestamp: pendulum.DateTime) -> str:
     return timestamp.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
+class InfluxQuery:
+    """Perform an influx query on a named bucket at a url and with the given auth token"""
+
+    def __init__(self, bucket_name: str, base_url: str, auth_token: str):
+        self._bucket_name = bucket_name
+        self._base_url = base_url
+        self._auth_token = auth_token
+
+    def channel_names(self) -> List[str]:
+        def flatten(nested):
+            return itertools.chain.from_iterable(nested)
+
+        return list(flatten(self._influxdb_query("SHOW MEASUREMENTS")["values"]))
+
+    def _influxdb_query(self, query: str) -> Any:
+        """Perform a query against the REST api of the influx database. Returns the series field if present"""
+        LOGGER.debug(query)
+        resp = requests.get(
+            f"{self._base_url}/query",
+            headers={"Authorization": f"Token {self._auth_token}"},
+            params={
+                "db": self._bucket_name,
+                "epoch": MICROSECONDS_STR_INFLUX,
+                "q": query,
+            },
+        )
+        resp_json = resp.json()
+        try:
+            return resp_json["results"][0]["series"][0]
+        except (IndexError, KeyError):
+            raise ValueError(
+                f"Error querying Influx. Unexpected result structure:\n '{resp_json}'"
+            )
+
+
+# Remove this after we migrate everything to the query class
 def influxdb_query(bucket_name: str, query: str, base_url, auth_token) -> Any:
     """Perform a query against the REST api of the influx database. Returns the series field if present"""
     LOGGER.debug(query)
@@ -61,21 +99,6 @@ def influxdb_query(bucket_name: str, query: str, base_url, auth_token) -> Any:
         raise ValueError(
             f"Error querying Influx. Unexpected result structure:\n '{resp_json}'"
         )
-
-
-def influxdb_channel_names(
-    bucket_name: str, base_url: str, auth_token: str
-) -> List[str]:
-    def flatten(nested):
-        return itertools.chain.from_iterable(nested)
-
-    return list(
-        flatten(
-            influxdb_query(bucket_name, "SHOW MEASUREMENTS", base_url, auth_token)[
-                "values"
-            ]
-        )
-    )
 
 
 def influxdb_last_time(
@@ -173,7 +196,7 @@ def influxdb_get_measurement(
 @dlt.source(parallelized=True, name=INFLUXDB_MACHINESTATE_BUCKET)
 def machinestate(
     bucket_name: str,
-    measurements_to_load: List[str],
+    measurements_to_load: Sequence[str],
     backfill_range: Tuple[pendulum.DateTime, Optional[pendulum.DateTime]],
 ) -> Generator[DltResource]:
 
@@ -192,7 +215,7 @@ def machinestate(
 
 
 def extract_and_load_machinestate(
-    pipeline: dlt.Pipeline, channels: List[str], on_pipeline_step_failed: str
+    pipeline: dlt.Pipeline, channels: Sequence[str], on_pipeline_step_failed: str
 ):
     """Extract and load the Influxdb machinestate channels to the destination
 
@@ -229,54 +252,20 @@ def extract_and_load_machinestate(
     return load_info
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--channels",
-        nargs="+",
-        default=[],
-        help="A whitespace-separate list of channel names to load to the warehouse. By default all channels from the source will be loaded.",
-    )
-    parser.add_argument(
-        "--num-per-process",
-        type=int,
-        default=1000,
-        help="The number of channels to handle in a single process."
-        "If more channels than this are found then the processing is split into multiple processes to keep memory usage under control.",
-    )
-    parser.add_argument(
-        "--on-pipeline-step-failure",
-        type=str,
-        default="raise",
-        choices=["raise", "log_and_continue"],
-        help="What should be done with pipeline step failure exceptions",
-    )
-
-    return parser.parse_args()
-
-
-# ------------------------------------------------------------------------------
-def configure_logging(root_level: int):
-    class FilterUnwantedRecords:
-        def filter(self, record):
-            return record.name == "__main__"
-
-    logging.basicConfig(level=root_level)
-    for handler in logging.getLogger().handlers:
-        handler.addFilter(FilterUnwantedRecords())
-
-
-def create_and_run_pipeline(
-    pipeline_name_fq: str, channels_to_load: List[str], on_pipeline_step_failure: str
-):
-    # Begin pipeline
-    pipeline = dlt.pipeline(
+def create_pipeline(pipeline_name_fq: str):
+    return dlt.pipeline(
         destination="filesystem",
         pipeline_name=pipeline_name_fq,
         dataset_name=pipeline_name_fq,
         progress="log",
     )
 
+
+def run_pipeline(
+    pipeline: dlt.Pipeline,
+    channels_to_load: Sequence[str],
+    on_pipeline_step_failure: str,
+):
     elt_started_at = pendulum.now()
     channels_batch_size = dlt.config["sources.channel_batch_size"]
     channels_total_size = len(channels_to_load)
@@ -317,20 +306,96 @@ def create_and_run_pipeline(
     return pipeline
 
 
+# ------------------------------------------------------------------------------
+def get_channels_to_load(
+    cli_args: List[str],
+    influx: InfluxQuery,
+    pipeline: dlt.Pipeline,
+    skip_existing: bool,
+) -> Sequence[str]:
+    """Determine which channels should be loaded, given the arguments
+
+    :param cli_args: Arguments from the command line. These take precendence
+    :param influx: InfluxQuery object
+    :param pipeline: A dlt.Pipeline object that can query the destination
+    :param skip_existing: If true, filter out channels that already exist in the destination
+    """
+    if cli_args:
+        channels_to_load = cli_args
+    else:
+        channels_to_load = influx.channel_names()
+
+    if skip_existing:
+        with inject_section(ConfigSectionContext(pipeline.pipeline_name)):
+            existing_tables = pipeline.dataset().schema.data_table_names(
+                seen_data_only=True
+            )
+            existing_channels = set(
+                map(
+                    lambda x: x.replace("_", "::", 1).replace("_", ":"), existing_tables
+                )
+            )
+            channels_to_load = list(set(channels_to_load) - set(existing_channels))
+
+    return channels_to_load
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--channels",
+        nargs="+",
+        default=[],
+        help="A whitespace-separate list of channel names to load to the warehouse. By default all channels from the source will be loaded.",
+    )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="If provided then don't query Influx for new data for channels that exist in the destination.",
+    )
+    parser.add_argument(
+        "--num-per-process",
+        type=int,
+        default=1000,
+        help="The number of channels to handle in a single process."
+        "If more channels than this are found then the processing is split into multiple processes to keep memory usage under control.",
+    )
+    parser.add_argument(
+        "--on-pipeline-step-failure",
+        type=str,
+        default="raise",
+        choices=["raise", "log_and_continue"],
+        help="What should be done with pipeline step failure exceptions",
+    )
+
+    return parser.parse_args()
+
+
+def configure_logging(root_level: int):
+    class FilterUnwantedRecords:
+        def filter(self, record):
+            return record.name == "__main__"
+
+    logging.basicConfig(level=root_level)
+    for handler in logging.getLogger().handlers:
+        handler.addFilter(FilterUnwantedRecords())
+
+
 def main():
     args = parse_args()
     configure_logging(logging.DEBUG)
 
     pipeline_name_fq = pipeline_name(PIPELINE_BASENAME)
-    LOGGER.info(f"-- Pipeline={pipeline_name_fq} --")
-    channels_to_load = (
-        args.channels
-        if args.channels
-        else influxdb_channel_names(
-            INFLUXDB_MACHINESTATE_BUCKET,
-            dlt.config["sources.base_url"],
-            dlt.secrets["sources.auth_token"],
-        )
+    pipeline = create_pipeline(pipeline_name_fq)
+    LOGGER.info(f"-- Pipeline={pipeline_name_fq} created --")
+
+    influx = InfluxQuery(
+        dlt.config["sources.bucket_name"],
+        dlt.config["sources.base_url"],
+        dlt.secrets["sources.auth_token"],
+    )
+    channels_to_load = get_channels_to_load(
+        args.channels, influx, pipeline, args.skip_existing
     )
     channels_total_size = len(channels_to_load)
     LOGGER.debug(f"Found {channels_total_size} to load.")
@@ -342,9 +407,7 @@ def main():
         # Run a single process
         LOGGER.debug(f"Using single process to load all requested channels.")
         LOGGER.debug(f"Loading channels {channels_to_load}")
-        create_and_run_pipeline(
-            pipeline_name_fq, channels_to_load, args.on_pipeline_step_failure
-        )
+        run_pipeline(pipeline, channels_to_load, args.on_pipeline_step_failure)
     else:
         # Batch up in subprocesses
         LOGGER.debug(
