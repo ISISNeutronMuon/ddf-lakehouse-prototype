@@ -5,3 +5,5 @@ pandas==2.2.3
 # Minimum version of botocore required to pass relevant options to s3transfer
 # https://github.com/boto/boto3/issues/4398
 botocore>=1.36.5
+duckdb==1.2.0
+sqlglot==26.6.0
