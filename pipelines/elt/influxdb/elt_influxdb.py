@@ -408,6 +408,7 @@ def main():
                 "--channels",
             ]
             cmd.extend(channels_per_process)
+            LOGGER.debug(f"Executing '{cmd}'")
             subp.run(cmd, check=True)
             LOGGER.info(f"Completed subprocess {subp_index+1}/{len(channels_batched)}")
             if POST_SUBPROCESS_SCRIPT.exists():
