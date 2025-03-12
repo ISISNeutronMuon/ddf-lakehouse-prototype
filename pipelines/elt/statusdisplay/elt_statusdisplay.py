@@ -1,20 +1,17 @@
 import argparse
 import logging
 from pathlib import Path
-from typing import cast, Optional, Sequence
+from typing import cast, Sequence
 
 import dlt
 from dlt import Pipeline
-from dlt.common.configuration.resolve import inject_section
-from dlt.common.configuration.specs import ConfigSectionContext
-from dlt.common.libs.pandas import DataFrame
 from dlt.common.pipeline import LoadInfo
 from dlt.destinations.impl.filesystem.filesystem import FilesystemClient
 from dlt.extract import DltSource
 from dlt.sources.rest_api import rest_api_source
 import humanize
 
-from pipelines_common.pipeline import pipeline_name
+import pipelines_common.pipeline as pipeline_utils
 import pipelines_common.utils.spark as spark_utils
 
 # Runtime
@@ -38,17 +35,6 @@ def statusdisplay() -> DltSource:
     )
 
 
-def create_pipeline(basename: str) -> Pipeline:
-    """Given the base pipeline name return a new Pipeline object using the full qualified name"""
-    pipeline_name_fq = pipeline_name(basename)
-    return dlt.pipeline(
-        pipeline_name=pipeline_name_fq,
-        dataset_name=pipeline_name_fq,
-        destination="filesystem",
-        progress="log",
-    )
-
-
 def extract_and_load_statusdisplay(pipeline: Pipeline) -> LoadInfo:
     """Run the pipeline on the statusdisplay source"""
     source = statusdisplay()
@@ -65,21 +51,6 @@ def extract_and_load_statusdisplay(pipeline: Pipeline) -> LoadInfo:
         )}"
     )
     return load_info
-
-
-def find_latest_load_id(pipeline: Pipeline) -> Optional[str]:
-    """Check the _dlt_loads table and retrieve the latest load_id"""
-    with inject_section(ConfigSectionContext(pipeline_name=pipeline.pipeline_name)):
-        ds = pipeline.dataset()
-        _dlt_loads_df = cast(DataFrame, ds._dlt_loads.df())
-        if len(_dlt_loads_df) > 0:
-            return (
-                _dlt_loads_df.sort_values("inserted_at", ascending=False)
-                .head(1)["load_id"]
-                .iat[0]
-            )
-        else:
-            return None
 
 
 def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
@@ -107,22 +78,6 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
         config=dlt.secrets["transform.spark.config"],
     )
 
-    def read_parquet(path: str, load_id: str):
-        return spark.read.option("recursiveFileLookup", "true").parquet(
-            path, pathGlobFilter=f"{load_id}*.parquet"
-        )
-
-    def read_all_load_ids(path: str, loads_ids: Sequence[str]):
-        all_df = None
-        for load_id in loads_ids:
-            df = read_parquet(path, load_id)
-            if all_df is None:
-                all_df = df
-            else:
-                all_df.unionAll(df)
-
-        return all_df
-
     catalog_name, namespace_name = (
         dlt.config["transform.catalog_name"],
         dlt.config["transform.namespace_name"],
@@ -144,8 +99,10 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
     # We currently only replace the whole thing everytime as the data is tiny...
     spark.sql(f"DELETE FROM {running_schedule_id}")
 
-    raw_schedule_df = read_all_load_ids(schedule_table_dir, loads_ids)
-    raw_maintenance_df = read_all_load_ids(maintenance_table_dir, loads_ids)
+    raw_schedule_df = spark_utils.read_all_parquet(spark, schedule_table_dir, loads_ids)
+    raw_maintenance_df = spark_utils.read_all_parquet(
+        spark, maintenance_table_dir, loads_ids
+    )
     # This is deliberately not an f-string. Instead it uses pyspark's parametrized sql call
     query = """
         (SELECT type, label, start, end
@@ -189,11 +146,13 @@ def main():
     args = parse_args()
     configure_logging(args.log_level)
 
-    pipeline = create_pipeline(PIPELINE_BASENAME)
+    pipeline = pipeline_utils.create_pipeline(
+        PIPELINE_BASENAME, destination="filesystem", progress="log"
+    )
     LOGGER.info(f"-- Pipeline={pipeline.pipeline_name} --")
 
     if args.skip_extract_and_load:
-        loads_ids = find_latest_load_id(pipeline)
+        loads_ids = pipeline_utils.find_latest_load_id(pipeline)
         if loads_ids is None:
             LOGGER.info("No load ids were found in the destination. Exiting.")
             return
