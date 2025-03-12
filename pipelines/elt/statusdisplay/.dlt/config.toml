@@ -21,8 +21,13 @@ workers = 5
 layout = "{schema_name}/{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
 
 [dev_statusdisplay.destination.filesystem]
-bucket_url = './dev-warehouse-isis-staging/sources/'
+bucket_url = "./dev-warehouse-isis-staging/sources/"
 auto_mkdir = true
 
 [statusdisplay.destination.filesystem]
-bucket_url = 's3://prod-warehouse-isis-staging/sources/'
+bucket_url = "s3://prod-warehouse-isis-staging/sources/"
+
+[transform]
+catalog_name = "isis"
+namespace_name = "facility"
+running_schedule_table_name = "running_schedule"
