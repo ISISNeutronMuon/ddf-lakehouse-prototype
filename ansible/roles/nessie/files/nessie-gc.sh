@@ -80,7 +80,7 @@ sweep () {
 preflight
 # Special case the commands that require a complicated combination of options
 # to allow them to be specified as environment variables
-case "$1" in
+case "${1:-}" in
   identify)
     identify
     ;;
@@ -99,6 +99,10 @@ case "$1" in
   deferred-deletes)
     shift
     docker_run deferred-deletes ${NESSIE_GC_JDBC_ARGS} ${NESSIE_GC_ICEBERG_ARGS} $*
+    ;;
+  gc)
+    shift
+    docker_run gc ${NESSIE_GC_JDBC_ARGS} ${NESSIE_GC_ICEBERG_ARGS} $*
     ;;
   *)
     docker_run $*

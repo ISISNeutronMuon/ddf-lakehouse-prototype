@@ -1,4 +1,13 @@
 ---
+- name: Ensure helper scripts are up to date
+  ansible.posix.synchronize:
+    use_ssh_args: true
+    src: ./
+    dest: "./nessie-scripts/"
+    archive: true
+    recursive: true
+    delete: true
+
 - name: Ensure Nessie container is running
   become: true
   community.docker.docker_container:
