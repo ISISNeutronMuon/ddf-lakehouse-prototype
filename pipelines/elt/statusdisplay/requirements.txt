@@ -2,11 +2,11 @@
 #    uv pip compile ./requirements.in
 -e ../../pipelines-common
     # via -r ./requirements.in
-aiobotocore==2.19.0
+aiobotocore==2.21.1
     # via s3fs
-aiohappyeyeballs==2.4.6
+aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.11.12
+aiohttp==3.11.13
     # via
     #   aiobotocore
     #   s3fs
@@ -18,9 +18,11 @@ annotated-types==0.7.0
     # via pydantic
 attrs==25.1.0
     # via aiohttp
-botocore==1.36.3
-    # via aiobotocore
-cachetools==5.5.1
+botocore==1.37.1
+    # via
+    #   aiobotocore
+    #   dlt
+cachetools==5.5.2
     # via pyiceberg
 certifi==2025.1.31
     # via requests
@@ -30,13 +32,13 @@ click==8.1.8
     # via
     #   dlt
     #   pyiceberg
-dlt==1.6.1
+dlt==1.8.1
     # via -r ./../../requirements/base.in
 frozenlist==1.5.0
     # via
     #   aiohttp
     #   aiosignal
-fsspec==2025.2.0
+fsspec==2025.3.0
     # via
     #   dlt
     #   pyiceberg
@@ -85,16 +87,22 @@ packaging==24.2
 pathvalidate==3.2.3
     # via dlt
 pendulum==3.0.0
-    # via dlt
+    # via
+    #   -r ./../../requirements/base.in
+    #   dlt
 pluggy==1.5.0
     # via dlt
 ply==3.11
     # via jsonpath-ng
-propcache==0.2.1
+propcache==0.3.0
     # via
     #   aiohttp
     #   yarl
 psutil==6.1.1
+    # via -r ./../../requirements/base.in
+py4j==0.10.9.7
+    # via pyspark
+pyarrow==19.0.1
     # via -r ./../../requirements/base.in
 pydantic==2.10.6
     # via pyiceberg
@@ -102,12 +110,14 @@ pydantic-core==2.27.2
     # via pydantic
 pygments==2.19.1
     # via rich
-pyiceberg==0.8.1
+pyiceberg==0.9.0
     # via
     #   -r ./../../requirements/base.in
     #   pipelines-common
 pyparsing==3.2.1
     # via pyiceberg
+pyspark==3.5.2
+    # via -r ./../../requirements/base.in
 python-dateutil==2.9.0.post0
     # via
     #   aiobotocore
@@ -131,12 +141,14 @@ rich==13.9.4
     #   rich-argparse
 rich-argparse==1.7.0
     # via dlt
-s3fs==2025.2.0
-    # via pyiceberg
+s3fs==2025.3.0
+    # via dlt
 semver==3.0.4
     # via dlt
-setuptools==75.8.0
-    # via dlt
+setuptools==76.0.0
+    # via
+    #   dlt
+    #   types-setuptools
 simplejson==3.20.1
     # via dlt
 six==1.17.0
@@ -155,7 +167,7 @@ time-machine==2.16.0
     # via pendulum
 tomlkit==0.13.2
     # via dlt
-types-setuptools==75.8.0.20250210
+types-setuptools==75.8.2.20250305
     # via requirements-parser
 typing-extensions==4.12.2
     # via
@@ -168,7 +180,6 @@ tzdata==2025.1
     #   pendulum
 urllib3==2.3.0
     # via
-    #   aiobotocore
     #   botocore
     #   requests
 wrapt==1.17.2

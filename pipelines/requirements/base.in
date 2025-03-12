@@ -1,4 +1,4 @@
-dlt[s3]==1.8.0
+dlt[s3]==1.8.1
 humanize==4.11.0
 pendulum==3.0.0
 psutil==6.1.1
