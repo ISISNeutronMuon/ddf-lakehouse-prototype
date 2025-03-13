@@ -8,3 +8,25 @@
       ansible.builtin.apt:
         name: openjdk-11-jre
         update_cache: true
+
+    - name: Check if uv exists
+      stat:
+        path: /usr/local/bin/uv
+      register: stat_uv
+
+    - name: Fetch uv installer
+      ansible.builtin.get_url:
+        url: https://astral.sh/uv/0.6.6/install.sh
+        dest: /tmp/uv-install.sh
+      when: not stat_uv.stat.exists
+
+    - name: Execute uv installer
+      become: true
+      shell: env UV_UNMANAGED_INSTALL=/usr/local/bin sh /tmp/uv-install.sh
+      when: not stat_uv.stat.exists
+
+    - name: Remove uv installer script
+      file:
+        path: /tmp/uv-install.sh
+        state: absent
+      when: not stat_uv.stat.exists
