@@ -1,0 +1,10 @@
+---
+# This instance supports running ELT scripts
+- name: Configure Ingestion instance
+  hosts: ingestion
+  tasks:
+    - name: Ensure Java 11 is available
+      become: true
+      ansible.builtin.apt:
+        name: openjdk-11-jre
+        update_cache: true
