@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 from typing import cast, Sequence
 
@@ -11,6 +10,8 @@ from dlt.sources.rest_api import rest_api_source
 import humanize
 
 import pipelines_common.cli as cli_utils
+from pipelines_common.destinations import raise_if_destination_not
+import pipelines_common.destinations.filesystem as filesystem_utils
 import pipelines_common.pipeline as pipeline_utils
 import pipelines_common.logging as logging_utils
 import pipelines_common.spark as spark_utils
@@ -56,18 +57,11 @@ def extract_and_load_statusdisplay(pipeline: Pipeline) -> LoadInfo:
 
 def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
     """Given the loads_ids for a loaded set of tables compute the final schedule table"""
-    if pipeline.destination.destination_name != "filesystem":
-        raise NotImplementedError(
-            "Transforms are currently only implemented for the filesystem destination."
-        )
-    LOGGER.debug(f"Using load packages '{loads_ids}' as transform sources.")
+    raise_if_destination_not("filesystem", pipeline)
 
-    destination_client = cast(FilesystemClient, pipeline.destination_client())
-    schedule_table_dir = destination_client.make_remote_url(
-        destination_client.get_table_dir("schedule")
-    )
-    maintenance_table_dir = destination_client.make_remote_url(
-        destination_client.get_table_dir("schedule__maintenance_days")
+    LOGGER.debug(f"Using load packages '{loads_ids}' as transform sources.")
+    schedule_table_dir, maintenance_table_dir = filesystem_utils.get_table_dirs(
+        pipeline, ["schedule", "schedule__maintenance_days"]
     )
 
     # Spark is not really required for this transformation given the data volume
@@ -118,9 +112,6 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
         query, raw_schedule_df=raw_schedule_df, raw_maintenance_df=raw_maintenance_df
     )
     insert_into_df.write.insertInto(running_schedule_id)
-
-
-# -----------------------------------------------------------
 
 
 def main():
