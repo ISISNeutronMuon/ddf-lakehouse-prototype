@@ -46,3 +46,8 @@ auto_mkdir = true
 
 [opralog.destination.filesystem]
 bucket_url = 's3://prod-warehouse-isis-staging/sources/'
+
+[transform]
+catalog_name = "isis"
+namespace_name = "accelerator"
+running_schedule_table_name = "equipment_downtime_record"

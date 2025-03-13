@@ -1,5 +1,5 @@
-from collections.abc import Generator
-import logging
+from collections.abc import Generator, Sequence
+from pathlib import Path
 
 import dlt
 from dlt import Pipeline
@@ -9,13 +9,15 @@ from dlt.sources.sql_database import sql_database
 import humanize
 
 import pipelines_common.cli as cli_utils
+from pipelines_common.destinations import raise_if_destination_not
 import pipelines_common.logging as logging_utils
 import pipelines_common.pipeline as pipeline_utils
 import pipelines_common.spark as spark_utils
 
 # Runtime
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging_utils.logging.getLogger(__name__)
 PIPELINE_BASENAME = "opralog"
+SPARK_APPNAME = Path(__file__).name
 
 # Staging destination
 LOADER_FILE_FORMAT = "parquet"
@@ -51,6 +53,46 @@ def extract_and_load_opralog(pipeline: Pipeline) -> LoadInfo:
     )
 
     return load_info
+
+
+def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
+    """Given loaded data apply transformations to the data"""
+    raise_if_destination_not("filesystem", pipeline)
+
+    LOGGER.debug(f"Using load packages '{loads_ids}' as transform sources.")
+
+    spark = spark_utils.create_spark_session(
+        app_name=SPARK_APPNAME,
+        controller_url=dlt.secrets["transform.spark.controller_url"],
+        config=dlt.secrets["transform.spark.config"],
+    )
+
+    catalog_name, namespace_name = (
+        dlt.config["transform.catalog_name"],
+        dlt.config["transform.namespace_name"],
+    )
+    spark_utils.create_namespace_if_not_exists(spark, catalog_name, namespace_name)
+
+
+def ensure_equipment_downtime_table_exists(
+    spark: spark_utils.SparkSession, table_id: str
+):
+    edrtable_ensure_exists = f"""
+        CREATE TABLE IF NOT EXISTS {table_id} (
+        entry_id LONG,
+        time_logged TIMESTAMP,
+        cycle_name STRING,
+        interval_type STRING,
+        interval_label STRING,
+        equipment STRING,
+        downtime_mins DOUBLE,
+        group STRING,
+        comment_text STRING
+        )
+        USING iceberg
+        PARTITIONED BY (month(time_logged), equipment)
+    """
+    spark.sql(edrtable_ensure_exists)
 
 
 # ------------------------------------------------------------------------------
