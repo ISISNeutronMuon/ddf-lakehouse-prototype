@@ -1,5 +1,4 @@
 import argparse
-import logging
 from pathlib import Path
 from typing import cast, Sequence
 
@@ -11,11 +10,13 @@ from dlt.extract import DltSource
 from dlt.sources.rest_api import rest_api_source
 import humanize
 
+import pipelines_common.cli as cli_utils
 import pipelines_common.pipeline as pipeline_utils
-import pipelines_common.utils.spark as spark_utils
+import pipelines_common.logging as logging_utils
+import pipelines_common.spark as spark_utils
 
 # Runtime
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging_utils.logging.getLogger(__name__)
 PIPELINE_BASENAME = "statusdisplay"
 SPARK_APPNAME = Path(__file__).name
 
@@ -119,32 +120,12 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
     insert_into_df.write.insertInto(running_schedule_id)
 
 
-# ------------------------------------------------------------------------------
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--log-level", choices=logging.getLevelNamesMapping().keys())
-    parser.add_argument(
-        "--skip-extract-and-load",
-        action="store_true",
-        help="Skip the extract and load step.",
-    )
-
-    return parser.parse_args()
-
-
-def configure_logging(root_level: int | str):
-    class FilterUnwantedRecords:
-        def filter(self, record):
-            return record.name == "__main__"
-
-    logging.basicConfig(level=root_level)
-    for handler in logging.getLogger().handlers:
-        handler.addFilter(FilterUnwantedRecords())
+# -----------------------------------------------------------
 
 
 def main():
-    args = parse_args()
-    configure_logging(args.log_level)
+    args = cli_utils.create_standard_argparser().parse_args()
+    logging_utils.configure_logging(args.log_level, keep_records_from=["__main__"])
 
     pipeline = pipeline_utils.create_pipeline(
         PIPELINE_BASENAME, destination="filesystem", progress="log"
