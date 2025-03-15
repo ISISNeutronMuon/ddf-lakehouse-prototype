@@ -1,6 +1,5 @@
 -r ../../requirements/base.in
 -e ../../pipelines-common
-pandas==2.2.3
 # AWS SDK implmented checksum validation that is not supported by 3rd-party services
 # Minimum version of botocore required to pass relevant options to s3transfer
 # https://github.com/boto/boto3/issues/4398
