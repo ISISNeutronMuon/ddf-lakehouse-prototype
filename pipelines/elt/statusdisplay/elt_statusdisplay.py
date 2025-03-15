@@ -1,10 +1,9 @@
 from pathlib import Path
-from typing import cast, Sequence
+from typing import Sequence
 
 import dlt
 from dlt import Pipeline
 from dlt.common.pipeline import LoadInfo
-from dlt.destinations.impl.filesystem.filesystem import FilesystemClient
 from dlt.extract import DltSource
 from dlt.sources.rest_api import rest_api_source
 import humanize
@@ -23,6 +22,9 @@ SPARK_APPNAME = Path(__file__).name
 
 # Staging destination
 LOADER_FILE_FORMAT = "parquet"
+
+# Transforms
+MODELS_DIR = Path(__file__).parent / "models"
 
 
 def statusdisplay() -> DltSource:
@@ -59,7 +61,7 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
     """Given the loads_ids for a loaded set of tables compute the final schedule table"""
     raise_if_destination_not("filesystem", pipeline)
 
-    LOGGER.debug(f"Using load packages '{loads_ids}' as transform sources.")
+    LOGGER.info(f"Using load packages '{loads_ids}' as transform sources.")
     schedule_table_dir, maintenance_table_dir = filesystem_utils.get_table_dirs(
         pipeline, ["schedule", "schedule__maintenance_days"]
     )
@@ -72,46 +74,30 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
         controller_url=dlt.secrets["transform.spark.controller_url"],
         config=dlt.secrets["transform.spark.config"],
     )
-
     catalog_name, namespace_name = (
         dlt.config["transform.catalog_name"],
         dlt.config["transform.namespace_name"],
     )
     spark_utils.create_namespace_if_not_exists(spark, catalog_name, namespace_name)
+    spark.sql(f"USE {catalog_name}.{namespace_name}")
 
-    # Create merged table if required
-    running_schedule_id = f"{catalog_name}.{namespace_name}.{dlt.config['transform.running_schedule_table_name']}"
-    running_schedule_ddl = f"""CREATE TABLE IF NOT EXISTS {running_schedule_id} (
-      type STRING,
-      label STRING,
-      start TIMESTAMP,
-      end TIMESTAMP
-    )
-    USING iceberg
-    """
-    spark.sql(running_schedule_ddl)  # noqa
+    # Create table
+    model_table_name = "running_schedule"
+    spark_utils.execute_sql_from_file(spark, MODELS_DIR / f"{model_table_name}_def.sql")
 
-    # We currently only replace the whole thing everytime as the data is tiny...
-    spark.sql(f"DELETE FROM {running_schedule_id}")
+    # Create temporary table from raw source
+    schedule_df = spark_utils.read_all_parquet(spark, schedule_table_dir, loads_ids)
+    # name is currently duplicated in .sql script...
+    schedule_df.createOrReplaceTempView("schedule")
+    model_table_df = spark_utils.execute_sql_from_file(
+        spark, MODELS_DIR / f"{model_table_name}.sql"
+    )
 
-    raw_schedule_df = spark_utils.read_all_parquet(spark, schedule_table_dir, loads_ids)
-    raw_maintenance_df = spark_utils.read_all_parquet(
-        spark, maintenance_table_dir, loads_ids
-    )
-    # This is deliberately not an f-string. Instead it uses pyspark's parametrized sql call
-    query = """
-        (SELECT type, label, start, end
-        FROM {raw_schedule_df})
-        UNION ALL
-        (SELECT 'maintenance' AS type, 'Maintenance Day' AS label,
-          to_timestamp_ltz(split_part(value, "/", 1)) AS start,
-          to_timestamp_ltz(split_part(value, "/", 2)) AS end
-        FROM {raw_maintenance_df})
-    """
-    insert_into_df = spark.sql(
-        query, raw_schedule_df=raw_schedule_df, raw_maintenance_df=raw_maintenance_df
-    )
-    insert_into_df.write.insertInto(running_schedule_id)
+    # We currently replace the whole thing everytime as the data is tiny...
+    spark.sql(f"DELETE FROM {model_table_name}")
+    model_table_df.write.insertInto(model_table_name)
+
+    LOGGER.info(f"Completed transformations.")
 
 
 def main():

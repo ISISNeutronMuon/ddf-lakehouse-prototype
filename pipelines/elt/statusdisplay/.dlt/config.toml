@@ -30,4 +30,3 @@ bucket_url = "s3://prod-warehouse-isis-staging/sources/"
 [transform]
 catalog_name = "isis"
 namespace_name = "facility"
-running_schedule_table_name = "running_schedule"
