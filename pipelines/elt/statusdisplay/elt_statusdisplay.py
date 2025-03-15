@@ -62,8 +62,8 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
     raise_if_destination_not("filesystem", pipeline)
 
     LOGGER.info(f"Using load packages '{loads_ids}' as transform sources.")
-    schedule_table_dir, maintenance_table_dir = filesystem_utils.get_table_dirs(
-        pipeline, ["schedule", "schedule__maintenance_days"]
+    schedule_table_dir, = filesystem_utils.get_table_dirs(
+        pipeline, ["schedule"]
     )
 
     # Spark is not really required for this transformation given the data volume
