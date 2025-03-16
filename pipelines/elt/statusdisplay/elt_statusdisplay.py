@@ -62,10 +62,6 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
     raise_if_destination_not("filesystem", pipeline)
 
     LOGGER.info(f"Using load packages '{loads_ids}' as transform sources.")
-    schedule_table_dir, = filesystem_utils.get_table_dirs(
-        pipeline, ["schedule"]
-    )
-
     # Spark is not really required for this transformation given the data volume
     # but we use it for consistency across all imported sources and it's closer
     # to the data
@@ -86,6 +82,7 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
     spark_utils.execute_sql_from_file(spark, MODELS_DIR / f"{model_table_name}_def.sql")
 
     # Create temporary table from raw source
+    (schedule_table_dir,) = filesystem_utils.get_table_dirs(pipeline, ["schedule"])
     schedule_df = spark_utils.read_all_parquet(spark, schedule_table_dir, loads_ids)
     # name is currently duplicated in .sql script...
     schedule_df.createOrReplaceTempView("schedule")
