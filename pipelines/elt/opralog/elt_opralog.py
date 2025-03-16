@@ -10,6 +10,7 @@ import humanize
 
 import pipelines_common.cli as cli_utils
 from pipelines_common.destinations import raise_if_destination_not
+import pipelines_common.destinations.filesystem as filesystem_utils
 import pipelines_common.logging as logging_utils
 import pipelines_common.pipeline as pipeline_utils
 import pipelines_common.spark as spark_utils
@@ -21,6 +22,9 @@ SPARK_APPNAME = Path(__file__).name
 
 # Staging destination
 LOADER_FILE_FORMAT = "parquet"
+
+# Transforms
+MODELS_DIR = Path(__file__).parent / "models"
 
 
 @dlt.source(name="opralog")
@@ -60,7 +64,6 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
     raise_if_destination_not("filesystem", pipeline)
 
     LOGGER.debug(f"Using load packages '{loads_ids}' as transform sources.")
-
     spark = spark_utils.create_spark_session(
         app_name=SPARK_APPNAME,
         controller_url=dlt.secrets["transform.spark.controller_url"],
@@ -72,27 +75,32 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
         dlt.config["transform.namespace_name"],
     )
     spark_utils.create_namespace_if_not_exists(spark, catalog_name, namespace_name)
+    spark.sql(f"USE {catalog_name}.{namespace_name}")
 
+    # Create table
+    model_table_name = "equipment_downtime_record"
+    model_table_df = spark_utils.execute_sql_from_file(
+        spark, MODELS_DIR / f"{model_table_name}_def.sql"
+    )
 
-def ensure_equipment_downtime_table_exists(
-    spark: spark_utils.SparkSession, table_id: str
-):
-    edrtable_ensure_exists = f"""
-        CREATE TABLE IF NOT EXISTS {table_id} (
-        entry_id LONG,
-        time_logged TIMESTAMP,
-        cycle_name STRING,
-        interval_type STRING,
-        interval_label STRING,
-        equipment STRING,
-        downtime_mins DOUBLE,
-        group STRING,
-        comment_text STRING
-        )
-        USING iceberg
-        PARTITIONED BY (month(time_logged), equipment)
-    """
-    spark.sql(edrtable_ensure_exists)
+    # Create temporary tables required by transform query
+    for temp_table in (
+        "entries",
+        "logbook_entries",
+        "logbook_chapter",
+        "logbooks",
+        "more_entry_columns",
+        "additional_columns",
+    ):
+        (table_dir,) = filesystem_utils.get_table_dirs(pipeline, [temp_table])
+        df = spark_utils.read_all_parquet(spark, table_dir, loads_ids)
+        df.createOrReplaceTempView(temp_table)
+
+    # We currently replace the whole thing everytime as the data is tiny...
+    spark.sql(f"DELETE FROM {model_table_name}")
+    model_table_df.write.insertInto(model_table_name)
+
+    LOGGER.info(f"Completed transformations.")
 
 
 # ------------------------------------------------------------------------------
