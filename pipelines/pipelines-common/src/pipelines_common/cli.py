@@ -9,6 +9,13 @@ def create_standard_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--log-level", choices=logging.getLevelNamesMapping().keys())
     parser.add_argument(
+        "--on-pipeline-step-failure",
+        type=str,
+        default="raise",
+        choices=["raise", "log_and_continue"],
+        help="What should be done with pipeline step failure exceptions",
+    )
+    parser.add_argument(
         "--skip-extract-and-load",
         action="store_true",
         help="Skip the extract and load step.",

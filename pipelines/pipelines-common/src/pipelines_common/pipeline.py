@@ -40,13 +40,17 @@ def pipeline_name(basename: str) -> str:
 
 
 def create_pipeline(
-    basename: str, destination: str, progress: TCollectorArg = NULL_COLLECTOR
+    basename: str,
+    destination: str,
+    dataset_name: str | None = None,
+    progress: TCollectorArg = NULL_COLLECTOR,
 ) -> Pipeline:
-    """Given the base pipeline name return a new Pipeline object using the full qualified name"""
+    """Given the base pipeline name return a new Pipeline object using the full qualified name.
+    If no dataset name is given the pipeline name is used"""
     pipeline_name_fq = pipeline_name(basename)
     return dlt.pipeline(
         pipeline_name=pipeline_name_fq,
-        dataset_name=pipeline_name_fq,
+        dataset_name=(dataset_name if dataset_name is not None else basename),
         destination=destination,
         progress=progress,
     )
