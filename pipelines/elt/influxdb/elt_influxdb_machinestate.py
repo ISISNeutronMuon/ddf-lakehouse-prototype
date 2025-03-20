@@ -214,11 +214,13 @@ def extract_and_load_machinestate(
             write_disposition="append",
         )
         LOGGER.debug(load_info)
-    except PipelineStepFailed as exc:
+    except PipelineStepFailed as step_exc:
         if on_pipeline_step_failed == "raise":
             raise
         else:
-            LOGGER.info(f"Pipeline step failed with error: {str(exc)}. Skipping")
+            LOGGER.info(f"Pipeline step failed with error: {str(step_exc)}")
+            LOGGER.debug(f"  {str(step_exc.exception)}")
+
             # If any packages failed to load we don't want to load them again.
             pipeline.drop_pending_packages(with_partial_loads=True)
 
@@ -382,11 +384,7 @@ def main():
             cmd.append("--channels")
             cmd.extend(channels)
             LOGGER.debug(f"Executing '{cmd}'")
-            subp.run(cmd, check=True)
-            run_pipeline(
-                pipeline, influx, schema_name, channels, args.on_pipeline_step_failure
-            )
-
+            subp.run(cmd, check=(args.on_pipeline_step_failure == "raise"))
             LOGGER.info(f"Completed subprocess {schema_index+1}/{schemas_total_count}")
 
         complete_elt_ended_at = pendulum.now()
