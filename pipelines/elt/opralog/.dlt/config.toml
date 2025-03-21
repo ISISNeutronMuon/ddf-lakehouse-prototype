@@ -45,11 +45,11 @@ workers = 5
 layout = "{schema_name}/{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
 
 [dev_opralog.destination.filesystem]
-bucket_url = './dev-warehouse-isis-staging/sources/'
+bucket_url = './dev-lakehouse-source-opralog/'
 auto_mkdir = true
 
 [opralog.destination.filesystem]
-bucket_url = 's3://prod-warehouse-isis-staging/sources/'
+bucket_url = 's3://prod-lakehouse-source-opralog/'
 
 [transform]
 catalog_name = "isis"
