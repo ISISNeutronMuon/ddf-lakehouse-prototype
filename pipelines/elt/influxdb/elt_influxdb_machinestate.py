@@ -245,13 +245,16 @@ def run_pipeline(
 ):
     elt_started_at = pendulum.now()
 
-    load_info = extract_and_load_machinestate(
-        pipeline, influx, schema_name, channels_to_load, on_pipeline_step_failure
-    )
-    if load_info is not None:
-        if LOGGER.level == logging.DEBUG:
-            for load_id in load_info.loads_ids:
-                LOGGER.debug(pipeline.get_load_package_info(load_id))
+    for channels_batch in itertools.batched(
+        channels_to_load, dlt.config["sources.channel_batch_size"]
+    ):
+        load_info = extract_and_load_machinestate(
+            pipeline, influx, schema_name, channels_batch, on_pipeline_step_failure
+        )
+        if load_info is not None:
+            if LOGGER.level == logging.DEBUG:
+                for load_id in load_info.loads_ids:
+                    LOGGER.debug(pipeline.get_load_package_info(load_id))
 
     elt_ended_at = pendulum.now()
     LOGGER.info(
