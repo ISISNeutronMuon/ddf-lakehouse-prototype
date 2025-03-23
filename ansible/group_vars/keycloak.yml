@@ -1,0 +1,8 @@
+---
+postgres_db_data_path: "{{ cephfs_mount_mount_path }}/live/keycloak/data"
+postgres_container_network: "{{ keycloak_container_network }}"
+postgres_port: "{{ keycloak_store_port }}"
+postgres_db_user: "{{ keycloak_store_user }}"
+postgres_db_passwd: "{{ keycloak_store_passwd }}"
+postgres_db_names:
+  - "{{ keycloak_store_dbname }}"

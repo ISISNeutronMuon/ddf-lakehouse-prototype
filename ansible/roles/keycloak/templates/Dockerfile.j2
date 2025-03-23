@@ -1,0 +1,21 @@
+# Building an optimized image as recommended by Keycloak:
+#  - https://www.keycloak.org/server/containers#_importing_a_realm_on_startup
+FROM {{ keycloak_image }} AS builder
+
+# Enable health and metrics support
+ENV KC_HEALTH_ENABLED=true
+ENV KC_METRICS_ENABLED=true
+
+# Database vendor
+ENV KC_DB=postgres
+
+WORKDIR /opt/keycloak
+RUN /opt/keycloak/bin/kc.sh build
+
+FROM {{ keycloak_image }}
+COPY --from=builder /opt/keycloak/ /opt/keycloak/
+
+# Default to postgres DB type
+ENV KC_DB=postgres
+
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]

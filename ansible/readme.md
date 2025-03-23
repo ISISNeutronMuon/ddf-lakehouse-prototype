@@ -33,9 +33,9 @@ The `galaxy_roles` path has been added to `.gitignore`.
 
 TODO: Tidy up
 
-- Two floating IPs are required:
-  - One for the management/SSH jump node. Check `openstack_management_vm_fip` value in [./group_vars/all/openstack.yml](./group_vars/all/openstack.yml)
-  - One for the Traefik load balancer node. Check the `openstack_server_fip` value in [./playbooks/traefik/create.yml](./playbooks/traefik/create.yml)
+- Two floating IPs are required (defined in [./group_vars/all/openstack.yml](./group_vars/all/openstack.yml)):
+  - One for the management/SSH jump node. Check `openstack_management_vm_fip` value.
+  - One for the Traefik load balancer node. Check the `openstack_reverse_proxy_fip` value.
 
 ## Creating the stack
 

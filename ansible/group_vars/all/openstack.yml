@@ -10,5 +10,7 @@ openstack_virtual_network:
     - name: lakehouse-1
       cidr: 192.168.42.0/24
       gateway_ip: 192.168.42.1
+
+openstack_reverse_proxy_fip: 130.246.214.124
 openstack_management_vm_fip: 130.246.81.245
 openstack_jump_host: "{{ openstack_management_vm_fip }}"

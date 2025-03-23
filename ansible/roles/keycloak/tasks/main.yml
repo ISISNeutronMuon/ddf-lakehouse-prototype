@@ -1,0 +1,65 @@
+---
+- name: Ensure Keycloak working directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ keycloak_working_dir }}"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+
+- name: Ensure Dockerfile is up to date
+  become: true
+  ansible.builtin.template:
+    src: "{{ template_file.src }}"
+    dest: "{{ keycloak_working_dir }}/{{ template_file.dest }}"
+    mode: "{{ template_file.mode|default('u=rw,g=r,o=r') }}"
+  loop:
+    - { src: Dockerfile.j2, dest: Dockerfile }
+  loop_control:
+    loop_var: template_file
+
+- name: Ensure optimized Keycloak image is built
+  become: true
+  community.docker.docker_image_build:
+    name: "{{ keycloak_image_optimized_name }}"
+    path: "{{ keycloak_working_dir }}"
+    rebuild: always
+
+- name: Ensure Keycloak container is running
+  become: true
+  community.docker.docker_container:
+    name: keycloak
+    image: "{{ keycloak_image_optimized_name }}"
+    state: started
+    cleanup: true
+    detach: true
+    restart_policy: unless-stopped
+    recreate: true
+    published_ports:
+      - "{{ keycloak_http_port }}:8080"
+      - "{{ keycloak_http_management_port }}:9000"
+    env:
+      # comment to keep formatter moving this up one line
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: "{{ keycloak_bootstrap_admin_passwd }}"
+      KC_DB_URL: "jdbc:postgresql://postgres:{{ keycloak_store_port }}/{{ keycloak_store_dbname }}"
+      KC_DB_USERNAME: "{{ keycloak_store_user }}"
+      KC_DB_PASSWORD: "{{ keycloak_store_passwd }}"
+    networks:
+      - name: "{{ keycloak_container_network }}"
+    comparisons:
+      networks: strict
+      env: strict
+    command:
+      [
+        "start",
+        "--optimized",
+        "--http-enabled=true",
+        "--hostname=https://{{ top_level_domain }}{{ keycloak_base_path }}",
+        "--proxy-headers=xforwarded",
+        "--proxy-trusted-addresses={{ openstack_reverse_proxy_fip }},127.0.0.0/8",
+      ]
+    healthcheck:
+      test: "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"
+      interval: 5s
+      timeout: 2s
+      retries: 15

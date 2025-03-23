@@ -1,0 +1,9 @@
+---
+- name: Configure Keycloak to act as an identity provider
+  hosts: keycloak
+  roles:
+    - role: cephfs_mount
+    - role: geerlingguy.docker
+      become: true
+    - role: postgres
+    - role: keycloak
