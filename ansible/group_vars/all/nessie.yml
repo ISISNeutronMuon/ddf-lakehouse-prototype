@@ -6,7 +6,7 @@ nessie_base_path: /nessie
 nessie_iceberg_catalog:
   name: isis
   uri: "https://{{ top_level_domain }}{{ nessie_base_path if nessie_base_path != '/' else '' }}/iceberg/"
-  location: s3://prod-warehouse-isis/
+  location: s3://prod-lakehouse-isis/
 
 nessie_store_port: 5432
 nessie_store_dbname: nessiedb
