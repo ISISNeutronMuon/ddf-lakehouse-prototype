@@ -7,6 +7,7 @@ from dlt.common.pipeline import LoadInfo
 from dlt.sources import DltResource
 from dlt.sources.sql_database import sql_database
 import humanize
+import pendulum
 
 import pipelines_common.cli as cli_utils
 from pipelines_common.destinations import raise_if_destination_not
@@ -61,13 +62,13 @@ def extract_and_load_opralog(pipeline: Pipeline) -> LoadInfo:
 
 
 def transform(pipeline: Pipeline):
-    """Given loaded data apply transformations to the data
+    """Create/update models based on the loaded data.
 
-    Currently we reread all of the source and compute the whole downstream dataset again
-    """
+    This currently recomputes the whole model each time"""
     LOGGER.info("Running transformations to create models")
     raise_if_destination_not("filesystem", pipeline)
 
+    transform_started_at = pendulum.now()
     spark = spark_utils.create_spark_session(
         app_name=SPARK_APPNAME,
         controller_url=dlt.secrets["transform.spark.controller_url"],
@@ -102,12 +103,17 @@ def transform(pipeline: Pipeline):
     model_table_df = spark_utils.execute_sql_from_file(
         spark, MODELS_DIR / f"{model_table_name}.sql"
     )
-    # We currently replace the whole thing everytime as the data is tiny...
     spark.sql(f"DELETE FROM {model_table_name}")
+    LOGGER.debug(
+        f"Inserting {model_table_df.count()} new records into model '{model_table_name}'"
+    )
     model_table_df.write.insertInto(model_table_name)
     LOGGER.debug(f"Table {model_table_name} updated.")
 
-    LOGGER.info(f"Completed transformations.")
+    transform_ended_at = pendulum.now()
+    LOGGER.info(
+        f"Completed transformations in {humanize.precisedelta(transform_ended_at - transform_started_at)}"
+    )
 
 
 # ------------------------------------------------------------------------------
@@ -120,10 +126,14 @@ def main():
     )
     LOGGER.info(f"-- Pipeline={pipeline.pipeline_name} --")
 
-    if not args.skip_extract_and_load:
+    if args.skip_extract_and_load:
+        LOGGER.info("Skpping extract and load step as requested.")
+    else:
         extract_and_load_opralog(pipeline)
 
-    if not args.skip_transform:
+    if args.skip_transform:
+        LOGGER.info("Skpping transform step as requested.")
+    else:
         transform(pipeline)
 
 
