@@ -345,9 +345,9 @@ def main():
     LOGGER.info(f"-- Pipeline={pipeline.pipeline_name} --")
 
     influx = InfluxQuery(
-        dlt.config["sources.bucket_name"],
-        dlt.config["sources.base_url"],
-        dlt.secrets["sources.auth_token"],
+        dlt.config["influxdb.bucket_name"],
+        dlt.config["influxdb.base_url"],
+        dlt.secrets["influxdb.auth_token"],
     )
     channels_to_load = get_channels_to_load(
         args.channels, influx, pipeline, args.skip_existing
