@@ -21,7 +21,7 @@ def create_standard_argparser() -> argparse.ArgumentParser:
         help="Skip the extract and load step.",
     )
     parser.add_argument(
-        "--skip-transfrom",
+        "--skip-transform",
         action="store_true",
         help="Skip the extract and load step.",
     )

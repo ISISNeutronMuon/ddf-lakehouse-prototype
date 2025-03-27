@@ -120,7 +120,8 @@ def main():
             LOGGER.info("No data was loaded into the destination. Exiting.")
             return
 
-    transform(pipeline, loads_ids)
+    if not args.skip_transform:
+        transform(pipeline, loads_ids)
 
 
 # ------------------------------------------------------------------------------

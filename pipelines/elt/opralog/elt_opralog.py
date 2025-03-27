@@ -59,11 +59,13 @@ def extract_and_load_opralog(pipeline: Pipeline) -> LoadInfo:
     return load_info
 
 
-def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
-    """Given loaded data apply transformations to the data"""
+def transform(pipeline: Pipeline):
+    """Given loaded data apply transformations to the data
+
+    Currently we reread all of the source and compute the whole downstream dataset again
+    """
     raise_if_destination_not("filesystem", pipeline)
 
-    LOGGER.debug(f"Using load packages '{loads_ids}' as transform sources.")
     spark = spark_utils.create_spark_session(
         app_name=SPARK_APPNAME,
         controller_url=dlt.secrets["transform.spark.controller_url"],
@@ -79,6 +81,7 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
 
     # Create table
     model_table_name = "equipment_downtime_record"
+    LOGGER.debug(f"Creating {model_table_name}...")
     model_table_df = spark_utils.execute_sql_from_file(
         spark, MODELS_DIR / f"{model_table_name}_def.sql"
     )
@@ -93,12 +96,13 @@ def transform(pipeline: Pipeline, loads_ids: Sequence[str]):
         "additional_columns",
     ):
         (table_dir,) = filesystem_utils.get_table_dirs(pipeline, [temp_table])
-        df = spark_utils.read_all_parquet(spark, table_dir, loads_ids)
+        df = spark_utils.read_all_parquet(spark, table_dir)
         df.createOrReplaceTempView(temp_table)
 
     # We currently replace the whole thing everytime as the data is tiny...
     spark.sql(f"DELETE FROM {model_table_name}")
     model_table_df.write.insertInto(model_table_name)
+    LOGGER.debug(f"Table {model_table_name} updated.")
 
     LOGGER.info(f"Completed transformations.")
 
@@ -113,7 +117,11 @@ def main():
     )
     LOGGER.info(f"-- Pipeline={pipeline.pipeline_name} --")
 
-    extract_and_load_opralog(pipeline)
+    if not args.skip_extract_and_load:
+        extract_and_load_opralog(pipeline)
+
+    if not args.skip_transform:
+        transform(pipeline)
 
 
 if __name__ == "__main__":

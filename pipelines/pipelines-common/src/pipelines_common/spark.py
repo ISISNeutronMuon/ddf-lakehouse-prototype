@@ -37,23 +37,29 @@ def create_namespace_if_not_exists(
     spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog_name}.{namespace_name}")
 
 
-def read_parquet(spark: SparkSession, path: str, load_id: str) -> SparkDataFrame:
-    """Read a set of parquet files found using the pathGlobFilter on the given path"""
+def read_parquet(
+    spark: SparkSession, path: str, load_id: str | None = None
+) -> SparkDataFrame:
+    """Read a set of parquet files found using base path and optional load_id"""
+    glob_filter = f"{load_id}*.parquet" if load_id is not None else "*.parquet"
     return spark.read.option("recursiveFileLookup", "true").parquet(
-        path, pathGlobFilter=f"{load_id}*.parquet"
+        path, pathGlobFilter=glob_filter
     )
 
 
 def read_all_parquet(
-    spark: SparkSession, path: str, loads_ids: Sequence[str]
+    spark: SparkSession, path: str, loads_ids: Sequence[str] | None = None
 ) -> SparkDataFrame:
-    all_df = None
-    for load_id in loads_ids:
-        df = read_parquet(spark, path, load_id)
-        if all_df is None:
-            all_df = df
-        else:
-            all_df.unionAll(df)
+    if loads_ids is not None:
+        all_df = None
+        for load_id in loads_ids:
+            df = read_parquet(spark, path, load_id)
+            if all_df is None:
+                all_df = df
+            else:
+                all_df.unionAll(df)
+    else:
+        all_df = read_parquet(spark, path)
 
     return cast(SparkDataFrame, all_df)
 
