@@ -3,9 +3,9 @@ dlthub_telemetry = false
 log_level = "WARNING"
 
 [influxdb]
-base_url = "http://172.16.103.105:8086"
+base_url = "http://192.168.42.159:8086"
 bucket_name = "machinestate"
-channel_batch_size = 10
+channel_batch_size = 3
 
 [sources.data_writer]
 file_max_items = 100000
