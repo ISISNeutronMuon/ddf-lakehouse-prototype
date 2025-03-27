@@ -45,10 +45,11 @@ def opralog() -> Generator[DltResource]:
 
 
 def extract_and_load_opralog(pipeline: Pipeline) -> LoadInfo:
+    LOGGER.info("Running pipeline")
     load_info = pipeline.run(
         opralog(), loader_file_format=LOADER_FILE_FORMAT, write_disposition="append"
     )
-    LOGGER.info(load_info)
+    LOGGER.debug(load_info)
     LOGGER.info(
         f"Pipeline {pipeline.pipeline_name} run completed in {
         humanize.precisedelta(
