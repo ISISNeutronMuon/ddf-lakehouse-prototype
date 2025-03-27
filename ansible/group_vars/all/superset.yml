@@ -6,7 +6,11 @@ superset_metadb_name: superset
 superset_metadb_port: 5432
 superset_container_network: superset
 superset_http_port: 8088
-superset_build_git_ref: allow_prefixed_paths
+
+# latest
+# superset_build_git_ref: 465a696c53c693e7448b119e020ea8cc59d3a734
+superset_build_git_ref: 901412e9a8346153c26949b4e8d5085856cc9bf2
+
 superset_app_root: "/analytics/superset"
 superset_flask_debug: false
 superset_env_name: production
