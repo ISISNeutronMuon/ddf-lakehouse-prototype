@@ -36,6 +36,7 @@
   become: true
   ansible.posix.synchronize:
     use_ssh_args: true
+    checksum: true
     src: ./
     dest: "{{ superset_config_path }}/"
     archive: false

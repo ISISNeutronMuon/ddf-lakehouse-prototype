@@ -1,20 +1,13 @@
 import logging
 import os
-from typing import Dict, List
+from pathlib import Path
 
 from celery.schedules import crontab
-from flask import g, redirect, flash
-from flask_appbuilder._compat import as_unicode
-from flask_appbuilder.security.forms import LoginForm_db
-from flask_appbuilder.security.manager import AUTH_LDAP
-from flask_appbuilder.security.sqla.models import Role
-from flask_appbuilder.security.views import AuthLDAPView, expose
+from flask_appbuilder.security.manager import AUTH_OID
 from flask_caching.backends.filesystemcache import FileSystemCache
-from flask_login import login_user
-from superset.security import SupersetSecurityManager
 
+from keycloak_security_manager import OIDCSecurityManager
 
-logger = logging.getLogger()
 
 #####
 # Supersets own database details
@@ -32,94 +25,27 @@ SQLALCHEMY_DATABASE_URI = (
 )
 #####
 
-#####
+##### OAuth
+# Uses flask-iodc. See https://flask-oidc.readthedocs.io/en/latest/ for settings
+AUTH_TYPE = AUTH_OID
+OIDC_CLIENT_SECRETS = Path(__file__).parent / "client_secret.json"
+# OIDC_ID_TOKEN_COOKIE_SECURE = False
+# OIDC_REQUIRE_VERIFIED_EMAIL = False
+# OIDC_OPENID_REALM = "isis"
+# OIDC_VALID_ISSUERS = (
+#     f"https://data-accelerator.isis.cclrc.ac.uk/auth/realms/{OIDC_OPENID_REALM}"
+# )
+OIDC_INTROSPECTION_AUTH_METHOD = "client_secret_post"
+# OIDC_TOKEN_TYPE_HINT = "access_token"
+CUSTOM_SECURITY_MANAGER = OIDCSecurityManager
 
-
-class AuthLocalAndLDAPView(AuthLDAPView):
-    """Implements an auth view that first uses LDAP to authorise
-    a user and falls back to the internal database if necessary.
-
-    This ensures we can have a local admin user should LDAP be
-    unavailable.
-    """
-
-    @expose("/login/", methods=["GET", "POST"])
-    def login(self):
-        if g.user is not None and g.user.is_authenticated:
-            return redirect(self.appbuilder.get_url_for_index)
-        form = LoginForm_db()
-        if form.validate_on_submit():
-            user = self.appbuilder.sm.auth_user_ldap(
-                form.username.data, form.password.data
-            )
-            if not user:
-                user = self.appbuilder.sm.auth_user_db(
-                    form.username.data, form.password.data
-                )
-            if user:
-                login_user(user, remember=False)
-                return redirect(self.appbuilder.get_url_for_index)
-            else:
-                flash(as_unicode(self.invalid_login_message), "warning")
-                return redirect(self.appbuilder.get_url_for_login)
-        return self.render_template(
-            self.login_template, title=self.title, form=form, appbuilder=self.appbuilder
-        )
-
-
-class InternallyManagedAdminRoleSecurityManager(SupersetSecurityManager):
-    authldapview = AuthLocalAndLDAPView
-
-    # Override base method to consult our own list of mappings.
-    # Currently we simply maintain a list of Admin users and all others
-    # are assigned the standard role
-    ADMIN_USERS: List[bytes] = [b"martyn.gigg@stfc.ac.uk"]
-
-    def _ldap_calculate_user_roles(
-        self, user_attributes: Dict[str, bytes]
-    ) -> List[Role]:
-        try:
-            mail = user_attributes["mail"][0]
-        except (IndexError, KeyError):
-            mail = ""
-
-        logger.debug(f"Calculating role(s) for user with mail='{mail}'")
-        return (
-            [self.find_role("Admin")]
-            if mail in self.ADMIN_USERS
-            else [
-                self.find_role(role_name)
-                for role_name in AUTH_USER_REGISTRATION_ROLE_NAMES
-            ]
-        )
-
-
-# LDAP authentication
-SILENCE_FAB = False
-AUTH_TYPE = AUTH_LDAP
-AUTH_LDAP_SERVER = os.getenv("LDAP_SERVER")
-AUTH_LDAP_USE_TLS = False
-AUTH_LDAP_TLS_DEMAND = True
-AUTH_LDAP_TLS_CACERTFILE = os.getenv("LDAP_CACERTFILE")
-
-# registration configs
+# Will allow user self registration, allowing to create Flask users from Authorized User
 AUTH_USER_REGISTRATION = True
-AUTH_ROLES_SYNC_AT_LOGIN = True
-AUTH_USER_REGISTRATION_ROLE_NAMES = ["Gamma", "isis_catalog_schemas_unrestricted"]
-AUTH_LDAP_FIRSTNAME_FIELD = "givenName"
-AUTH_LDAP_LASTNAME_FIELD = "sn"
-AUTH_LDAP_EMAIL_FIELD = "mail"
 
-# search configs using email (userPrincipalName in AD) as username
-AUTH_LDAP_SEARCH = "OU=FBU,DC=fed,DC=cclrc,DC=ac,DC=uk"
-AUTH_LDAP_SEARCH_FILTER = (
-    "(memberOf=CN=Isis,OU=Automatic Groups,DC=fed,DC=cclrc,DC=ac,DC=uk)"
-)
-AUTH_LDAP_UID_FIELD = "userPrincipalName"
-AUTH_LDAP_BIND_USER = "anonymous"
-AUTH_LDAP_BIND_PASSWORD = ""
+# The default user self registration role
+AUTH_USER_REGISTRATION_ROLE = "Gamma"
 
-CUSTOM_SECURITY_MANAGER = InternallyManagedAdminRoleSecurityManager
+#####
 
 #####
 # Caching layer
