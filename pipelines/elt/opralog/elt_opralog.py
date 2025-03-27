@@ -65,6 +65,7 @@ def transform(pipeline: Pipeline):
 
     Currently we reread all of the source and compute the whole downstream dataset again
     """
+    LOGGER.info("Running transformations to create models")
     raise_if_destination_not("filesystem", pipeline)
 
     spark = spark_utils.create_spark_session(
@@ -83,9 +84,7 @@ def transform(pipeline: Pipeline):
     # Create table
     model_table_name = "equipment_downtime_record"
     LOGGER.debug(f"Creating {model_table_name}...")
-    model_table_df = spark_utils.execute_sql_from_file(
-        spark, MODELS_DIR / f"{model_table_name}_def.sql"
-    )
+    spark_utils.execute_sql_from_file(spark, MODELS_DIR / f"{model_table_name}_def.sql")
 
     # Create temporary tables required by transform query
     for temp_table in (
@@ -100,6 +99,9 @@ def transform(pipeline: Pipeline):
         df = spark_utils.read_all_parquet(spark, table_dir)
         df.createOrReplaceTempView(temp_table)
 
+    model_table_df = spark_utils.execute_sql_from_file(
+        spark, MODELS_DIR / f"{model_table_name}.sql"
+    )
     # We currently replace the whole thing everytime as the data is tiny...
     spark.sql(f"DELETE FROM {model_table_name}")
     model_table_df.write.insertInto(model_table_name)
