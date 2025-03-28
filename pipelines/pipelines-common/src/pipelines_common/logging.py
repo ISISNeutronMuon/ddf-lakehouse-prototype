@@ -25,3 +25,14 @@ def configure_logging(
         filter = _log_filter_factory(keep_records_from)
         for handler in logging.getLogger().handlers:
             handler.addFilter(filter)
+
+
+def flush_all_handlers(logger: logging.Logger):
+    """Call flush on all handlers for a given logger
+
+    Call this when you need to be sure that all logging output has been flushed
+    before moving on, e.g. when external tools use other logging mechanisms and
+    logs can appear out of order.
+    """
+    for handler in logger.handlers:
+        handler.flush()

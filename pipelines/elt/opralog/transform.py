@@ -1,11 +1,10 @@
 from collections.abc import Generator
+import glob
+import os
 from pathlib import Path
 
 import dlt
 from dlt import Pipeline
-from dlt.common.pipeline import LoadInfo
-from dlt.sources import DltResource
-from dlt.sources.sql_database import sql_database
 import humanize
 import pendulum
 
@@ -22,50 +21,13 @@ PIPELINE_BASENAME = "opralog_desktop"
 DATASET_NAME = "opralogdb"
 SPARK_APPNAME = Path(__file__).name
 
-# Staging destination
-LOADER_FILE_FORMAT = "parquet"
-
 # Transforms
 MODELS_DIR = Path(__file__).parent / "models"
-
-
-@dlt.source(name="opralog")
-def opralog() -> Generator[DltResource]:
-    """Pull the configured tables from the database backing the Opralog application"""
-    tables = dlt.config["sources.sql_database.tables"]
-    source = sql_database(
-        schema=dlt.config.value,
-        backend="pyarrow",
-        backend_kwargs={"tz": "UTC"},
-    ).with_resources(*(table_info["name"] for table_info in tables))
-    for table_info in tables:
-        resource = getattr(source, table_info["name"])
-        resource.apply_hints(
-            incremental=dlt.sources.incremental(table_info["incremental_id"])
-        )
-        yield resource
-
-
-def extract_and_load_opralog(pipeline: Pipeline) -> LoadInfo:
-    LOGGER.info("Running pipeline")
-    load_info = pipeline.run(
-        opralog(), loader_file_format=LOADER_FILE_FORMAT, write_disposition="append"
-    )
-    LOGGER.debug(load_info)
-    LOGGER.info(
-        f"Pipeline {pipeline.pipeline_name} run completed in {
-        humanize.precisedelta(
-            pipeline.last_trace.finished_at - pipeline.last_trace.started_at
-        )}"
-    )
-
-    return load_info
+SCHEMAS_DIR = Path(__file__).parent / "schemas"
 
 
 def transform(pipeline: Pipeline):
-    """Create/update models based on the loaded data.
-
-    This currently recomputes the whole model each time"""
+    """Create/update models based on the loaded data."""
     LOGGER.info("Running transformations to create models")
     raise_if_destination_not("filesystem", pipeline)
 
@@ -117,22 +79,65 @@ def transform(pipeline: Pipeline):
     )
 
 
-# ------------------------------------------------------------------------------
+class Model:
+
+    def __init__(
+        self,
+        catalog_name: str,
+        namespace_name: str,
+        table_name: str,
+        schema_path: Path,
+        model_path: Path,
+    ):
+        """Encapsulate a model definition and associated schema.
+
+        This current only handles a single schema.
+
+        :param catalog_name: Name of the destination catalog
+        :param namespace_name: Name of the destination namespace
+        :param table_name: Name of the model table
+        :param schema_path: Path to the schema definition
+        :param model_path: Path to model computation script
+        """
+        self._catalog_name = catalog_name
+        self._namespace_name = namespace_name
+        self._table_name = table_name
+        self._schema_path = schema_path
+        self._model_path = model_path
+
+    @property
+    def catalog_name(self) -> str:
+        return self._catalog_name
+
+    @property
+    def namespace_name(self) -> str:
+        return self._namespace_name
+
+    @property
+    def model_path(self) -> Path:
+        return self._model_path
+
+    @property
+    def schema_path(self) -> Path:
+        return self._schema_path
+
+    @property
+    def table_name(self) -> str:
+        return self._table_name
+
+
+def models() -> Generator[Model]:
+    for model_script in glob.glob("**/*.py", root_dir=MODELS_DIR, recursive=True):
+        catalog_name, namespace_name, table_name = model_script.split(os.sep)[:-1]
+        model_path = MODELS_DIR / model_script
+        schema_path = (
+            SCHEMAS_DIR / catalog_name / namespace_name / table_name / "create.sql"
+        )
+        yield Model(catalog_name, namespace_name, table_name, schema_path, model_path)
 
 
 def main():
-
-    extra_cli_args = [
-        (
-            "--transform-loads-ids",
-            dict(
-                nargs="+",
-                default=[],
-                help="A white-space separate list of load ids to pass to the transform step",
-            ),
-        )
-    ]
-    args = cli_utils.create_standard_argparser(extra_cli_args).parse_args()
+    args = cli_utils.create_common_argparser().parse_args()
     logging_utils.configure_logging(args.log_level, keep_records_from=["__main__"])
 
     pipeline = pipeline_utils.create_pipeline(
@@ -141,17 +146,12 @@ def main():
         dataset_name=DATASET_NAME,
         progress="log",
     )
-    LOGGER.info(
-        f"-- Pipeline: {pipeline.pipeline_name}, Dataset {pipeline.dataset_name} --"
-    )
+    LOGGER.info(f"----- Transform -----")
+    LOGGER.info(f"Pipeline: {pipeline.pipeline_name}, Dataset {pipeline.dataset_name}")
 
-    extract_and_load_opralog(pipeline)
-
-    # logging_utils.flush_all_handlers(LOGGER)
-    # if args.skip_transform:
-    #     LOGGER.info("Skipping transform step as requested.")
-    # else:
-    #     transform(pipeline, loads_ids)
+    # transform(pipeline)
+    for m in models():
+        print(m)
 
 
 if __name__ == "__main__":
