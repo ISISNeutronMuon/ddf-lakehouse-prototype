@@ -131,6 +131,12 @@ def main():
     else:
         extract_and_load_opralog(pipeline)
 
+    # Flush all logs at this point. Other tools such as Spark don't use Python
+    # logging and logs can then appear out of order as the other logging is written
+    # before the Python log is flushed
+    for handler in LOGGER.handlers:
+        handler.flush()
+
     if args.skip_transform:
         LOGGER.info("Skpping transform step as requested.")
     else:
