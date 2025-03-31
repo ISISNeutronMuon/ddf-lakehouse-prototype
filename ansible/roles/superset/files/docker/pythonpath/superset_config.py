@@ -105,7 +105,11 @@ AUTH_LDAP_TLS_CACERTFILE = os.getenv("LDAP_CACERTFILE")
 # registration configs
 AUTH_USER_REGISTRATION = True
 AUTH_ROLES_SYNC_AT_LOGIN = True
-AUTH_USER_REGISTRATION_ROLE_NAMES = ["Gamma", "isis_catalog_schemas_unrestricted"]
+AUTH_USER_REGISTRATION_ROLE_NAMES = [
+    "Gamma",
+    "ISIS Facility Schema Access",
+    "ISIS Accelerator Schema Access",
+]
 AUTH_LDAP_FIRSTNAME_FIELD = "givenName"
 AUTH_LDAP_LASTNAME_FIELD = "sn"
 AUTH_LDAP_EMAIL_FIELD = "mail"
