@@ -1,0 +1,4 @@
+---
+metabase_working_dir: /var/metabase
+metabase_base_image: metabase/metabase:v0.53.8.x
+metabase_trino_driver_version: 6.1.0

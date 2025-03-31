@@ -1,0 +1,8 @@
+---
+postgres_db_data_path: "{{ cephfs_mount_mount_path }}/live/metabase/postgres/data"
+postgres_db_host: "{{ metabase_metadb_host }}"
+postgres_db_user: "{{ metabase_metadb_user }}"
+postgres_db_passwd: "{{ metabase_metadb_passwd }}"
+postgres_container_network: "{{ metabase_container_network }}"
+postgres_db_names:
+  - metabase

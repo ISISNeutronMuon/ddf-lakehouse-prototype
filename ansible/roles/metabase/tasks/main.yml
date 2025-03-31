@@ -1,0 +1,65 @@
+---
+- name: Create container network
+  become: true
+  community.docker.docker_network:
+    name: "{{ metabase_container_network }}"
+
+- name: Ensure working directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ metabase_working_dir }}"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+
+- name: Ensure configuration files are synchronized
+  become: true
+  ansible.posix.synchronize:
+    use_ssh_args: true
+    checksum: true
+    src: ./
+    dest: "{{ metabase_working_dir }}/"
+    archive: false
+    recursive: true
+    delete: true
+
+- name: Ensure templated configuration files are synchronized
+  become: true
+  ansible.builtin.template:
+    src: "{{ metabase_template.src }}"
+    dest: "{{ metabase_working_dir }}/{{ metabase_template.dest }}"
+    mode: "{{ metabase_template.mode|default('u=rw,g=r,o=r') }}"
+  loop:
+    - { src: Dockerfile.j2, dest: Dockerfile }
+    - { src: docker-compose.yml.j2, dest: docker-compose.yml }
+    - { src: dotenv.j2, dest: .env }
+  loop_control:
+    loop_var: metabase_template
+
+- name: Ensure certificates directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ metabase_working_dir }}/certs"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+
+# - name: Ensure certificates are present
+#   become: true
+#   no_log: true
+#   ansible.builtin.copy:
+#     dest: "{{ metabase_working_dir }}/certs/{{ certificate.filename }}"
+#     content: "{{ certificate.content }}"
+#     owner: root
+#     group: root
+#     mode: "u=r,o=,g="
+#   loop:
+#     - { filename: stfc-ca.pem, content: "{{ stfc_ca_cert }}" }
+#   loop_control:
+#     loop_var: certificate
+
+- name: Run metabase services
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: "{{ metabase_working_dir }}"
+    build: always
+    recreate: always
+    state: present

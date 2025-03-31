@@ -1,0 +1,19 @@
+---
+- name: Provision VMs for Metabase
+  hosts: localhost
+  vars:
+    openstack_server_name: metabase
+    openstack_security_group_name: metabase
+    openstack_security_group_description: Ingress to metabase ports
+    openstack_security_group_rules:
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ metabase_http_port }}"
+        port_range_max: "{{ metabase_http_port }}"
+    openstack_flavor: l3.micro
+    openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
+    inventory_group: metabase
+  roles:
+    - role: security_group_create
+    - role: vm_create

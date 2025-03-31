@@ -1,0 +1,8 @@
+# syntax=docker/dockerfile
+FROM {{ metabase_base_image }}
+
+ARG TRINO_DRIVER_VERSION={{ metabase_trino_driver_version }}
+
+# Third-party driver for Trino developed by Starburst
+RUN curl https://github.com/starburstdata/metabase-driver/releases/download/${TRINO_DRIVER_VERSION}/starburst-${TRINO_DRIVER_VERSION}.metabase-driver.jar \
+  -Lo /plugins/starburst-${TRINO_DRIVER_VERSION}.metabase-driver.jar
