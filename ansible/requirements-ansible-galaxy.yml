@@ -3,4 +3,5 @@ collections:
 
 roles:
   - geerlingguy.docker
+  - geerlingguy.java
   - geerlingguy.pip

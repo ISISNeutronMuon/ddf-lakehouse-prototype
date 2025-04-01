@@ -2,13 +2,20 @@
 # This instance supports running ELT scripts
 - name: Configure Ingestion instance
   hosts: ingestion
-  tasks:
-    - name: Ensure Java 11 is available
+  vars:
+    uv_python_version: "3.12"
+    # github_token must be provided on the command line
+    elt_git_url: https://x-access-token:{{ github_token }}@github.com/ISISNeutronMuon/ddf-lakehouse-prototype.git
+    elt_git_dest: "{{ ansible_env['HOME'] }}/var/elt_sources"
+    elt_git_ref: "main"
+  roles:
+    - role: geerlingguy.java
       become: true
-      ansible.builtin.apt:
-        name: openjdk-11-jre
-        update_cache: true
-
+      vars:
+        java_packages:
+          - openjdk-11-jre
+  tasks:
+    # ---------- UV & Python ----------
     - name: Check if uv exists
       stat:
         path: /usr/local/bin/uv
@@ -30,3 +37,32 @@
         path: /tmp/uv-install.sh
         state: absent
       when: not stat_uv.stat.exists
+
+    - name: Find compatible Python version
+      ansible.builtin.command: uv python find --quiet "{{ uv_python_version }}"
+      register: uv_python_find
+
+    - name: Ensure Python is installed
+      ansible.builtin.command: uv python install "{{ uv_python_version }}"
+      when: uv_python_find.rc == 0
+
+    # ---------- AWS S3 ----------
+    - name: Ensure AWS configuration is present
+      ansible.builtin.copy:
+        dest: "{{ ansible_env['HOME'] }}/.aws/config"
+        content: |+
+          [default]
+          request_checksum_calculation = "when_required"
+        mode: "u=rw,o=r,g=r"
+
+    # ---------- ELT sources ----------
+    - name: Pull ELT sources
+      ansible.builtin.git:
+        repo: "{{ elt_git_url }}"
+        dest: "{{ elt_git_dest }}"
+        version: "{{ elt_git_ref }}"
+      environment:
+        GIT_TERMINAL_PROMPT: 0 # reports "terminal prompts disabled" on missing password
+# TODO:
+#  - Configure ~/.dlt/secrets
+#  - Set up cron jobs including creating log directories
