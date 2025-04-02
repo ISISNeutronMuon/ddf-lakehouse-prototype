@@ -3,7 +3,7 @@
   hosts: localhost
   vars:
     openstack_flavor: l3.xsmall
-    openstack_server_name: "ingestion-{{ ansible_date_time.date }}"
+    openstack_server_name: "ingestion"
     openstack_security_groups: [default]
     inventory_group: ingestion
   roles:
