@@ -1,4 +1,4 @@
-from collections.abc import Generator, Sequence
+from collections.abc import Generator
 from pathlib import Path
 
 import dlt
@@ -18,8 +18,8 @@ import pipelines_common.spark as spark_utils
 
 # Runtime
 LOGGER = logging_utils.logging.getLogger(__name__)
-PIPELINE_BASENAME = "opralog"
-SPARK_APPNAME = Path(__file__).name
+PIPELINE_BASENAME = "logbook"
+SPARK_APPNAME = f"{PIPELINE_BASENAME}_transform"
 
 # Staging destination
 LOADER_FILE_FORMAT = "parquet"
@@ -28,8 +28,8 @@ LOADER_FILE_FORMAT = "parquet"
 MODELS_DIR = Path(__file__).parent / "models"
 
 
-@dlt.source(name="opralog")
-def opralog() -> Generator[DltResource]:
+@dlt.source(name="logbook")
+def logbook() -> Generator[DltResource]:
     """Pull the configured tables from the database backing the Opralog application"""
     tables = dlt.config["sources.sql_database.tables"]
     source = sql_database(
@@ -48,7 +48,7 @@ def opralog() -> Generator[DltResource]:
 def extract_and_load_opralog(pipeline: Pipeline) -> LoadInfo:
     LOGGER.info("Running pipeline")
     load_info = pipeline.run(
-        opralog(), loader_file_format=LOADER_FILE_FORMAT, write_disposition="append"
+        logbook(), loader_file_format=LOADER_FILE_FORMAT, write_disposition="append"
     )
     LOGGER.debug(load_info)
     LOGGER.info(

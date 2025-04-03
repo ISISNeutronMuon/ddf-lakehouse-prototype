@@ -42,14 +42,14 @@ raise_on_max_retries = 1
 workers = 5
 
 [destination.filesystem]
-layout = "{schema_name}/{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
+layout = "{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
 
-[dev_opralog.destination.filesystem]
-bucket_url = './dev-lakehouse-source-opralog/'
+[dev_logbook.destination.filesystem]
+bucket_url = './lakehouse-source-opralogweb/'
 auto_mkdir = true
 
-[opralog.destination.filesystem]
-bucket_url = 's3://prod-lakehouse-source-opralog/'
+[logbook.destination.filesystem]
+bucket_url = 's3://prod-lakehouse-source-opralogweb/'
 
 [transform]
 catalog_name = "isis"
