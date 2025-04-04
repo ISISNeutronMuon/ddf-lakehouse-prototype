@@ -1,4 +1,12 @@
+(adrs)=
 # Architecture Decision Records
+
+```{toctree}
+:glob:
+:hidden:
+
+*
+```
 
 See [0001-record-architecture-decisions.md](./0001-record-architecture-decisions.md)
 for details.

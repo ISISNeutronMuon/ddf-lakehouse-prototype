@@ -1,10 +1,11 @@
 #!/bin/bash
 # Assume uv is available.
-# Create a local virtual environment, install build requirements and build into the given directory.
+# Create a local virtual environment, install build requirements and build
+# into a `build` subdirectory of the project root
 set -euo pipefail
 
-if [ $# != 2 ]; then
-  echo "Usage: $0 <project_root> <build_dir>"
+if [ $# = 0 ]; then
+  echo "Usage: $0 <project_root> [...other arguments passed to sphinx-build]"
   exit 1
 fi
 
@@ -14,16 +15,20 @@ if [ -n "${VIRTUAL_ENV:-}" ]; then
 fi
 
 # Constants
-PROJECT_ROOT=$1
-BUILD_DIR=$(realpath $2)
-SOURCE_DIR=$(realpath $PROJECT_ROOT/source)
-VENV_DIR=$PROJECT_ROOT/.venv
+VENV_DIR=.venv
+BUILD_DIR=build
+DEFAULT_BUILD_ARGS="--jobs auto"
+
+# Argument handling
+project_root=$1
+shift
+user_build_args=$*
 
 # Create and configure environment
-pushd $PROJECT_ROOT
+pushd $project_root
 test -d $VENV_DIR || uv venv $VENV_DIR
 uv pip install -r requirements.txt
-popd
 
 # Build
-uv run sphinx-build $PROJECT_ROOT/source $BUILD_DIR
+uv run sphinx-build $DEFAULT_BUILD_ARGS $user_build_args source $BUILD_DIR
+popd

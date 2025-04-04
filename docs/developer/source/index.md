@@ -1,5 +1,14 @@
 # Data Platform Proof-of-Concept
 
+```{toctree}
+:caption: 'Contents:'
+:glob: true
+:hidden: true
+:maxdepth: 2
+
+adrs/index
+```
+
 ## Introduction
 
 After requirements gathering meetings and a workshop as part of the
@@ -18,9 +27,9 @@ concept can be valuable to ISIS.
 The lakehouse architecture has several layers as described above.
 The diagram below shows the proof-of-concept implementation within the SCD cloud.
 
-![SCD cloud implementation](./images/ISIS%20Data%20Lakehouse%20PoC.png)
+![SCD cloud implementation](../images/lakehouse-poc.png)
 
-See [./architecture-decisions/](./architecture-decisions/) for a full list of
+See [./adrs](#adrs) for a full list of
 architecture decisions.
 
 ## Data Sources
@@ -77,7 +86,7 @@ taking the data the raw source data to modeled data with business rules applied,
 ready for consumption by downstream users such as BI (business intelligence) tools,
 ML tools etc.
 
-![Lakehouse data architecture](./images/lakehouse-data-architecture-layers.jpg)
+![Lakehouse data architecture](../images/lakehouse-data-architecture-layers.jpg)
 
 ### Raw
 
@@ -89,7 +98,7 @@ The files are stored in a object store on the SCD cloud in a bucket called
 `staging-isis` and contains exported files in various formats such as JSON, Parquet
 listed under directories named after the system from which the data originates, e.g:
 
-```txt
+```text
 staging-isis/
 |-- [sourcename]
     |-- incoming/
