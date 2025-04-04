@@ -16,7 +16,7 @@ author = "ISIS Computing Division"
 exclude_patterns = ["./common_links.rst"]
 extensions = ["myst_parser"]
 master_doc = "index"
-source_suffix = [".rst", ".md"]
+source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 templates_path = ["_templates"]
 
 

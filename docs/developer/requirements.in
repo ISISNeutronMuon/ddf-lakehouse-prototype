@@ -1,2 +1,1 @@
 -r ../requirements/base.in
-myst-parser==4.0.1

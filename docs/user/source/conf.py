@@ -13,9 +13,9 @@ author = "ISIS Computing Division"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-exclude_patterns = ["./common_links.rst"]
-extensions = []
-source_suffix = {".rst": "restructuredtext"}
+exclude_patterns = ["common_links.md", "common_links.rst"]
+extensions = ["myst_parser"]
+source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 templates_path = ["_templates"]
 
 
@@ -25,5 +25,5 @@ templates_path = ["_templates"]
 html_css_files = ["custom.css"]
 html_theme = "sphinx_book_theme"
 html_static_path = ["../../_static_shared"]
-html_logo = "../../_static/logo.svg"
+html_logo = "../../_static_shared/logo.svg"
 html_theme_options = {"show_prev_next": False}
