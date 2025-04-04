@@ -1,6 +1,0 @@
-pyproject.toml
-source/dataplatform_userdocs.egg-info/PKG-INFO
-source/dataplatform_userdocs.egg-info/SOURCES.txt
-source/dataplatform_userdocs.egg-info/dependency_links.txt
-source/dataplatform_userdocs.egg-info/requires.txt
-source/dataplatform_userdocs.egg-info/top_level.txt
