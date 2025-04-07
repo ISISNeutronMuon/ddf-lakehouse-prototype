@@ -10,4 +10,4 @@ secrets.toml
 *.wal
 
 # ignore local staging storage
-*-warehouse-isis-staging/**
+dev_bucket/

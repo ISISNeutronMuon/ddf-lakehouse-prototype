@@ -7,28 +7,28 @@ dlthub_telemetry = true
 schema = "dbo"
 
 [[sources.sql_database.tables]]
-name = "LOGBOOKS"
-incremental_id = "LOGBOOK_ID"
+name = "Entries"
+incremental_id = "EntryId"
 
 [[sources.sql_database.tables]]
-name = "LOGBOOK_ENTRIES"
-incremental_id = "ENTRY_ID"
+name = "ChapterEntry"
+incremental_id = "LogbookEntryId"
 
 [[sources.sql_database.tables]]
-name = "LOGBOOK_CHAPTER"
-incremental_id = "LOGBOOK_NO"
+name = "LogbookChapter"
+incremental_id = "LogbookChapterNo"
 
 [[sources.sql_database.tables]]
-name = "ENTRIES"
-incremental_id = "ENTRY_ID"
+name = "Logbooks"
+incremental_id = "LogbookId"
 
 [[sources.sql_database.tables]]
-name = "MORE_ENTRY_COLUMNS"
-incremental_id = "ENTRY_ID"
+name = "MoreEntryColumns"
+incremental_id = "MoreEntryColumnId"
 
 [[sources.sql_database.tables]]
-name = "ADDITIONAL_COLUMNS"
-incremental_id = "COLUMN_NO"
+name = "AdditionalColumns"
+incremental_id = "AdditionalColumnId"
 
 [sources.data_writer]
 file_max_items = 100000
@@ -44,11 +44,11 @@ workers = 5
 [destination.filesystem]
 layout = "{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
 
-[dev_logbook.destination.filesystem]
-bucket_url = './lakehouse-source-opralogweb/'
+[dev_opralogwebdb.destination.filesystem]
+bucket_url = './dev_bucket/'
 auto_mkdir = true
 
-[logbook.destination.filesystem]
+[opralogwebdb.destination.filesystem]
 bucket_url = 's3://prod-lakehouse-source-opralogweb/'
 
 [transform]

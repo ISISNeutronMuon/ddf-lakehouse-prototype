@@ -18,7 +18,7 @@ import pipelines_common.spark as spark_utils
 
 # Runtime
 LOGGER = logging_utils.logging.getLogger(__name__)
-PIPELINE_BASENAME = "logbook"
+PIPELINE_BASENAME = "opralogwebdb"
 SPARK_APPNAME = f"{PIPELINE_BASENAME}_transform"
 
 # Staging destination
@@ -28,15 +28,16 @@ LOADER_FILE_FORMAT = "parquet"
 MODELS_DIR = Path(__file__).parent / "models"
 
 
-@dlt.source(name="logbook")
-def logbook() -> Generator[DltResource]:
+@dlt.source(name=PIPELINE_BASENAME)
+def opralogwebdb() -> Generator[DltResource]:
     """Pull the configured tables from the database backing the Opralog application"""
     tables = dlt.config["sources.sql_database.tables"]
     source = sql_database(
         schema=dlt.config.value,
         backend="pyarrow",
         backend_kwargs={"tz": "UTC"},
-    ).with_resources(*(table_info["name"] for table_info in tables))
+        table_names=[table_info["name"] for table_info in tables],
+    )
     for table_info in tables:
         resource = getattr(source, table_info["name"])
         resource.apply_hints(
@@ -48,7 +49,9 @@ def logbook() -> Generator[DltResource]:
 def extract_and_load_opralog(pipeline: Pipeline) -> LoadInfo:
     LOGGER.info("Running pipeline")
     load_info = pipeline.run(
-        logbook(), loader_file_format=LOADER_FILE_FORMAT, write_disposition="append"
+        opralogwebdb(),
+        loader_file_format=LOADER_FILE_FORMAT,
+        write_disposition="append",
     )
     LOGGER.debug(load_info)
     LOGGER.info(
