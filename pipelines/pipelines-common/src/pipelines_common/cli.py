@@ -15,15 +15,5 @@ def create_standard_argparser() -> argparse.ArgumentParser:
         choices=["raise", "log_and_continue"],
         help="What should be done with pipeline step failure exceptions",
     )
-    parser.add_argument(
-        "--skip-extract-and-load",
-        action="store_true",
-        help="Skip the extract and load step.",
-    )
-    parser.add_argument(
-        "--skip-transform",
-        action="store_true",
-        help="Skip the extract and load step.",
-    )
 
     return parser
