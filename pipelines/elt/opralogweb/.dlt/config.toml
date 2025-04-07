@@ -4,6 +4,7 @@ log_level = "WARNING" # the system log level of dlt
 dlthub_telemetry = true
 
 [sources.sql_database]
+drivername = "mssql+pymssql"
 schema = "dbo"
 
 [[sources.sql_database.tables]]
