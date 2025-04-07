@@ -44,7 +44,7 @@ workers = 5
 [destination.filesystem]
 layout = "{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
 
-[dev_opralogwebdb.destination.filesystem]
+[develop_opralogwebdb.destination.filesystem]
 bucket_url = './dev_bucket/'
 auto_mkdir = true
 

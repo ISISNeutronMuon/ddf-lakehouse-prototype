@@ -10,8 +10,8 @@ from dlt.pipeline.progress import TCollectorArg, _NULL_COLLECTOR as NULL_COLLECT
 
 
 _PIPELINE_ENV_VAR = "PIPELINE_ENV"
-_PIPELINE_ENV_NAME_PROD = "prod"
-_PIPELINE_ENV_NAME_DEV = "dev"
+_PIPELINE_ENV_NAME_PROD = "production"
+_PIPELINE_ENV_NAME_DEV = "develop"
 
 
 def _pipeline_environment():
