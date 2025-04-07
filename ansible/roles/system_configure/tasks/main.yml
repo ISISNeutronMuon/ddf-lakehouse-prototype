@@ -1,0 +1,17 @@
+---
+- name: Ensure timezones are available
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    pkg:
+      - tzdata
+    state: present
+
+- name: Set timezone
+  become: true
+  community.general.timezone:
+    name: "{{ system_configure_timezone }}"
+
+- name: Ensure VM is configured
+  include_role:
+    name: packages_update
