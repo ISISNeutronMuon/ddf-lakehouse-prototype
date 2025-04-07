@@ -5,9 +5,10 @@
   vars:
     uv_python_version: "3.12"
     # github_token must be provided on the command line
-    elt_git_url: https://x-access-token:{{ github_token }}@github.com/ISISNeutronMuon/ddf-lakehouse-prototype.git
+    elt_git_url: https://git:{{ github_token }}@github.com/ISISNeutronMuon/ddf-lakehouse-prototype.git
     elt_git_dest: "{{ ansible_env['HOME'] }}/var/elt_sources"
     elt_git_ref: "main"
+    cron_log_dir: "/var/log/cron/elt-pipelines"
   roles:
     - role: geerlingguy.java
       become: true
@@ -63,6 +64,26 @@
         version: "{{ elt_git_ref }}"
       environment:
         GIT_TERMINAL_PROMPT: 0 # reports "terminal prompts disabled" on missing password
-# TODO:
-#  - Configure ~/.dlt/secrets
-#  - Set up cron jobs including creating log directories
+
+    # ---------- Secrets ----------
+    - name: Ensure dlt secrets exists
+      ansible.builtin.template:
+        src: ./templates/dlt/secrets.toml.j2
+        dest: "{{ ansible_env['HOME'] }}/.dlt/secrets.toml"
+
+    # ---------- Cron ----------
+    - name: Ensure cron logs directory exists
+      become: true
+      ansible.builtin.file:
+        path: "{{ cron_log_dir }}/opralogweb"
+        state: directory
+        mode: "u=rwx,g=rx,o=rx"
+        owner: 1000
+        group: 1000
+
+    - name: Ensure daily Opralog ingest job exists
+      ansible.builtin.cron:
+        name: "Opralog ingest"
+        minute: "10"
+        hour: "2"
+        job: "{{ elt_git_dest }}/pipelines/elt/opralogweb/cron-scripts/daily.sh > {{ cron_log_dir }}/opralogweb/extract-and-load-$(date -I).log 2>&1"

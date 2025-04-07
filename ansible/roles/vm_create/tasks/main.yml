@@ -53,6 +53,10 @@
     ansible_user: "{{ openstack_vm_user }}"
     ansible_python_interpreter: "{{ openstack_python_interpreter }}"
 
+- name: Set timezone if supplied
+  community.general.timezone:
+    name: "{{ vm_create_timezone }}"
+
 - name: Ensuring machine is up to date
   include_role:
     name: packages_update
