@@ -53,7 +53,7 @@
     ansible_user: "{{ openstack_vm_user }}"
     ansible_python_interpreter: "{{ openstack_python_interpreter }}"
 
-- name: Set timezone if supplied
+- name: Set timezone
   community.general.timezone:
     name: "{{ vm_create_timezone }}"
 
