@@ -99,4 +99,4 @@
         name: "Opralog ingest"
         minute: "10"
         hour: "2"
-        job: "{{ elt_git_dest }}/pipelines/elt/opralogweb/cron-scripts/daily.sh > {{ cron_log_dir }}/opralogweb/extract-and-load-$(date +\%Y\%m\%d_\%H\%M\%S').log 2>&1"
+        job: "{{ elt_git_dest }}/pipelines/elt/opralogweb/cron-scripts/daily.sh > {{ cron_log_dir }}/opralogweb/extract-and-load-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
