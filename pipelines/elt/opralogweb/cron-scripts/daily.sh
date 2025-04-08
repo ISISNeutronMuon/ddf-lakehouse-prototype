@@ -11,7 +11,7 @@ ON_PIPELINE_FAILURE=log_and_continue
 REQUIREMENTS_TXT=requirements.txt
 
 # Variables required by the pipeline script
-export PIPELINE_ENV=prod
+export PIPELINE_ENV=production
 
 # Create & configure environment
 pushd $SCRIPT_DIR/..
