@@ -13,7 +13,7 @@ import pipelines_common.pipeline as pipeline_utils
 
 # Runtime
 LOGGER = logging_utils.logging.getLogger(__name__)
-PIPELINE_BASENAME = "opralogweb"
+PIPELINE_BASENAME = "opralogwebdb"
 
 # Staging destination
 LOADER_FILE_FORMAT = "parquet"
