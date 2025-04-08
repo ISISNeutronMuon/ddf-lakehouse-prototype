@@ -59,7 +59,7 @@
         dest: "{{ ansible_env['HOME'] }}/.aws/config"
         content: |+
           [default]
-          request_checksum_calculation = "when_required"
+          request_checksum_calculation = when_required
         mode: "u=rw,o=r,g=r"
 
     # ---------- ELT sources ----------
