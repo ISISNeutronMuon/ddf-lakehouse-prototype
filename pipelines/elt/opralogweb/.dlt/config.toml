@@ -4,7 +4,6 @@ log_level = "WARNING" # the system log level of dlt
 dlthub_telemetry = true
 
 [sources.sql_database]
-drivername = "mssql+pymssql"
 schema = "dbo"
 
 [[sources.sql_database.tables]]
@@ -45,14 +44,9 @@ workers = 5
 [destination.filesystem]
 layout = "{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
 
-[develop_opralogwebdb.destination.filesystem]
-bucket_url = './dev_bucket/'
+[develop_opralogweb.destination.filesystem]
+bucket_url = './develop_opralogweb/'
 auto_mkdir = true
 
-[opralogwebdb.destination.filesystem]
+[opralogweb.destination.filesystem]
 bucket_url = 's3://prod-lakehouse-source-opralogweb/'
-
-[transform]
-catalog_name = "isis"
-namespace_name = "accelerator"
-running_schedule_table_name = "equipment_downtime_record"
