@@ -1,5 +1,3 @@
-(superset-charts)=
-
 # Charts
 
 A chart is one of the central elements in Superset. It supports over 50 types
@@ -19,18 +17,12 @@ page shown in the image below while the final method skips this page and takes
 you to the empty chart screen for the selected dataset, with the chart type
 set to table.
 
-```{image} _images/isis-superset-chart-add-no-selection.png
-:align: center
-:scale: 60%
-```
+![Superset chart with no selection](../assets/images/superset/isis-superset-chart-add-no-selection.png)
 
 We will use a *Line Chart* as an example. Select a dataset and the *Line Chart*
 type then click *Create new chart*.
 
-```{image} _images/isis-superset-line-chart-empty.png
-:align: center
-:scale: 60%
-```
+![Superset empty line chart](../assets/images/superset/isis-superset-line-chart-empty.png)
 
 You are presented with the line-chart builder page with your chosen dataset
 selected.

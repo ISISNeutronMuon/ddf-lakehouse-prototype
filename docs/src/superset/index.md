@@ -1,17 +1,12 @@
-(superset)=
-
 # Superset
 
-```{toctree}
-:glob: true
-:hidden: true
-
-*
-```
+<!-- Common links -->
+[isis-superset]: https://data-accelerator.isis.cclrc.ac.uk/analytics/superset "ISIS Superset"
+[apache-superset]: https://superset.apache.org/ "Apache Superset"
 
 ## Quick links
 
-- [ISIS Superset][#isis-superset]
+- [ISIS Superset][isis-superset]
 
 ## Getting started
 
@@ -21,17 +16,14 @@ It is an off-the-shelf, open-source tool used extensively by the analytics commu
 and is not a custom tool built for ISIS.
 
 ISIS hosts its own [instance of this tool][isis-superset] with the available
-datasets preconfigured.
+pre-configured datasets.
 
 ### Logging in
 
 When visiting [Superset][isis-superset] for the first time you will
 be presented with a login screen:
 
-```{image} _images/isis-superset-login-screen.png
-:align: center
-:scale: 75%
-```
+![Superset login screen](../assets/images/superset/isis-superset-login-screen.png)
 
 Use your STFC email address and password to login.
 
@@ -44,10 +36,7 @@ providing a way to quickly jump to content that is most frequently accessed.
 *who is logged in. The pixelated parts of the image will look different when you*
 *view the page as you.*
 
-```{image} _images/isis-superset-example-home-page.png
-:align: center
-:scale: 40%
-```
+![Superset home page](../assets/images/superset/isis-superset-example-home-page.png)
 
 The header within the *Charts* & *Dashboards* sections contains the following
 buttons:
@@ -62,10 +51,4 @@ on the right-hand side of the section header.
 ### Charts
 
 Charts are one of the central features of Superset.
-Please see the {ref}`superset-charts` documentation for more detail.
-
-<!-- ```{include} ../common_links.md
-``` -->
-```{eval-rst}
-.. include:: ../common_links.rst
-```
+Please see the [charts](./charts.md) documentation for more detail.
