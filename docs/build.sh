@@ -5,7 +5,7 @@
 set -euo pipefail
 
 if [ $# = 0 ]; then
-  echo "Usage: $0 <project_root> [...other arguments passed to sphinx-build]"
+  echo "Usage: $0 <project_root> <build_dir> [...other arguments passed to mkdocs build]"
   exit 1
 fi
 
@@ -16,12 +16,12 @@ fi
 
 # Constants
 VENV_DIR=.venv
-BUILD_DIR=build
-DEFAULT_BUILD_ARGS="--jobs auto"
+DEFAULT_BUILD_ARGS="--clean"
 
 # Argument handling
 project_root=$1
-shift
+build_dir=$2
+shift 2
 user_build_args=$*
 
 # Create and configure environment
@@ -30,5 +30,5 @@ test -d $VENV_DIR || uv venv $VENV_DIR
 uv pip install -r requirements.txt
 
 # Build
-uv run sphinx-build $DEFAULT_BUILD_ARGS $user_build_args source $BUILD_DIR
+uv run mkdocs build $DEFAULT_BUILD_ARGS --site-dir $build_dir
 popd
