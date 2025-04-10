@@ -1,83 +1,29 @@
 # Deployment
 
-The system is currently deployed on the [SCD cloud](https://cloud.stfc.ac.uk/).
-In theory it can be deployed on any cloud infrastructure but it will require
-changes before this will work.
+_The system is currently deployed on the [SCD cloud](https://cloud.stfc.ac.uk/)._
+_In theory it can be deployed on any cloud infrastructure but it will require_
+_changes before this will work._
 
-## Prerequisites
+There are several prerequisites required before deployment can being. Please
+read [them here](./prerequisites.md).
 
-The following resources are required before deployment can proceed:
+## Ansible
 
-- [Python environment configured for running Ansible](#python-environment)
-- [Ansible vault password](#ansible-vault)
-- [Openstack clouds.yaml](#openstack-cloudsyaml)
-- [A shared filesystem through a Manila share](#manila-share)
-- [Object storage](#object-store)
-- [Domain & floating IPs](#domain-and-floating-ips)
+Ansible playbooks in `<repo_root>/ansible/playbooks` control the deployment
+of the prototype.
 
-## Python environment
-
-Ansible requires a Python environment. These instructions assume the use of the
-[uv](https://docs.astral.sh) tool for managing both Python and the virtual
-environments. See [uv installation](https://docs.astral.sh/uv/getting-started/installation/)
-& [installing Python](https://docs.astral.sh/uv/guides/install-python/) guides.
-
-- Create a virtual environment in the `<repo_root>/ansible` directory
+To create all VM resources run the amalgamated playbook:
 
 ```sh
-cd <repo_root>/ansible
-uv venv
+ansible-playbook -i localhost -e inventory_filename=$PWD/dataplatform.ini \
+  -e openstack_cloud_name=<cloud_name> \
+  -e openstack_key_name=<ssh_key> \ playbooks/cloud/vms_create.yml
 ```
 
-- Install the Python requirements & Ansible Galaxy requirements
+where _cloud\_name_ and _ssh\_key_ are described in the [prerequisites section](./prerequisites.md#openstack-api--vm-credentials).
 
 ```sh
-uv pip install -r requirements-python.txt
-uv run ansible-galaxy role install --roles-path galaxy_roles -r requirements-ansible-galaxy.yml
+ansible-playbook -i dataplatform.ini playbooks/cloud/services_create.yml
 ```
 
-## Openstack clouds.yaml
-
-## Ansible vault
-
-The project secrets are stored using [Ansible Vault](https://docs.ansible.com/ansible/latest/vault_guide/index.html). The password is required and can be supplied either on the command line with each ansible command or
-stored locally in a `<repo_root>/ansible/.vault_pass` file. **Do not share this password or commit the .vault_pass file to Git.**
-
-## Manila share
-
-_Used for: Persistent storage for running system services, e.g. database data. Not used for user data._
-
-A Manila/CephFS share of at least 5TB is required. Once a quota has been assigned to the project:
-
-- Create a new share, under _Project->Share->Shares_, and mark it private.
-- Click on the share, make note of the _Export locations.Path_ value.
-- Edit the `vault_cephfs_export_path` variable to match the value from the previous step.
-- On the main _Shares_ page click the down arrow on the side of the _EDIT SHARE_
-  button and go to _Manage Rules_.
-- Add a new rule and once created make note of the _Access Key` value.
-- Edit the `vault_cephfs_access_secret` variable to match the value from the previous step.
-
-## Object store
-
-_Used for: Persistent storage of user data._
-
-This is currently expected to be configured to use the Echo object store.
-The S3 endpoint is configured through the `s3_endpoint` ansible variable
-in `<repo_root>/ansible/group_vars/all/s3.yml`.
-
-An access key and secret are configured in the vault. They cannot be managed through
-the Openstack web interface, instead new keys and secrets are created using the
-`openstack ec2 credentials` command.
-
-In the `<repo_root>/ansible` directory run `uv run openstack --os-cloud=<cloud_name> ec2 credentials create`
-to create a new access key/secret pair. Update the Ansible vault accordingly.
-
-## Domain and floating IPs
-
-Two floating IPs are required, defined in `<repo_root>/ansible/group_vars/all/openstack.yml`:
-
-- One for the management/SSH jump node. Check `openstack_management_vm_fip` value.
-- One for the Traefik load balancer node. Check the `openstack_reverse_proxy_fip` value.
-
-The `openstack_reverse_proxy_fip` value must match the value configured
-in the DNS record for the
+`ANSIBLE_HOST_KEY_CHECKING=False`
