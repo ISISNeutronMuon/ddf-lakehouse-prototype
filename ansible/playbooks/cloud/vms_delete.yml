@@ -11,6 +11,8 @@
         prompt: "Do you want to continue (yes/no)?"
       register: pause_info
       delegate_to: localhost
+    - ansible.builtin.debug:
+        msg: "{{ pause_info }}"
     - name: Ensure cloud server(s) are deleted
       openstack.cloud.server:
         cloud: "{{ openstack_cloud_name }}"
@@ -20,3 +22,4 @@
       with_items: "{{ vms_to_delete }}"
       loop_control:
         loop_var: server_name
+      when: pause_info.user_input == "yes"

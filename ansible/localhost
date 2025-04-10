@@ -2,4 +2,4 @@
 # directory. Without an inventory file variables in 'group_vars/all' are not
 # found if the playbook is in a subdirectory.
 # See https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html#variable-precedence-where-should-i-put-a-variable
-localhost ansible_connection=local
+localhost ansible_connection=local ansible_python_interpreter=python
