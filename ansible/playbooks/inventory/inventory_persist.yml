@@ -30,7 +30,7 @@
         path: "{{ inventory_filename }}"
         block: |
           [all:vars]
-          ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -q {{ openstack_vm_user }}@{{ openstack_management_vm_fip }}"'
+          ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -q {{ openstack_vm_user }}@{{ openstack_jump_host }}"'
         prepend_newline: true
         append_newline: true
         marker: "# {mark} ANSIBLE MANAGED BLOCK [all:vars]"
