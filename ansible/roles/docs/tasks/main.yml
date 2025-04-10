@@ -11,11 +11,15 @@
     archive: false
     recursive: true
     delete: true
+    rsync_opts:
+      - "--no-motd"
+      - "--exclude=.venv"
+      - "--exclude=build"
 
 - name: Build documentation
   community.docker.docker_container:
     name: docs-build
-    image: python:3.12
+    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
     command: ["bash", "/work/build.sh", "{{ docs_build_dir_relpath }}"]
     state: started
     detach: false
