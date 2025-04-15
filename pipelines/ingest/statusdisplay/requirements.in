@@ -1,2 +1,2 @@
--r ../../requirements/base.in
+-r ../requirements/base.in
 -e ../../pipelines-common
