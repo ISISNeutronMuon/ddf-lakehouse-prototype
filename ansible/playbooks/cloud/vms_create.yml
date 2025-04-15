@@ -4,16 +4,17 @@
   gather_facts: false
   tasks:
     - ansible.builtin.fail:
-        msg: "Exiting: play requires the variable 'inventory_filename' to be defined. Define it using the '-e inventory_filename=...' option n the command line."
+        msg: "Exiting: play requires the variable 'inventory_filename' to be defined. Define it using the '-e inventory_filename=...' option on the command line."
       when: inventory_filename is not defined
     # Implicit localhost is not included in all so doesn't load the all variables by default
     - ansible.builtin.include_vars:
         dir: ../../group_vars/all
 
 # Openstack resources
+- import_playbook: ./networking.yml
+
 # We're using the traefik node as an SSH tunnel so we need to create this first
 - import_playbook: ../traefik/create.yml
-
 - import_playbook: ../ingestion/create.yml
 - import_playbook: ../jupyterhub/create.yml
 - import_playbook: ../keycloak/create.yml

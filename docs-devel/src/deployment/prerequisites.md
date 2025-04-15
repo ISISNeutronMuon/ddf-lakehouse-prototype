@@ -7,7 +7,7 @@ The following resources are required before deployment can proceed:
 - [Openstack clouds.yaml](#openstack-api--vm-credentials)
 - [A shared filesystem through a Manila share](#manila-share)
 - [Object storage](#object-store)
-- [Domain & floating IPs](#domain-and-floating-ips)
+- [Networking](#networking)
 
 ## Python environment
 
@@ -74,14 +74,6 @@ In the `<repo_root>/ansible` directory run `uv run openstack --os-cloud=<cloud_n
 to create a new access key/secret pair. Update the Ansible vault accordingly.
 
 ## Networking
-
-### Private network
-
-Using the web interface create a new network from _Project->Network->Networks_ with a single subnet.
-Update the details of `openstack_virtual_network` in `<repo_root>/ansible/group_vars/all/openstack.yml`
-to match the new network.
-
-### Floating IPs
 
 Two floating IPs are required:
 
