@@ -18,15 +18,4 @@ raise_on_max_retries = 1
 workers = 5
 
 [destination.filesystem]
-layout = "{schema_name}/{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
-
-[dev_statusdisplay.destination.filesystem]
-bucket_url = "./dev-lakehouse-source-statusdisplay/"
-auto_mkdir = true
-
-[statusdisplay.destination.filesystem]
-bucket_url = "s3://prod-lakehouse-source-statusdisplay/"
-
-[transform]
-catalog_name = "isis"
-namespace_name = "facility"
+layout = "{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
