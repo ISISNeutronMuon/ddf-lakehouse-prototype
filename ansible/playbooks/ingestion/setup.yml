@@ -84,6 +84,27 @@
         dest: "{{ ansible_env['HOME'] }}/.dlt/secrets.toml"
 
     # ---------- Cron ----------
+    # TODO: Replace this with a central cron script to control the dependencies
+
+    # ---------- statusdisplay ----------
+    - name: Ensure statusdisplay cron logs directory exists
+      become: true
+      ansible.builtin.file:
+        path: "{{ cron_log_dir }}/statusdisplay"
+        state: directory
+        recurse: true
+        mode: "u=rwx,g=rx,o=rx"
+        owner: 1000
+        group: 1000
+
+    - name: Ensure daily statusdisplay ingest job exists
+      ansible.builtin.cron:
+        name: "Statusdisplay ingest"
+        minute: "15"
+        hour: "0"
+        job: "{{ elt_git_dest }}/pipelines/ingest/statusdisplay/cron-scripts/daily.sh > {{ cron_log_dir }}/statusdisplay/extract-and-load-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
+
+    # ---------- Opralog ----------
     - name: Ensure Opralog cron logs directory exists
       become: true
       ansible.builtin.file:
