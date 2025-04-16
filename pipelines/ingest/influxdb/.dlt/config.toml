@@ -27,6 +27,3 @@ auto_mkdir = true
 
 [influxdb.destination.filesystem]
 bucket_url = "s3://prod-lakehouse-source-accelerator-influxdb/"
-
-[transform]
-combined_machinestate_table = "accelerator.clean_machinestate"
