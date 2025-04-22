@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Constants
+ELT_GIT_URL={{ ingestion_elt_git_url }}
+ELT_GIT_DEST={{ ingestion_elt_git_dest }}
+EXTRACT_AND_LOAD_SCRIPT=extract_and_load.py
+LOG_LEVEL=DEBUG
+ON_PIPELINE_FAILURE=log_and_continue
+REQUIREMENTS_TXT=requirements.txt
+
+function ensure_elt_sources_exist() {
+  if [ -d "$ELT_GIT_DEST" ]; then
+    pushd $ELT_GIT_DEST
+    GIT_TERMINAL_PROMPT=0 git pull
+    popd
+  else
+    GIT_TERMINAL_PROMPT=0 git clone $ELT_GIT_URL $ELT_GIT_DEST
+  fi
+}
+
+# Variables required by the pipeline script
+export PIPELINE_ENV=production
+
+# Script arguments - directory is relative to ELT_GIT_DEST
+if [ $# -ne 1 ]; then
+  echo "Usage $0 <extract_and_load_dir>"
+  exit 1
+fi
+#
+extract_and_load_dir=$ELT_GIT_DEST/$1
+
+# Create & configure environment
+ensure_elt_sources_exist
+pushd $extract_and_load_dir
+test -d .venv || uv venv
+uv pip install -r $REQUIREMENTS_TXT
+
+# Extraction
+uv run $EXTRACT_AND_LOAD_SCRIPT --log-level $LOG_LEVEL --on-pipeline-step-failure $ON_PIPELINE_FAILURE

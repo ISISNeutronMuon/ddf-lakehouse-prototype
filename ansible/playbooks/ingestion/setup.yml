@@ -4,10 +4,10 @@
   hosts: ingestion
   vars:
     uv_python_version: "3.12"
-    elt_git_url: https://git:{{ vault_ingestion_github_token }}@github.com/ISISNeutronMuon/ddf-lakehouse-prototype.git
-    elt_git_dest: "{{ ansible_env['HOME'] }}/var/elt_sources"
-    elt_git_ref: "main"
-    cron_log_dir: "/var/log/elt-pipelines/cron"
+    ingestion_elt_git_url: https://github.com/ISISNeutronMuon/ddf-lakehouse-prototype.git
+    ingestion_elt_git_dest: "{{ ansible_env['HOME'] }}/var/elt_sources"
+    ingestion_elt_cron_scripts_dir: "{{ ansible_env['HOME'] }}/etc/cron"
+    ingestion_elt_cron_log_dir: "{{ ansible_env['HOME'] }}/var/log/elt-pipelines/cron"
   roles:
     - role: geerlingguy.java
       become: true
@@ -61,15 +61,6 @@
           request_checksum_calculation = when_required
         mode: "u=rw,o=r,g=r"
 
-    # ---------- ELT sources ----------
-    - name: Pull ELT sources
-      ansible.builtin.git:
-        repo: "{{ elt_git_url }}"
-        dest: "{{ elt_git_dest }}"
-        version: "{{ elt_git_ref }}"
-      environment:
-        GIT_TERMINAL_PROMPT: 0 # reports "terminal prompts disabled" on missing password
-
     # ---------- Secrets ----------
     - name: Ensure dlt secrets directory exists
       ansible.builtin.file:
@@ -82,14 +73,24 @@
         src: ./templates/dlt/secrets.toml.j2
         dest: "{{ ansible_env['HOME'] }}/.dlt/secrets.toml"
 
-    # ---------- Cron ----------
-    # TODO: Replace this with a central cron script to control the dependencies
+    # ---------- Cron tasks ----------
+    - name: Ensure cron scripts directory exists
+      ansible.builtin.file:
+        path: "{{ ingestion_elt_cron_scripts_dir }}"
+        state: directory
+        mode: "u=rwx,g=rx,o=rx"
+
+    - name: Create/update ELT cron script template
+      ansible.builtin.template:
+        src: ./templates/cron/elt_task.sh.j2
+        dest: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh"
+        mode: "u=rwx,g=rx,o=rx"
 
     # ---------- statusdisplay ----------
     - name: Ensure statusdisplay cron logs directory exists
       become: true
       ansible.builtin.file:
-        path: "{{ cron_log_dir }}/statusdisplay"
+        path: "{{ ingestion_elt_cron_log_dir }}/statusdisplay"
         state: directory
         recurse: true
         mode: "u=rwx,g=rx,o=rx"
@@ -101,13 +102,13 @@
         name: "Statusdisplay ingest"
         minute: "15"
         hour: "0"
-        job: "{{ elt_git_dest }}/pipelines/ingest/statusdisplay/cron-scripts/daily.sh > {{ cron_log_dir }}/statusdisplay/extract-and-load-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
+        job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/statusdisplay > {{ ingestion_elt_cron_log_dir }}/statusdisplay/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
 
     # ---------- Opralog ----------
     - name: Ensure Opralog cron logs directory exists
       become: true
       ansible.builtin.file:
-        path: "{{ cron_log_dir }}/opralogweb"
+        path: "{{ ingestion_elt_cron_log_dir }}/opralogweb"
         state: directory
         recurse: true
         mode: "u=rwx,g=rx,o=rx"
@@ -119,4 +120,4 @@
         name: "Opralog ingest"
         minute: "10"
         hour: "2"
-        job: "{{ elt_git_dest }}/pipelines/ingest/opralogweb/cron-scripts/daily.sh > {{ cron_log_dir }}/opralogweb/extract-and-load-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
+        job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/opralogweb > {{ ingestion_elt_cron_log_dir }}/opralogweb/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
