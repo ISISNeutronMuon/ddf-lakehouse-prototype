@@ -1,9 +1,0 @@
----
-metabase_metadb_host: postgres
-metabase_metadb_user: metabase
-metabase_metadb_passwd: "{{ vault_metabase_metadb_passwd }}"
-metabase_metadb_name: metabase
-metabase_metadb_port: 5432
-metabase_container_network: metabase
-metabase_http_port: 3000
-metabase_app_root: "/analytics/metabase"
