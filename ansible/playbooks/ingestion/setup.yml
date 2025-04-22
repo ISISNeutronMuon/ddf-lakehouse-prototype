@@ -4,8 +4,7 @@
   hosts: ingestion
   vars:
     uv_python_version: "3.12"
-    # github_token must be provided on the command line
-    elt_git_url: https://git:{{ github_token }}@github.com/ISISNeutronMuon/ddf-lakehouse-prototype.git
+    elt_git_url: https://git:{{ vault_ingestion_github_token }}@github.com/ISISNeutronMuon/ddf-lakehouse-prototype.git
     elt_git_dest: "{{ ansible_env['HOME'] }}/var/elt_sources"
     elt_git_ref: "main"
     cron_log_dir: "/var/log/elt-pipelines/cron"
