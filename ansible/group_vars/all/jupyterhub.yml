@@ -2,14 +2,3 @@
 jupyterhub_home_root_path: "{{ cephfs_mount_mount_path }}/live/jupyterhub/home"
 jupyterhub_base_path: /jupyterhub
 jupyterhub_http_port: 80
-
-# SQL
-jupyterhub_spark_packages:
-  - org.apache.hadoop:hadoop-aws:3.3.4
-  - org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.6.1
-  - org.apache.iceberg:iceberg-aws-bundle:1.6.1
-  - org.projectnessie.nessie-integrations:nessie-spark-extensions-3.5_2.12:0.91.3
-
-jupyterhub_spark_sql_exts:
-  - org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
-  - org.projectnessie.spark.extensions.NessieSparkSessionExtensions

@@ -8,6 +8,7 @@
     ingestion_elt_git_dest: "{{ ansible_env['HOME'] }}/var/elt_sources"
     ingestion_elt_cron_scripts_dir: "{{ ansible_env['HOME'] }}/etc/cron"
     ingestion_elt_cron_log_dir: "{{ ansible_env['HOME'] }}/var/log/elt-pipelines/cron"
+    ingestion_spark_conf_dir: "{{ ansible_env['HOME'] }}/etc/spark/conf"
   roles:
     - role: geerlingguy.java
       become: true
@@ -70,8 +71,23 @@
 
     - name: Ensure dlt secrets exists
       ansible.builtin.template:
-        src: ./templates/dlt/secrets.toml.j2
+        src: dlt/secrets.toml.j2
         dest: "{{ ansible_env['HOME'] }}/.dlt/secrets.toml"
+
+    # ---------- Remote spark config ----------
+    - name: Ensure Spark config directory exists
+      ansible.builtin.file:
+        path: "{{ ingestion_spark_conf_dir }}"
+        state: directory
+        mode: "u=rwx,g=rx,o=rx"
+
+    - name: Create/update Spark defaults
+      ansible.builtin.template:
+        src: ../../common-templates/spark/spark-defaults.conf.j2
+        dest: "{{ ingestion_spark_conf_dir }}/spark-defaults.conf"
+        mode: "u=rw,g=r,o=x"
+      vars:
+        spark_defaults_include_s3_secrets: True
 
     # ---------- Cron tasks ----------
     - name: Ensure cron scripts directory exists
@@ -82,7 +98,7 @@
 
     - name: Create/update ELT cron script template
       ansible.builtin.template:
-        src: ./templates/cron/elt_task.sh.j2
+        src: ./cron/elt_task.sh.j2
         dest: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh"
         mode: "u=rwx,g=rx,o=rx"
 
@@ -102,7 +118,7 @@
         name: "Statusdisplay ingest"
         minute: "15"
         hour: "0"
-        job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/statusdisplay > {{ ingestion_elt_cron_log_dir }}/statusdisplay/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
+        job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/statusdisplay pipelines/modelling/isis --select models/facility > {{ ingestion_elt_cron_log_dir }}/statusdisplay/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
 
     # ---------- Opralog ----------
     - name: Ensure Opralog cron logs directory exists

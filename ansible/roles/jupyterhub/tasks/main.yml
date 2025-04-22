@@ -140,9 +140,11 @@
 - name: Ensure Spark config files are present
   become: true
   ansible.builtin.template:
-    src: spark/spark-defaults.conf.j2
+    src: ../../common-templates/spark/spark-defaults.conf.j2
     dest: "{{ pyspark_root.stdout }}/conf/spark-defaults.conf"
     mode: "u=rw,g=r,o=r"
+  vars:
+    spark_defaults_include_s3_secrets: false
 
 - name: Ensure JupyterHub config files are present and up to date
   become: true

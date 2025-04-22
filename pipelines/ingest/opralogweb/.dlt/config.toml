@@ -43,10 +43,3 @@ workers = 5
 
 [destination.filesystem]
 layout = "{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
-
-[develop_opralogwebdb.destination.filesystem]
-bucket_url = './develop_opralogweb/'
-auto_mkdir = true
-
-[opralogwebdb.destination.filesystem]
-bucket_url = 's3://prod-lakehouse-source-opralogweb/'
