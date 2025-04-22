@@ -1,4 +1,4 @@
-name: "facility"
+name: isis
 version: "1.0.0"
 
 profile: "spark"
@@ -7,7 +7,7 @@ model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
 seed-paths: ["seeds"]
-macro-paths: ["../dbt_macros"]
+macro-paths: ["dbt_macros"]
 snapshot-paths: ["snapshots"]
 
 clean-targets: # directories to be removed by `dbt clean`
@@ -16,3 +16,6 @@ clean-targets: # directories to be removed by `dbt clean`
 
 models:
   +materialized: "table"
+  isis:
+    facility:
+      +schema: "facility"

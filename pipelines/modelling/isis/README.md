@@ -1,7 +1,14 @@
-# Isis catalog model projects
+# Isis catalog models
 
 [dbt](https://docs.getdbt.com/) projects for defining models within the `isis` catalog.
 
-The directory is organized by namespace:
+_Prerequisities_:
 
-- [facility](./facility/): Contains models that describe the facility
+- Python requirements defined in `./requirements/requirements.txt`
+- Requires Java on the path.
+
+Try running the following commands:
+
+- `dbt run`
+- `dbt test`
+

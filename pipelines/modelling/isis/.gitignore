@@ -1,2 +1,6 @@
-**/logs/
-**/spark-warehouse/
+logs/
+spark-warehouse/
+target/
+dbt_packages/
+logs/
+
