@@ -3,3 +3,4 @@
 
 dlt[sql-database]
 pymssql==2.3.2
+html2text==2025.4.15
