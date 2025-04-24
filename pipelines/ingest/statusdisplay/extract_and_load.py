@@ -21,7 +21,7 @@ def statusdisplay() -> DltSource:
 if __name__ == "__main__":
     cli_utils.cli_main(
         pipeline_name="statusdisplay",
-        dataset_name="statusdisplay_api",
         data=statusdisplay(),
-        write_disposition="replace",
+        dataset_name="statusdisplay_api",
+        default_write_disposition="replace",
     )
