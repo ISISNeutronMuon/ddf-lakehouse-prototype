@@ -7,7 +7,7 @@ model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
 seed-paths: ["seeds"]
-macro-paths: ["dbt_macros"]
+macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
 clean-targets: # directories to be removed by `dbt clean`
@@ -15,6 +15,7 @@ clean-targets: # directories to be removed by `dbt clean`
   - "dbt_packages"
 
 models:
+  +file_format: iceberg
   +materialized: "table"
   isis:
     # The full schema name of the final tables is "{target_schema}_"{custom_schema}"
@@ -23,3 +24,5 @@ models:
     # See https://docs.getdbt.com/docs/build/custom-schemas
     facility:
       +schema: "facility"
+    accelerator:
+      +schema: "accelerator"

@@ -1,10 +1,15 @@
 spark:
-  target: prod
+  target: isis_catalog
   outputs:
-    prod:
+    isis_catalog:
       type: spark
       method: session
       schema: "{{ env_var('DBT_SPARK_SCHEMA', 'analytics') }}"
       host: NA
       server_side_parameters:
-        "spark.sql.defaultCatalog": "{{ env_var('DBT_SPARK_DEFAULT_CATALOG', 'isis') }}"
+        # This configuration assumes a spark-defaults.conf can be found containing the
+        # catalog configuration and secrets.
+        # The directory containing spark-defaults.conf can be set using the SPARK_CONF_DIR environment variable
+        "spark.sql.defaultCatalog": "isis"
+        "spark.cores.max": "{{ env_var('DBT_SPARK_CORES_MAX', '8') }}"
+        "spark.executor.memory": "{{ env_var('DBT_SPARK_EXECUTOR_MEMORY', '16g') }}"

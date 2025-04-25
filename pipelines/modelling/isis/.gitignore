@@ -1,6 +1,7 @@
 logs/
-spark-warehouse/
 target/
 dbt_packages/
-logs/
+spark-warehouse/
+metastore_db/
 
+derby.log

@@ -1,5 +1,5 @@
 version: 2
 
 models:
-  - name: running_schedule
-    description: "The ISIS running schedule"
+  - name: cycles
+    description: "The ISIS cycle dates, including pre and post user-cycle periods."

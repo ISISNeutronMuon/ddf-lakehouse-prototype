@@ -7,8 +7,6 @@ agate==1.9.1
     #   dbt-core
 annotated-types==0.7.0
     # via pydantic
-appdirs==1.4.4
-    # via sqlfluff
 attrs==25.3.0
     # via
     #   jsonschema
@@ -28,25 +26,26 @@ click==8.1.8
     #   dbt-core
     #   dbt-semantic-interfaces
     #   sqlfluff
-    #   typer
 colorama==0.4.6
     # via
     #   dbt-common
     #   sqlfluff
 daff==1.3.46
     # via dbt-core
-dbt-adapters==1.14.6
+dbt-adapters==1.14.7
     # via
     #   dbt-core
     #   dbt-duckdb
-dbt-common==1.18
+dbt-common==1.23.0
     # via
     #   dbt-adapters
     #   dbt-core
     #   dbt-duckdb
 dbt-core==1.9.4
-    # via dbt-duckdb
-dbt-duckdb==1.9.2
+    # via
+    #   dbt-duckdb
+    #   sqlfluff-templater-dbt
+dbt-duckdb==1.9.3
     # via -r requirements/developer.in
 dbt-extractor==0.6.0
     # via dbt-core
@@ -74,17 +73,18 @@ jinja2==3.1.6
     #   dbt-core
     #   dbt-semantic-interfaces
     #   diff-cover
+    #   jinja2-simple-tags
     #   sqlfluff
+jinja2-simple-tags==0.6.1
+    # via sqlfluff-templater-dbt
 jsonschema==4.23.0
     # via
     #   dbt-common
     #   dbt-semantic-interfaces
-jsonschema-specifications==2024.10.1
+jsonschema-specifications==2025.4.1
     # via jsonschema
 leather==0.4.0
     # via agate
-markdown-it-py==3.0.0
-    # via rich
 markupsafe==3.0.2
     # via jinja2
 mashumaro==3.14
@@ -92,9 +92,7 @@ mashumaro==3.14
     #   dbt-adapters
     #   dbt-common
     #   dbt-core
-mdurl==0.1.2
-    # via markdown-it-py
-more-itertools==10.6.0
+more-itertools==10.7.0
     # via dbt-semantic-interfaces
 msgpack==1.1.0
     # via mashumaro
@@ -102,7 +100,7 @@ networkx==3.4.2
     # via dbt-core
 ordered-set==4.1.0
     # via deepdiff
-packaging==24.2
+packaging==25.0
     # via
     #   dbt-core
     #   pytest
@@ -113,6 +111,8 @@ pathspec==0.12.1
     #   dbt-common
     #   dbt-core
     #   sqlfluff
+platformdirs==4.3.7
+    # via sqlfluff
 pluggy==1.5.0
     # via
     #   diff-cover
@@ -127,9 +127,7 @@ pydantic==2.11.3
 pydantic-core==2.33.1
     # via pydantic
 pygments==2.19.1
-    # via
-    #   diff-cover
-    #   rich
+    # via diff-cover
 pytest==8.3.5
     # via sqlfluff
 python-dateutil==2.9.0.post0
@@ -160,23 +158,21 @@ requests==2.32.3
     #   dbt-common
     #   dbt-core
     #   snowplow-tracker
-rich==14.0.0
-    # via typer
 rpds-py==0.24.0
     # via
     #   jsonschema
     #   referencing
-shellingham==1.5.4
-    # via typer
 six==1.17.0
     # via
     #   isodate
     #   python-dateutil
 snowplow-tracker==1.1.0
     # via dbt-core
-sqlfluff==2.3.5
-    # via sqlfmt
-sqlfmt==0.0.3
+sqlfluff==3.4.0
+    # via
+    #   -r requirements/developer.in
+    #   sqlfluff-templater-dbt
+sqlfluff-templater-dbt==3.4.0
     # via -r requirements/developer.in
 sqlparse==0.5.3
     # via dbt-core
@@ -186,8 +182,6 @@ text-unidecode==1.3
     # via python-slugify
 tqdm==4.67.1
     # via sqlfluff
-typer==0.15.2
-    # via sqlfmt
 typing-extensions==4.13.2
     # via
     #   dbt-adapters
@@ -199,8 +193,6 @@ typing-extensions==4.13.2
     #   pydantic-core
     #   referencing
     #   snowplow-tracker
-    #   sqlfluff
-    #   typer
     #   typing-inspection
 typing-inspection==0.4.0
     # via pydantic
