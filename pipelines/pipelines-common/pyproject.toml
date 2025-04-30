@@ -8,4 +8,4 @@ version = "0.1.0"
 description = "A set of common utility routines for data pipelines."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["pyiceberg>=0.8.1"]
+dependencies = ["pyiceberg>=0.8.1,<=1.0.0"]
