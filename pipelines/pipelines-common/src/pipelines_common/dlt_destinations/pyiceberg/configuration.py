@@ -10,20 +10,20 @@ from dlt.common.utils import digest128
 
 
 @configspec(init=False)
-class IcebergRestCatalogCredentials(CredentialsConfiguration):
+class PyIcebergRestCatalogCredentials(CredentialsConfiguration):
     uri: str = None
     warehouse: str = None
 
 
-IcebergCatalogCredentials: TypeAlias = IcebergRestCatalogCredentials
+PyIcebergCatalogCredentials: TypeAlias = PyIcebergRestCatalogCredentials
 
 
 @configspec
 class IcebergClientConfiguration(DestinationClientDwhConfiguration):
-    destination_type: Final[str] = dataclasses.field(default="iceberg", init=False, repr=False, compare=False)  # type: ignore[misc]
+    destination_type: Final[str] = dataclasses.field(default="pyiceberg", init=False, repr=False, compare=False)  # type: ignore[misc]
 
     catalog_type: Literal["rest"] = None
-    credentials: IcebergCatalogCredentials = None
+    credentials: PyIcebergCatalogCredentials = None
 
     def fingerprint(self) -> str:
         """Returns a fingerprint of a connection string."""

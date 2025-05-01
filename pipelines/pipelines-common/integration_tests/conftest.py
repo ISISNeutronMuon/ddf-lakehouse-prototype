@@ -1,0 +1,35 @@
+import os
+from typing import List
+
+# patch which providers to enable
+from dlt.common.configuration.providers import (
+    ConfigProvider,
+    EnvironProvider,
+    SecretsTomlProvider,
+    ConfigTomlProvider,
+)
+from dlt.common.runtime.run_context import RunContext
+
+from pyiceberg.catalog.rest import RestCatalog
+import pytest
+
+
+def initial_providers(self) -> List[ConfigProvider]:
+    # do not read the global config
+    # find the .dlt in the same directory as this file
+    return [
+        EnvironProvider(),
+        SecretsTomlProvider(settings_dir="tests/.dlt"),
+        ConfigTomlProvider(settings_dir="tests/.dlt"),
+    ]
+
+
+RunContext.initial_providers = initial_providers  # type: ignore[method-assign]
+
+
+def pytest_configure(config):
+    # Iceberg catalog details - default to match settings in local docker-compose setup.
+    os.environ.setdefault(
+        "DESTINATION__PYICEBERG__CREDENTIALS__URI", "http://localhost:8181/catalog"
+    )
+    os.environ.setdefault("DESTINATION__PYICEBERG__CREDENTIALS__WAREHOUSE", "demo")

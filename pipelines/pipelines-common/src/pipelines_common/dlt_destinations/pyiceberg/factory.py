@@ -2,13 +2,13 @@ import typing as t
 
 from dlt.common.destination import Destination, DestinationCapabilitiesContext
 
-from pipelines_common.dlt_destinations.iceberg.configuration import (
+from pipelines_common.dlt_destinations.pyiceberg.configuration import (
     IcebergClientConfiguration,
-    IcebergCatalogCredentials,
+    PyIcebergCatalogCredentials,
 )
 
 
-class iceberg(Destination[IcebergClientConfiguration, "IcebergClient"]):
+class pyiceberg(Destination[IcebergClientConfiguration, "PyIcebergClient"]):
     spec = IcebergClientConfiguration
 
     def _raw_capabilities(self) -> DestinationCapabilitiesContext:
@@ -29,16 +29,16 @@ class iceberg(Destination[IcebergClientConfiguration, "IcebergClient"]):
         return caps
 
     @property
-    def client_class(self) -> t.Type["IcebergClient"]:
-        from pipelines_common.dlt_destinations.iceberg.iceberg import (
-            IcebergClient,
+    def client_class(self) -> t.Type["PyIcebergClient"]:
+        from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import (
+            PyIcebergClient,
         )
 
-        return IcebergClient
+        return PyIcebergClient
 
     def __init__(
         self,
-        credentials: IcebergCatalogCredentials = None,
+        credentials: PyIcebergCatalogCredentials = None,
         **kwargs: t.Any,
     ) -> None:
         """Configure the Iceberg destination to use in a pipeline.
@@ -54,4 +54,4 @@ class iceberg(Destination[IcebergClientConfiguration, "IcebergClient"]):
         )
 
 
-iceberg.register()
+pyiceberg.register()

@@ -1,3 +1,3 @@
-from pipelines_common.dlt_destinations.iceberg.factory import iceberg
+from pipelines_common.dlt_destinations.pyiceberg.factory import pyiceberg
 
-__all__ = ["iceberg"]
+__all__ = ["pyiceberg"]
