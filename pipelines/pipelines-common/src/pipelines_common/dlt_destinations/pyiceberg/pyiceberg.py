@@ -6,7 +6,7 @@ from dlt.common.destination.client import (
     WithStateSync,
 )
 
-from dlt.common.destination.client import LoadJob, RunnableLoadJob, HasFollowupJobs
+from dlt.common.destination.client import LoadJob, RunnableLoadJob
 from dlt.common.destination import DestinationCapabilitiesContext
 from dlt.common.destination.typing import PreparedTableSchema
 from dlt.common.schema import Schema
@@ -52,7 +52,6 @@ class PyIcebergLoadJob(RunnableLoadJob):
         )
 
 
-# Need to add WithStateSync to be able to sync back pipeline state
 class PyIcebergClient(JobClientBase):
     def __init__(
         self,
@@ -138,6 +137,8 @@ class PyIcebergClient(JobClientBase):
             qualified_table_name, data_to_load, create_table_if_not_exists=True
         )
 
+    # "get_stored_schema", "get_stored_schema_by_hash", "get_stored_state",
+
     def make_qualified_table_name(self, table_name: str) -> str:
         return f"{self.dataset_name}.{table_name}"
 
@@ -163,7 +164,3 @@ class PyIcebergClient(JobClientBase):
                 table_data.schema,
             ) as txn:
                 txn.append(table_data)
-
-
-# "complete_load", "create_load_job", "drop_storage",
-# "get_stored_schema", "get_stored_schema_by_hash", "get_stored_state",
