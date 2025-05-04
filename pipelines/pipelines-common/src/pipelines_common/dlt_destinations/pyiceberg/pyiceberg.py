@@ -16,13 +16,15 @@ import pendulum
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pyiceberg.catalog.rest import (
-    Catalog as PyIcebergCatalog,
-    RestCatalog as PyIcebergRestCatalog,
-)
 
 from pipelines_common.dlt_destinations.pyiceberg.configuration import (
     IcebergClientConfiguration,
+)
+from pipelines_common.dlt_destinations.pyiceberg.catalog import (
+    create_catalog,
+    namespace_exists,
+    PyIcebergNoSuchNamespaceError,
+    PyIcebergCatalog,
 )
 
 
@@ -66,9 +68,7 @@ class PyIcebergClient(JobClientBase):
         self.loads_collection_properties = list(loads_table_["columns"].keys())
 
         self.config = config
-        self.iceberg_catalog = PyIcebergRestCatalog(
-            name="default", **config.credentials
-        )
+        self.iceberg_catalog = create_catalog(name="default", **config.credentials)
 
     def __enter__(self) -> "JobClientBase":
         return self
@@ -95,7 +95,7 @@ class PyIcebergClient(JobClientBase):
 
     def is_storage_initialized(self) -> bool:
         """Returns if storage is ready to be read/written."""
-        return self.iceberg_catalog.namespace_exists(self.dataset_name)
+        return namespace_exists(self.iceberg_catalog, self.dataset_name)
 
     def drop_storage(self) -> None:
         """Brings storage back into not initialized state. Typically data in storage is destroyed."""
