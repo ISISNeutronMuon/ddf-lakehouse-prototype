@@ -72,6 +72,7 @@ class PyIcebergDestinationTestConfiguration:
                 tables = catalog.list_tables(ns_name)
                 for qualified_table_name in tables:
                     catalog.purge_table(qualified_table_name)
+                catalog.drop_namespace(ns_name)
 
     def attach_pipeline(self, pipeline_name: str, **kwargs) -> dlt.Pipeline:
         """Attach to existing pipeline keeping the dev_mode"""

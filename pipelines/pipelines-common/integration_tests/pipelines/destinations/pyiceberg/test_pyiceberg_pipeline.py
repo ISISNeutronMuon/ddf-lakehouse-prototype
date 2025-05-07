@@ -5,7 +5,12 @@ from types import FrameType
 from typing import Any, Dict, List
 
 import dlt
-from dlt.common.schema.utils import loads_table, pipeline_state_table
+from dlt.common.schema.utils import loads_table, pipeline_state_table, version_table
+
+from pipelines_common.dlt_destinations.pyiceberg.catalog import (
+    namespace_exists as catalog_namespace_exists,
+)
+
 
 from integration_tests.pipelines.destinations.pyiceberg.utils import (
     assert_table_has_shape,
@@ -42,6 +47,12 @@ def test_dlt_tables_created(
         f"{pipeline.dataset_name}._dlt_loads",
         expected_row_count=1,
         expected_schema=loads_table(),
+    )
+    assert_table_has_shape(
+        pipeline,
+        f"{pipeline.dataset_name}._dlt_version",
+        expected_row_count=1,
+        expected_schema=version_table(),
     )
     assert_table_has_shape(
         pipeline,
@@ -110,7 +121,7 @@ def test_explicit_replace(
         pipelines_dir=pipelines_dir,
     )
     # first run
-    pipeline.run(data_items(data), write_disposition="replace")
+    pipeline.run(data_items(data))
     assert_table_has_data(
         pipeline,
         f"{pipeline.dataset_name}.data_items",
@@ -135,17 +146,40 @@ def test_explicit_replace(
     )
 
 
-# def test_drop_state(
-#     pipelines_dir,
-#     destination_config: PyIcebergDestinationTestConfiguration,
-# ):
-#     data = [{"id": i + 1} for i in range(2)]
-#     pipeline = destination_config.setup_pipeline(
-#         pipeline_name(inspect.currentframe()),
-#         pipelines_dir=pipelines_dir,
-#     )
-#     # run a pipeline to populate the local & destination state and then remove local
-#     pipeline.run(data_items(data))
+def test_drop_storage(
+    pipelines_dir,
+    destination_config: PyIcebergDestinationTestConfiguration,
+):
+    data = [{"id": i + 1} for i in range(2)]
+    pipeline = destination_config.setup_pipeline(
+        pipeline_name(inspect.currentframe()),
+        pipelines_dir=pipelines_dir,
+    )
+    # run a pipeline to populate destination state and then drop the storage
+    pipeline.run(data_items(data))
 
-#     with iceberg_catalog(pipeline) as catalog:
-#         assert catalog.table_exists((pipeline.dataset_name, "_dlt_pipeline_state"))
+    with pipeline.destination_client() as client:
+        client.drop_storage()
+
+    with iceberg_catalog(pipeline) as catalog:
+        assert not catalog_namespace_exists(catalog, pipeline.dataset_name)
+
+
+def test_sync_state(
+    pipelines_dir, destination_config: PyIcebergDestinationTestConfiguration
+):
+    data = [{"id": i + 1} for i in range(2)]
+    pipeline_1 = destination_config.setup_pipeline(
+        pipeline_name(inspect.currentframe()),
+        pipelines_dir=pipelines_dir,
+    )
+    # run a pipeline to populate destination state, remove local state and run again
+    pipeline_1.run(data_items(data))
+    shutil.rmtree(pipelines_dir)
+    pipeline_2 = destination_config.setup_pipeline(
+        pipeline_name(inspect.currentframe()),
+        pipelines_dir=pipelines_dir,
+    )
+    pipeline_2.run(data_items(data), write_disposition="replace")
+
+    assert pipeline_2.state == pipeline_1.state
