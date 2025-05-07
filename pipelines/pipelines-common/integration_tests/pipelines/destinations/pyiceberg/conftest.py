@@ -2,10 +2,10 @@ import os
 from tempfile import TemporaryDirectory
 
 import pytest
-
 from pipelines_common.dlt_destinations.pyiceberg.catalog import (
     create_catalog as create_iceberg_catalog,
 )
+
 from integration_tests.pipelines.destinations.pyiceberg.utils import (
     PyIcebergDestinationTestConfiguration,
 )

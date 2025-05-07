@@ -1,11 +1,22 @@
-from typing import Dict, Optional, Iterable, cast
+from typing import Dict, Optional, Iterable, Tuple, cast
 
 from dlt.common.destination.typing import PreparedTableSchema
 from dlt.common.exceptions import TerminalValueError
+from dlt.common.libs.pyarrow import pyarrow as pa
 from dlt.common.schema.typing import TColumnSchema, TColumnType
 from dlt.destinations.type_mapping import TypeMapperImpl
 
-from dlt.common.libs.pyarrow import pyarrow as pa
+from pyiceberg.partitioning import (
+    UNPARTITIONED_PARTITION_SPEC,
+    PartitionField,
+    PartitionSpec,
+)
+from pyiceberg.io.pyarrow import pyarrow_to_schema
+from pyiceberg.transforms import parse_transform
+from pyiceberg.schema import Schema as PyIcebergSchema
+from pyiceberg.table.name_mapping import MappedField, NameMapping
+
+from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import PARTITION_HINT
 
 TIMESTAMP_PRECISION_TO_UNIT: Dict[int, str] = {0: "s", 3: "ms", 6: "us", 9: "ns"}
 UNIT_TO_TIMESTAMP_PRECISION: Dict[str, int] = {
@@ -92,6 +103,31 @@ class PyIcebergTypeMapper(TypeMapperImpl):
 
         return super().from_destination_type(db_type, precision, scale)
 
+    def create_pyiceberg_schema(
+        self,
+        columns: Iterable[TColumnSchema],
+        table: PreparedTableSchema,
+    ) -> Tuple[PyIcebergSchema, PartitionSpec]:
+        """Create a pyiceberg.Schema from the dlt column & table schemas.
+
+        columns: Iterable[TColumnSchema],
+        table: PreparedTableSchema,
+
+        :return: A new Schema
+        """
+        pyarrow_schema = self.create_pyarrow_schema(columns, table)
+        name_mapping = NameMapping(
+            [
+                MappedField(field_id=index + 1, names=[column["name"]])  # type: ignore
+                for index, column in enumerate(columns)
+            ]
+        )
+        iceberg_schema = pyarrow_to_schema(pyarrow_schema, name_mapping=name_mapping)
+        return (
+            iceberg_schema,
+            create_partition_spec(table, iceberg_schema),
+        )
+
     def create_pyarrow_schema(
         self,
         columns: Iterable[TColumnSchema],
@@ -113,3 +149,30 @@ class PyIcebergTypeMapper(TypeMapperImpl):
                 for column in columns
             ]
         )
+
+
+def create_partition_spec(
+    dlt_schema: PreparedTableSchema, iceberg_schema: PyIcebergSchema
+) -> PartitionSpec:
+    """Create an Iceberg partition spec for this table if the partition hints
+    have been provided"""
+
+    def field_name(column_name: str, transform: str):
+        bracket_index = transform.find("[")
+        return f"{column_name}_{transform[:bracket_index] if bracket_index > 0 else transform}"
+
+    partition_hint: Dict[str, str] | None = dlt_schema.get(PARTITION_HINT)
+    if partition_hint is None:
+        return UNPARTITIONED_PARTITION_SPEC
+
+    return PartitionSpec(
+        *(
+            PartitionField(
+                source_id=iceberg_schema.find_field(column_name).field_id,
+                field_id=1000 + index,  # the documentation does this...
+                transform=parse_transform(transform),
+                name=field_name(column_name, transform),
+            )
+            for index, (column_name, transform) in enumerate(partition_hint.items())
+        )
+    )

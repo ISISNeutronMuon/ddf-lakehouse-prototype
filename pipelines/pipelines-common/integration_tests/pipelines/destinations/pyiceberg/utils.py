@@ -4,6 +4,7 @@ import os
 from typing import cast, Any, Dict, List, Optional, Union
 
 import dlt
+from dlt.common.pendulum import pendulum
 from dlt.common.configuration.specs import CredentialsConfiguration
 from dlt.common.destination import (
     TDestinationReferenceArg,
@@ -11,8 +12,23 @@ from dlt.common.destination import (
 from dlt.common.schema.typing import TTableSchema
 from dlt.common.destination.exceptions import SqlClientNotAvailable
 
+from pyiceberg.partitioning import PartitionSpec, PartitionField
+from pyiceberg.transforms import (
+    IdentityTransform,
+    YearTransform,
+    MonthTransform,
+    DayTransform,
+    HourTransform,
+    TruncateTransform,
+    BucketTransform,
+)
+
 from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import (
     PyIcebergClient,
+)
+from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import (
+    pyiceberg_partition,
+    PartitionTransformation,
 )
 
 
@@ -97,6 +113,92 @@ class PyIcebergDestinationTestConfiguration:
         self._active_pipeline = value
 
 
+@dataclass
+class PyIcebergPartitionTestConfiguration:
+    name: str
+    data: List[Dict[str, Any]]
+    partition_request: List[Union[str, PartitionTransformation]]
+    expected_spec: PartitionSpec
+
+
+def partition_test_configs() -> List[PyIcebergPartitionTestConfiguration]:
+    standard_test_data = [
+        {"id": i, "category": c, "created_at": d}
+        for i, c, d in [
+            (1, "A", pendulum.datetime(2020, 1, 1, 9, 15, 20)),
+            (2, "B", pendulum.datetime(2021, 1, 1, 10, 40, 30)),
+        ]
+    ]
+    test_configs = [
+        PyIcebergPartitionTestConfiguration(
+            name="partition_by_identity",
+            data=standard_test_data,
+            partition_request=["category"],
+            expected_spec=PartitionSpec(
+                PartitionField(
+                    source_id=2,
+                    field_id=1000,
+                    transform=IdentityTransform(),
+                    name="category_identity",
+                )
+            ),
+        )
+    ]
+    # add date/time-based partitions
+    test_configs.extend(
+        [
+            PyIcebergPartitionTestConfiguration(
+                name=f"partition_date_by_{dt_element}",
+                data=standard_test_data,
+                partition_request=[
+                    getattr(pyiceberg_partition, dt_element)("created_at")
+                ],
+                expected_spec=PartitionSpec(
+                    PartitionField(
+                        source_id=3,
+                        field_id=1000,
+                        transform=expected_transform,
+                        name=f"created_at_{dt_element}",
+                    ),
+                ),
+            )
+            for dt_element, expected_transform in [
+                ("year", YearTransform()),
+                ("month", MonthTransform()),
+                ("day", DayTransform()),
+                ("hour", HourTransform()),
+            ]
+        ]
+    )
+    # bucket & truncatetransforms are not currently supported.
+    # See note in pyiceberg_adapter.pyiceberg_partition class
+
+    # check multiple partition fields
+    test_configs.append(
+        PyIcebergPartitionTestConfiguration(
+            name="partition_by_multiple_fields",
+            data=standard_test_data,
+            partition_request=["category", pyiceberg_partition.year("created_at")],
+            expected_spec=PartitionSpec(
+                PartitionField(
+                    source_id=2,
+                    field_id=1000,
+                    transform=IdentityTransform(),
+                    name="category_identity",
+                ),
+                PartitionField(
+                    source_id=3,
+                    field_id=1001,
+                    transform=YearTransform(),
+                    name="created_at_year",
+                ),
+            ),
+        )
+    )
+
+    return test_configs
+
+
 def assert_table_has_shape(
     pipeline: dlt.Pipeline,
     qualified_table_name: str,
@@ -107,7 +209,7 @@ def assert_table_has_shape(
     with iceberg_catalog(pipeline) as catalog:
         assert catalog.table_exists(qualified_table_name)
         table = catalog.load_table(qualified_table_name)
-        assert table.scan().count() == expected_row_count
+        assert table.scan().to_arrow().shape[0] == expected_row_count
         table_columns = table.schema().column_names
         for column_name in expected_schema.get("columns", ["No columns field!"]):
             assert column_name in table_columns
@@ -124,12 +226,12 @@ def assert_table_has_data(
         assert catalog.table_exists(qualified_table_name)
         table = catalog.load_table(qualified_table_name)
 
-    assert table.scan().count() == expected_items_count
+    arrow_table = table.scan().to_arrow()
+    assert arrow_table.shape[0] == expected_items_count
 
     if items is None:
         return
 
-    arrow_table = table.scan().to_arrow()
     drop_keys = ["_dlt_id", "_dlt_load_id"]
     objects_without_dlt_keys = [
         {k: v for k, v in record.items() if k not in drop_keys}

@@ -6,17 +6,25 @@ from typing import Any, Dict, List
 import dlt
 from dlt.common.pendulum import pendulum
 from dlt.common.schema.utils import loads_table, pipeline_state_table, version_table
+from dlt.pipeline.exceptions import PipelineStepFailed
+
+import pytest
+
 
 from pipelines_common.dlt_destinations.pyiceberg.catalog import (
     namespace_exists as catalog_namespace_exists,
 )
-
+from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import (
+    pyiceberg_adapter,
+)
 
 from integration_tests.pipelines.destinations.pyiceberg.utils import (
     assert_table_has_shape,
     assert_table_has_data,
     iceberg_catalog,
+    partition_test_configs,
     PyIcebergDestinationTestConfiguration,
+    PyIcebergPartitionTestConfiguration,
 )
 
 
@@ -209,3 +217,56 @@ def test_expected_datatypes_can_be_loaded(
         expected_items_count=len(data),
         items=data,
     )
+
+
+def test_schema_evolution_not_supported(
+    pipelines_dir, destination_config: PyIcebergDestinationTestConfiguration
+):
+    pipeline = destination_config.setup_pipeline(
+        pipeline_name(inspect.currentframe()),
+        pipelines_dir=pipelines_dir,
+    )
+    data_schema_1 = [{"id": 1}]
+    pipeline.run(data_items(data_schema_1))
+    data_schema_2 = [{"id": 2, "new_column": "string value"}]
+
+    with pytest.raises(PipelineStepFailed):
+        pipeline.run(data_items(data_schema_2))
+
+
+@pytest.mark.parametrize(
+    "partition_config",
+    partition_test_configs(),
+    ids=lambda x: x.name,
+)
+def test_partition_specs_respected(
+    pipelines_dir,
+    destination_config: PyIcebergDestinationTestConfiguration,
+    partition_config: PyIcebergPartitionTestConfiguration,
+):
+    data = partition_config.data
+
+    @dlt.resource()
+    def partitioned_data():
+        yield data
+
+    pipeline = destination_config.setup_pipeline(
+        pipeline_name(inspect.currentframe()),
+        pipelines_dir=pipelines_dir,
+    )
+    partitioned_resource = pyiceberg_adapter(
+        partitioned_data, partition=partition_config.partition_request
+    )
+
+    pipeline.run(partitioned_resource)
+    assert_table_has_data(
+        pipeline,
+        f"{pipeline.dataset_name}.partitioned_data",
+        expected_items_count=len(data),
+        items=data,
+    )
+
+    # check partitions
+    with iceberg_catalog(pipeline) as catalog:
+        table = catalog.load_table((pipeline.dataset_name, "partitioned_data"))
+        assert table.spec() == partition_config.expected_spec

@@ -24,7 +24,6 @@ from dlt.common.storages.exceptions import SchemaStorageException
 
 from dlt.common.libs.pyarrow import pyarrow as pa
 import pyarrow.parquet as pq
-
 from pyiceberg.expressions import AlwaysTrue, And, EqualTo
 from pyiceberg.table import Table as PyIcebergTable
 
@@ -38,7 +37,10 @@ from pipelines_common.dlt_destinations.pyiceberg.catalog import (
     PyIcebergCatalog,
 )
 from pipelines_common.dlt_destinations.pyiceberg.exceptions import pyiceberg_error
-from pipelines_common.dlt_destinations.pyiceberg.schema import PyIcebergTypeMapper
+from pipelines_common.dlt_destinations.pyiceberg.schema import (
+    create_partition_spec,
+    PyIcebergTypeMapper,
+)
 
 
 class PyIcebergLoadJob(RunnableLoadJob):
@@ -355,9 +357,13 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         self, columns: Sequence[TColumnSchema], table: PreparedTableSchema
     ):
         """Create a new table schema in the catalog given the column schemas"""
-        arrow_schema = self.type_mapper.create_pyarrow_schema(columns, table)
+        schema, partition_spec = self.type_mapper.create_pyiceberg_schema(
+            columns, table
+        )
         self.iceberg_catalog.create_table(
-            self.make_qualified_table_name(table["name"]), arrow_schema
+            self.make_qualified_table_name(table["name"]),
+            schema,
+            partition_spec=partition_spec,
         )
 
     @pyiceberg_error
