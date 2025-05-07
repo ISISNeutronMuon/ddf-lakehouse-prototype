@@ -1,10 +1,10 @@
 import inspect
-from pathlib import Path
 import shutil
 from types import FrameType
 from typing import Any, Dict, List
 
 import dlt
+from dlt.common.pendulum import pendulum
 from dlt.common.schema.utils import loads_table, pipeline_state_table, version_table
 
 from pipelines_common.dlt_destinations.pyiceberg.catalog import (
@@ -40,7 +40,7 @@ def test_dlt_tables_created(
         pipeline_name(inspect.currentframe()),
         pipelines_dir=pipelines_dir,
     )
-    pipeline.run(data_items(data), write_disposition="append")
+    pipeline.run(data_items(data))
 
     assert_table_has_shape(
         pipeline,
@@ -183,3 +183,29 @@ def test_sync_state(
     pipeline_2.run(data_items(data), write_disposition="replace")
 
     assert pipeline_2.state == pipeline_1.state
+
+
+def test_expected_datatypes_can_be_loaded(
+    pipelines_dir, destination_config: PyIcebergDestinationTestConfiguration
+):
+    data = [
+        {
+            "integer": 1,
+            "text": "text value",
+            "boolean": True,
+            "timestamp": pendulum.datetime(2025, 5, 7, 14, 29, 31),
+            "date": pendulum.date(2025, 5, 7),
+        }
+    ]
+    pipeline = destination_config.setup_pipeline(
+        pipeline_name(inspect.currentframe()),
+        pipelines_dir=pipelines_dir,
+    )
+    pipeline.run(data_items(data))
+
+    assert_table_has_data(
+        pipeline,
+        f"{pipeline.dataset_name}.data_items",
+        expected_items_count=len(data),
+        items=data,
+    )
