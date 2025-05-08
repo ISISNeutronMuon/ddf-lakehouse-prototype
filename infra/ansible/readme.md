@@ -1,5 +1,9 @@
 # Ansible Scripts
 
+The Ansible configuration here is used to deploy the Lakehouse platform. It has
+currently only been tested using the STFC cloud but in theory it will work with
+other cloud providers or Linux VMs.
+
 ## Setup Ansible
 
 It is recommended to use a virtual environment to set up Ansible but you can use
