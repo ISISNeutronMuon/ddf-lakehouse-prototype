@@ -16,8 +16,8 @@ def initial_providers(self) -> List[ConfigProvider]:
     # find the .dlt in the same directory as this file
     return [
         EnvironProvider(),
-        SecretsTomlProvider(settings_dir="integration_tests/.dlt"),
-        ConfigTomlProvider(settings_dir="integration_tests/.dlt"),
+        SecretsTomlProvider(settings_dir="e2e_tests/.dlt"),
+        ConfigTomlProvider(settings_dir="e2e_tests/.dlt"),
     ]
 
 
