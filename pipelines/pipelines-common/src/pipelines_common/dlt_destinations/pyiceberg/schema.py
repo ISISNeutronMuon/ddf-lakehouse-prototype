@@ -6,17 +6,26 @@ from dlt.common.libs.pyarrow import pyarrow as pa
 from dlt.common.schema.typing import TColumnSchema, TColumnType
 from dlt.destinations.type_mapping import TypeMapperImpl
 
+from pyiceberg.io.pyarrow import pyarrow_to_schema
 from pyiceberg.partitioning import (
     UNPARTITIONED_PARTITION_SPEC,
     PartitionField,
     PartitionSpec,
 )
-from pyiceberg.io.pyarrow import pyarrow_to_schema
+from pyiceberg.table.name_mapping import MappedField, NameMapping
+from pyiceberg.table.sorting import (
+    UNSORTED_SORT_ORDER,
+    SortOrder,
+    SortField,
+    SortDirection,
+)
 from pyiceberg.transforms import parse_transform
 from pyiceberg.schema import Schema as PyIcebergSchema
-from pyiceberg.table.name_mapping import MappedField, NameMapping
 
-from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import PARTITION_HINT
+from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import (
+    PARTITION_HINT,
+    SORT_ORDER_HINT,
+)
 
 TIMESTAMP_PRECISION_TO_UNIT: Dict[int, str] = {0: "s", 3: "ms", 6: "us", 9: "ns"}
 UNIT_TO_TIMESTAMP_PRECISION: Dict[str, int] = {
@@ -107,7 +116,7 @@ class PyIcebergTypeMapper(TypeMapperImpl):
         self,
         columns: Iterable[TColumnSchema],
         table: PreparedTableSchema,
-    ) -> Tuple[PyIcebergSchema, PartitionSpec]:
+    ) -> Tuple[PyIcebergSchema, PartitionSpec, SortOrder]:
         """Create a pyiceberg.Schema from the dlt column & table schemas.
 
         columns: Iterable[TColumnSchema],
@@ -126,6 +135,7 @@ class PyIcebergTypeMapper(TypeMapperImpl):
         return (
             iceberg_schema,
             create_partition_spec(table, iceberg_schema),
+            create_sort_order(table, iceberg_schema),
         )
 
     def create_pyarrow_schema(
@@ -174,5 +184,27 @@ def create_partition_spec(
                 name=field_name(column_name, transform),
             )
             for index, (column_name, transform) in enumerate(partition_hint.items())
+        )
+    )
+
+
+def create_sort_order(
+    dlt_schema: PreparedTableSchema, iceberg_schema: PyIcebergSchema
+) -> SortOrder:
+    """If the table specifies hints to a Iceberg sort order, create the appropriate
+    SortOrder instance.
+    """
+    sort_order_hint: Dict[str, str] | None = dlt_schema.get(SORT_ORDER_HINT)
+    if sort_order_hint is None:
+        return UNSORTED_SORT_ORDER
+
+    return SortOrder(
+        *(
+            SortField(
+                source_id=iceberg_schema.find_field(column_name).field_id,
+                direction=SortDirection(direction),
+                transform=parse_transform("identity"),
+            )
+            for column_name, direction in sort_order_hint.items()
         )
     )

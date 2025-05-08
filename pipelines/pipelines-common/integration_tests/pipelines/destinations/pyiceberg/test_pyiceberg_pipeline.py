@@ -10,7 +10,6 @@ from dlt.pipeline.exceptions import PipelineStepFailed
 
 import pytest
 
-
 from pipelines_common.dlt_destinations.pyiceberg.catalog import (
     namespace_exists as catalog_namespace_exists,
 )
@@ -23,8 +22,10 @@ from integration_tests.pipelines.destinations.pyiceberg.utils import (
     assert_table_has_data,
     iceberg_catalog,
     partition_test_configs,
+    sort_order_test_configs,
     PyIcebergDestinationTestConfiguration,
     PyIcebergPartitionTestConfiguration,
+    PyIcebergSortOrderTestConfiguration,
 )
 
 
@@ -270,3 +271,34 @@ def test_partition_specs_respected(
     with iceberg_catalog(pipeline) as catalog:
         table = catalog.load_table((pipeline.dataset_name, "partitioned_data"))
         assert table.spec() == partition_config.expected_spec
+
+
+@pytest.mark.parametrize(
+    "sort_order_config",
+    sort_order_test_configs(),
+    ids=lambda x: x.name,
+)
+def test_sort_order_specs_respected(
+    pipelines_dir,
+    destination_config: PyIcebergDestinationTestConfiguration,
+    sort_order_config: PyIcebergSortOrderTestConfiguration,
+):
+
+    @dlt.resource()
+    def sort_order_data():
+        yield sort_order_config.data
+
+    pipeline = destination_config.setup_pipeline(
+        pipeline_name(inspect.currentframe()),
+        pipelines_dir=pipelines_dir,
+    )
+    sorted_resource = pyiceberg_adapter(
+        sort_order_data, sort_order=sort_order_config.sort_order_request
+    )
+
+    pipeline.run(sorted_resource)
+
+    # check sort order
+    with iceberg_catalog(pipeline) as catalog:
+        table = catalog.load_table((pipeline.dataset_name, "sort_order_data"))
+        assert table.sort_order() == sort_order_config.expected_spec

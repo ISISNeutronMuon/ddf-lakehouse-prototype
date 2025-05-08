@@ -357,13 +357,14 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         self, columns: Sequence[TColumnSchema], table: PreparedTableSchema
     ):
         """Create a new table schema in the catalog given the column schemas"""
-        schema, partition_spec = self.type_mapper.create_pyiceberg_schema(
+        schema, partition_spec, sort_order = self.type_mapper.create_pyiceberg_schema(
             columns, table
         )
         self.iceberg_catalog.create_table(
             self.make_qualified_table_name(table["name"]),
             schema,
             partition_spec=partition_spec,
+            sort_order=sort_order,
         )
 
     @pyiceberg_error

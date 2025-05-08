@@ -13,14 +13,13 @@ from dlt.common.schema.typing import TTableSchema
 from dlt.common.destination.exceptions import SqlClientNotAvailable
 
 from pyiceberg.partitioning import PartitionSpec, PartitionField
+from pyiceberg.table.sorting import SortOrder, SortField, SortDirection
 from pyiceberg.transforms import (
     IdentityTransform,
     YearTransform,
     MonthTransform,
     DayTransform,
     HourTransform,
-    TruncateTransform,
-    BucketTransform,
 )
 
 from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import (
@@ -28,7 +27,9 @@ from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import (
 )
 from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import (
     pyiceberg_partition,
+    pyiceberg_sortorder,
     PartitionTransformation,
+    SortOrderSpecification,
 )
 
 
@@ -121,6 +122,14 @@ class PyIcebergPartitionTestConfiguration:
     expected_spec: PartitionSpec
 
 
+@dataclass
+class PyIcebergSortOrderTestConfiguration:
+    name: str
+    data: List[Dict[str, Any]]
+    sort_order_request: List[SortOrderSpecification]
+    expected_spec: SortOrder
+
+
 def partition_test_configs() -> List[PyIcebergPartitionTestConfiguration]:
     standard_test_data = [
         {"id": i, "category": c, "created_at": d}
@@ -195,6 +204,56 @@ def partition_test_configs() -> List[PyIcebergPartitionTestConfiguration]:
             ),
         )
     )
+
+    return test_configs
+
+
+def sort_order_test_configs() -> List[PyIcebergSortOrderTestConfiguration]:
+    test_configs: List[PyIcebergSortOrderTestConfiguration] = []
+
+    standard_test_data = [
+        {"id": i, "category": c, "created_at": d}
+        for i, c, d in [
+            (1, "A", pendulum.datetime(2020, 1, 1, 9, 15, 20)),
+            (2, "B", pendulum.datetime(2021, 1, 1, 10, 40, 30)),
+        ]
+    ]
+    test_configs = [
+        PyIcebergSortOrderTestConfiguration(
+            name="sort_by_single_field",
+            data=standard_test_data,
+            sort_order_request=[pyiceberg_sortorder("created_at").desc().build()],
+            expected_spec=SortOrder(
+                SortField(
+                    source_id=3,
+                    transform=IdentityTransform(),
+                    direction=SortDirection.DESC,
+                )
+            ),
+        ),
+        PyIcebergSortOrderTestConfiguration(
+            name="sort_by_multiple_fields",
+            data=standard_test_data,
+            sort_order_request=[
+                pyiceberg_sortorder("category").asc().build(),
+                pyiceberg_sortorder("created_at").desc().build(),
+            ],
+            expected_spec=SortOrder(
+                *[
+                    SortField(
+                        source_id=2,
+                        transform=IdentityTransform(),
+                        direction=SortDirection.ASC,
+                    ),
+                    SortField(
+                        source_id=3,
+                        transform=IdentityTransform(),
+                        direction=SortDirection.DESC,
+                    ),
+                ],
+            ),
+        ),
+    ]
 
     return test_configs
 
