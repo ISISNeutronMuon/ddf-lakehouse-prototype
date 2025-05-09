@@ -34,12 +34,18 @@ class PyIcebergRestCatalogCredentials(CredentialsConfiguration):
 PyIcebergCatalogCredentials: TypeAlias = PyIcebergRestCatalogCredentials
 
 
-@configspec
+@configspec(init=False)
 class IcebergClientConfiguration(DestinationClientDwhConfiguration):
     destination_type: Final[str] = dataclasses.field(default="pyiceberg", init=False, repr=False, compare=False)  # type: ignore[misc]
 
+    bucket_url: str = None  # type: ignore
     catalog_type: Literal["rest"] = "rest"
     credentials: PyIcebergCatalogCredentials = None  # type: ignore
+
+    # possible placeholders: {dataset_name}, {table_name}, {location_tag}
+    # This is deliberately prefixed with an 'r' to indicate it is not an f-string
+    # and is intended to be expanded later
+    table_location_layout: Optional[str] = r"{dataset_name}/{table_name}"
 
     def fingerprint(self) -> str:
         """Returns a fingerprint of a connection string."""

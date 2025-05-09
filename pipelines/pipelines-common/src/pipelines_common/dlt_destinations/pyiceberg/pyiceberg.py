@@ -21,6 +21,7 @@ from dlt.common.destination.typing import PreparedTableSchema
 from dlt.common.schema import Schema, TColumnSchema, TSchemaTables, TTableSchemaColumns
 from dlt.common.schema.typing import TWriteDisposition
 from dlt.common.storages.exceptions import SchemaStorageException
+from dlt.common.utils import uniq_id
 
 from dlt.common.libs.pyarrow import pyarrow as pa
 import pyarrow.parquet as pq
@@ -361,11 +362,25 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         schema, partition_spec, sort_order = self.type_mapper.create_pyiceberg_schema(
             columns, table
         )
+        table_name: str = table["name"]
+        # Most catalogs purge files as background tasks so if tables of the
+        # same identifier are created/deleted in tight loops, e.g. in tests,
+        # then the same location can produce invalid location errors.
+        # The location_tag can be used to set to unique string to avoid this
+        location = (
+            f"{self.config.bucket_url}/"
+            + self.config.table_location_layout.format(  # type: ignore
+                dataset_name=self.dataset_name,
+                table_name=table_name.rstrip("/"),
+                location_tag=uniq_id(6),
+            )
+        )
         self.iceberg_catalog.create_table(
-            self.make_qualified_table_name(table["name"]),
+            self.make_qualified_table_name(table_name),
             schema,
             partition_spec=partition_spec,
             sort_order=sort_order,
+            location=location,
         )
 
     @pyiceberg_error
