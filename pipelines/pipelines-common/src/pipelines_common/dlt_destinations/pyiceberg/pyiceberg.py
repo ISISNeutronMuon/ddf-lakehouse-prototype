@@ -74,7 +74,9 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         super().__init__(schema, config, capabilities)
         self.dataset_name = self.config.normalize_dataset_name(self.schema)
         self.config = config
-        self.iceberg_catalog = create_catalog(name="default", **config.credentials)
+        self.iceberg_catalog = create_catalog(
+            name="default", **config.connection_properties
+        )
         self.type_mapper = cast(
             PyIcebergTypeMapper, self.capabilities.get_type_mapper()
         )
