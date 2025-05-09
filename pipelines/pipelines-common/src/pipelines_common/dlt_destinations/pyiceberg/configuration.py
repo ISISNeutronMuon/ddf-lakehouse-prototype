@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Dict, Literal, Final, Optional, TypeAlias
+from typing import Any, Dict, Literal, Final, Optional, TypeAlias
 
 from dlt.common.configuration import configspec
 from dlt.common.configuration.specs.base_configuration import (
@@ -13,6 +13,22 @@ from dlt.common.utils import digest128
 class PyIcebergRestCatalogCredentials(CredentialsConfiguration):
     uri: str = None  # type: ignore
     warehouse: Optional[str] = None
+    access_delegation: Literal["vended-credentials", "remote-signing"] = (
+        "vended-credentials"
+    )
+
+    def as_dict(self) -> Dict[str, str]:
+        """Return the credentials as a dictionary suitable for the Catalog constructor"""
+        properties: Dict[str, str] = self.headers_as_properties()
+        for key, value in self.items():
+            if value is None or key == "access_delegation":
+                continue
+            properties[key] = value
+
+        return properties
+
+    def headers_as_properties(self) -> Dict[str, str]:
+        return {"header.X-Iceberg-Access-Delegation": self.access_delegation}
 
 
 PyIcebergCatalogCredentials: TypeAlias = PyIcebergRestCatalogCredentials
@@ -35,6 +51,4 @@ class IcebergClientConfiguration(DestinationClientDwhConfiguration):
     @property
     def connection_properties(self) -> Dict[str, str]:
         """Returns a mapping of connection properties to pass to the catalog constructor"""
-        return {
-            key: value for key, value in self.credentials.items() if value is not None
-        }
+        return self.credentials.as_dict()

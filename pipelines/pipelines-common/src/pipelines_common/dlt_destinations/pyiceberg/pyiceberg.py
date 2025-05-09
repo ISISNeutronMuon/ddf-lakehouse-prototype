@@ -38,7 +38,6 @@ from pipelines_common.dlt_destinations.pyiceberg.catalog import (
 )
 from pipelines_common.dlt_destinations.pyiceberg.exceptions import pyiceberg_error
 from pipelines_common.dlt_destinations.pyiceberg.schema import (
-    create_partition_spec,
     PyIcebergTypeMapper,
 )
 

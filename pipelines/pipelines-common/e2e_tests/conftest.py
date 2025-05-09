@@ -22,11 +22,3 @@ def initial_providers(self) -> List[ConfigProvider]:
 
 
 RunContext.initial_providers = initial_providers  # type: ignore[method-assign]
-
-
-def pytest_configure(config):
-    # Iceberg catalog details - default to match settings in local docker-compose setup.
-    os.environ.setdefault(
-        "DESTINATION__PYICEBERG__CREDENTIALS__URI", "http://localhost:8181/catalog"
-    )
-    os.environ.setdefault("DESTINATION__PYICEBERG__CREDENTIALS__WAREHOUSE", "demo")
