@@ -1,4 +1,4 @@
-dlt[s3]==1.8.1
+dlt[s3]==1.10.0
 duckdb==1.2.1
 humanize==4.11.0
 pandas==2.2.3

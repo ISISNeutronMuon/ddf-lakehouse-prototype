@@ -1,0 +1,53 @@
+name: End-to-end tests for pipelines-common package
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "The branch or tag to checkout"
+        required: false
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----------- Checkout -----------
+      - name: Checkout for push or pull_request event
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+      - name: Checkout using ref (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.ref != ''
+        uses: actions/checkout@v4.2.2
+        with:
+          ref: ${{ github.event.inputs.ref }}
+      # --------------------------------
+
+      - name: Start fresh Lakekeeper instance
+        uses: hoverkraft-tech/compose-action@v2.0.1
+        with:
+          compose-file: "infra/local/docker-compose.yml"
+          services: |
+            lakekeeper-createwarehouse
+
+      - name: Run pipeline-common e2e tests
+        run: >
+          docker run
+          --rm
+          --network local_lakehouse_net
+          --volume ${{ github.workspace }}/pipelines/pipelines-common:/work
+          --env CI=1
+          --env DESTINATION__PYICEBERG__CREDENTIALS__URI=http://lakekeeper:8181/catalog
+          --env UV_LINK_MODE=copy
+          --workdir /work
+          ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+          uv run pytest --durations-min=0.5 --exitfirst e2e_tests --cache-clear

@@ -22,6 +22,6 @@ if __name__ == "__main__":
     cli_utils.cli_main(
         pipeline_name="statusdisplay",
         data=statusdisplay(),
-        dataset_name="statusdisplay_api",
+        dataset_name="sources_statusdisplay_api",
         default_write_disposition="replace",
     )

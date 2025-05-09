@@ -1,12 +1,3 @@
-{{ config(
-  pre_hook=[
-    "{{ create_temp_view_from_parquet('source_statusdisplay_schedule', 's3://prod-lakehouse-source-statusdisplay/statusdisplay_api/schedule') }}"
-    ],
-  post_hook=[
-    "ALTER TABLE {{ this }} WRITE ORDERED BY started_at ASC NULLS LAST"
-    ]
-) }}
-
 {# The schedule table defines pre- & post-cycle events but does not attribute #}
 {# them to a named cycle, e.g. #}
 
@@ -23,65 +14,65 @@
 {# group each contiguous block and select the label where type='cycle' #}
 
 
-WITH schedule_grouped_by_date_block AS (
-  SELECT
-    `type`,
-    `label`,
-    `start`,
-    `end`,
-    COUNT(group_number) OVER (
-      ORDER BY
-        `start`
-    ) AS group_number
-  FROM
-    (
-      SELECT
+with schedule_grouped_by_date_block as (
+    select
         `type`,
         `label`,
         `start`,
         `end`,
-        CASE
-          lag(`end`) over (
-            ORDER BY
-              `start`
-          )
-          WHEN `start` THEN NULL
-          ELSE `row_number`
-        END AS group_number
-      FROM
+        count(group_number) over (
+            order by
+                `start`
+        ) as group_number
+    from
         (
-          SELECT
-            row_number() OVER (
-              ORDER BY
-                `start` ASC
-            ) AS `row_number`,
-            `type`,
-            `label`,
-            `start`,
-            `end`
-          FROM
-            source_statusdisplay_schedule
+            select
+                `type`,
+                `label`,
+                `start`,
+                `end`,
+                case
+                lag(`end`)
+                    over (
+                        order by
+                            `start`
+                    )
+                    when `start` then null
+                    else `row_number`
+                end as group_number
+            from
+                (
+                    select
+                        `type`,
+                        `label`,
+                        `start`,
+                        `end`,
+                        row_number() over (
+                            order by
+                                `start` asc
+                        ) as `row_number`
+                    from
+                        {{ source('sources_statusdisplay_api', 'schedule') }}
+                )
         )
-    )
 ),
-renamed AS (
-  SELECT
-    t.`type`,
-    t.`label`,
-    t.`start` AS started_at,
-    t.`end` AS ended_at,
-    (
-      SELECT
-        FIRST(g.label)
-      FROM
-        schedule_grouped_by_date_block g
-      WHERE
-        g.`type` = 'cycle'
-        AND t.group_number = g.group_number
-    ) AS cycle_name
-  FROM
-    schedule_grouped_by_date_block t
-  ORDER BY started_at ASC NULLS LAST
+
+renamed as (
+    select
+        t.`type`,
+        t.`label`,
+        t.`start` as started_at,
+        t.`end` as ended_at,
+        (
+            select first(g.label) as first_label
+            from
+                schedule_grouped_by_date_block as g
+            where
+                g.`type` = 'cycle'
+                and t.group_number = g.group_number
+        ) as cycle_name
+    from
+        schedule_grouped_by_date_block as t
 )
 
 select * from renamed
