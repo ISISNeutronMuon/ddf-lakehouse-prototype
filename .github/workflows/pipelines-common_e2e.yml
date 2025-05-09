@@ -45,6 +45,7 @@ jobs:
           --rm
           --network local_lakehouse_net
           --volume ${{ github.workspace }}/pipelines/pipelines-common:/work
+          --env CI=1
           --env DESTINATION__PYICEBERG__CREDENTIALS__URI=http://lakekeeper:8181/catalog
           --env UV_LINK_MODE=copy
           --workdir /work
