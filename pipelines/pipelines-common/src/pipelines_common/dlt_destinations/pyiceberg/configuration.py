@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Dict, Literal, Final, Optional, TypeAlias
+from typing import Dict, Literal, Final, Optional, TypeAlias
 
 from dlt.common.configuration import configspec
 from dlt.common.configuration.specs.base_configuration import (
@@ -28,7 +28,11 @@ class PyIcebergRestCatalogCredentials(CredentialsConfiguration):
         return properties
 
     def headers_as_properties(self) -> Dict[str, str]:
-        return {"header.X-Iceberg-Access-Delegation": self.access_delegation}
+        from pyiceberg.utils.properties import HEADER_PREFIX
+
+        return {
+            f"{HEADER_PREFIX}X-Iceberg-Access-Delegation": self.access_delegation,
+        }
 
 
 PyIcebergCatalogCredentials: TypeAlias = PyIcebergRestCatalogCredentials
