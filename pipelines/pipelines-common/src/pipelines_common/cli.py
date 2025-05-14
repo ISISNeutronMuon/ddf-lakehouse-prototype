@@ -86,7 +86,9 @@ def cli_main(
         destination=args.destination,
         progress=args.progress,
     )
-    LOGGER.info(f"-- Running pipeline={pipeline.pipeline_name} --")
+    LOGGER.info(f"-- Starting pipeline={pipeline.pipeline_name} --")
+    LOGGER.info("Dropping pending packages to ensure a clean new load")
+    pipeline.drop_pending_packages()
     pipeline.run(
         data,
         loader_file_format=args.loader_file_format,
