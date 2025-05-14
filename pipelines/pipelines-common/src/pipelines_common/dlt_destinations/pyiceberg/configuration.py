@@ -57,4 +57,4 @@ class IcebergClientConfiguration(DestinationClientDwhConfiguration):
     @property
     def connection_properties(self) -> Dict[str, str]:
         """Returns a mapping of connection properties to pass to the catalog constructor"""
-        return self.credentials.as_dict()
+        return self.credentials.as_dict() if self.credentials is not None else {}
