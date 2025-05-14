@@ -262,19 +262,23 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         load_ids = loads_table_obj.scan(
             row_filter=EqualTo(c_status, 0), selected_fields=(c_load_id,)
         ).to_arrow()
-        latest_load_id = load_ids.sort_by([(c_load_id, "descending")]).to_pylist()[0][
-            c_load_id
-        ]
-        states = state_table_obj.scan(
-            row_filter=And(
-                EqualTo(c_dlt_load_id, latest_load_id),
-                EqualTo(c_pipeline_name, pipeline_name),
-            ),
-        ).to_arrow()
+        try:
+            latest_load_id = load_ids.sort_by([(c_load_id, "descending")]).to_pylist()[
+                0
+            ][c_load_id]
+            states = state_table_obj.scan(
+                row_filter=And(
+                    EqualTo(c_dlt_load_id, latest_load_id),
+                    EqualTo(c_pipeline_name, pipeline_name),
+                ),
+            ).to_arrow()
 
-        return StateInfo.from_normalized_mapping(
-            states.to_pylist()[0], self.schema.naming
-        )
+            return StateInfo.from_normalized_mapping(
+                states.to_pylist()[0], self.schema.naming
+            )
+        except IndexError:
+            # Table exists but there is no data
+            return None
 
     # ----- Helpers  -----
     def execute_destination_schema_update(
