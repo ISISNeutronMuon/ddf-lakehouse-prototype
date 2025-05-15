@@ -1,10 +1,14 @@
-name: End-to-end tests for pipelines-common package
+name: Unit tests for pipelines-common package
 on:
   push:
     branches:
       - "main"
+    paths:
+      - "pipelines/pipelines-common/**"
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - "pipelines/pipelines-common/**"
   workflow_dispatch:
     inputs:
       ref:
@@ -32,22 +36,17 @@ jobs:
           ref: ${{ github.event.inputs.ref }}
       # --------------------------------
 
-      - name: Start fresh Lakekeeper instance
-        uses: hoverkraft-tech/compose-action@v2.0.1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          compose-file: "infra/local/docker-compose.yml"
-          services: |
-            lakekeeper-createwarehouse
+          # Install a specific version of uv.
+          version: "0.7.3"
+          cache-dependency-glob: "pipelines/pipelines-common/pyproject.toml"
 
-      - name: Run pipeline-common e2e tests
-        run: >
-          docker run
-          --rm
-          --network local_lakehouse_net
-          --volume ${{ github.workspace }}/pipelines/pipelines-common:/work
-          --env CI=1
-          --env DESTINATION__PYICEBERG__CREDENTIALS__URI=http://lakekeeper:8181/catalog
-          --env UV_LINK_MODE=copy
-          --workdir /work
-          ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-          uv run pytest --durations-min=0.5 --exitfirst e2e_tests --cache-clear
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
+        working-directory: pipelines/pipelines-common
+
+      - name: Run tests
+        run: uv run pytest --durations-min=0.5 --exitfirst tests/unit_tests --cache-clear
+        working-directory: pipelines/pipelines-common
