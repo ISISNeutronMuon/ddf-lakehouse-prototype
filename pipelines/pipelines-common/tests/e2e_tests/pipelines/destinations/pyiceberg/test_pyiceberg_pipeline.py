@@ -17,7 +17,7 @@ from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import (
     pyiceberg_adapter,
 )
 
-from e2e_tests.pipelines.destinations.pyiceberg.utils import (
+from tests.e2e_tests.pipelines.destinations.pyiceberg.utils import (
     assert_table_has_shape,
     assert_table_has_data,
     iceberg_catalog,

@@ -50,4 +50,4 @@ jobs:
           --env UV_LINK_MODE=copy
           --workdir /work
           ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-          uv run pytest --durations-min=0.5 --exitfirst e2e_tests --cache-clear
+          uv run pytest --durations-min=0.5 --exitfirst tests/e2e_tests --cache-clear
