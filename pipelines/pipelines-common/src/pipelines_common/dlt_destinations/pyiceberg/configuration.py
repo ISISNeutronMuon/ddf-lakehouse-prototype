@@ -2,9 +2,7 @@ import dataclasses
 from typing import Dict, Literal, Final, Optional, TypeAlias
 
 from dlt.common.configuration import configspec
-from dlt.common.configuration.specs.base_configuration import (
-    CredentialsConfiguration,
-)
+from dlt.common.configuration.specs import CredentialsConfiguration
 from dlt.common.destination.client import DestinationClientDwhConfiguration
 from dlt.common.utils import digest128
 
@@ -51,14 +49,21 @@ class IcebergClientConfiguration(DestinationClientDwhConfiguration):
     # and is intended to be expanded later
     table_location_layout: Optional[str] = r"{dataset_name}/{table_name}"
 
+    @property
+    def connection_properties(self) -> Dict[str, str]:
+        """Returns a mapping of connection properties to pass to the catalog constructor"""
+        return self.credentials.as_dict() if self.credentials is not None else {}
+
+    def on_resolved(self) -> None:
+        self.normalize_bucket_url()
+
+    def normalize_bucket_url(self) -> None:
+        """Normalizes bucket_url, i.e. removes any trailing slashes"""
+        self.bucket_url = self.bucket_url.rstrip("/")
+
     def fingerprint(self) -> str:
         """Returns a fingerprint of a connection string."""
 
         if self.credentials.uri:
             return digest128(self.credentials.uri)
         return ""
-
-    @property
-    def connection_properties(self) -> Dict[str, str]:
-        """Returns a mapping of connection properties to pass to the catalog constructor"""
-        return self.credentials.as_dict() if self.credentials is not None else {}
