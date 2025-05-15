@@ -1,3 +1,14 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "pipelines-common",
+# ]
+#
+# [tool.uv.sources]
+# pipelines-common = { path = "../../pipelines-common" }
+# ///
+
 import dlt
 from dlt.extract import DltSource
 from dlt.sources.rest_api import rest_api_source
