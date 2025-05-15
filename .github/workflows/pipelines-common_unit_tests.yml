@@ -3,8 +3,12 @@ on:
   push:
     branches:
       - "main"
+    paths:
+      - "pipelines/pipelines-common/**"
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - "pipelines/pipelines-common/**"
   workflow_dispatch:
     inputs:
       ref:
