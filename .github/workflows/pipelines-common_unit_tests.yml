@@ -39,7 +39,7 @@ jobs:
           version: "0.7.3"
 
       - name: Install the project
-        run: cd pipelines/pipelines-common && uv sync --locked --all-extras --dev
+        run: uv sync --locked --all-extras --dev
         working-directory: pipelines/pipelines-common
 
       - name: Run tests
