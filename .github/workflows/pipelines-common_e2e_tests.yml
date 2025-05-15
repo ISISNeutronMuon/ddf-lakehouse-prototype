@@ -1,22 +1,15 @@
 name: End-to-end tests for pipelines-common package
 on:
-  push:
-    branches:
-      - "main"
-    paths:
-      - "infra/local/**"
-      - "pipelines/pipelines-common/**"
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - "infra/local/**"
-      - "pipelines/pipelines-common/**"
   workflow_dispatch:
     inputs:
       ref:
         description: "The branch or tag to checkout"
         required: false
         default: ""
+  workflow_run:
+    workflows: ["Unit tests for pipelines-common package"]
+    types:
+      - completed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -26,16 +19,19 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       # ----------- Checkout -----------
-      - name: Checkout for push or pull_request event
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        uses: actions/checkout@v4
       - name: Checkout using ref (workflow_dispatch)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.ref != ''
         uses: actions/checkout@v4.2.2
         with:
           ref: ${{ github.event.inputs.ref }}
+      - name: Checkout using ref (workflow_run)
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@v4.2.2
+        with:
+          ref: ${{ github.ref }}
       # --------------------------------
 
       - name: Start fresh Lakekeeper instance
