@@ -41,6 +41,7 @@ jobs:
         with:
           # Install a specific version of uv.
           version: "0.7.3"
+          cache-dependency-glob: "pipelines/pipelines-common/pyproject.toml"
 
       - name: Install the project
         run: uv sync --locked --all-extras --dev
