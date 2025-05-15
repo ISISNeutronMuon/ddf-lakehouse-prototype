@@ -1,0 +1,47 @@
+name: Unit tests for pipelines-common package
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "The branch or tag to checkout"
+        required: false
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----------- Checkout -----------
+      - name: Checkout for push or pull_request event
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+      - name: Checkout using ref (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.ref != ''
+        uses: actions/checkout@v4.2.2
+        with:
+          ref: ${{ github.event.inputs.ref }}
+      # --------------------------------
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Install a specific version of uv.
+          version: "0.7.3"
+
+      - name: Install the project
+        run: cd pipelines/pipelines-common && uv sync --locked --all-extras --dev
+        working-directory: pipelines/pipelines-common
+
+      - name: Run tests
+        run: uv run pytest --durations-min=0.5 --exitfirst tests/unit_tests --cache-clear
+        working-directory: pipelines/pipelines-common
