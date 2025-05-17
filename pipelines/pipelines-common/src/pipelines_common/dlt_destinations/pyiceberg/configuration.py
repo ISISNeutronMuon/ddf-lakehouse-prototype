@@ -4,33 +4,46 @@ from typing import Dict, Literal, Final, Optional, TypeAlias
 from dlt.common.configuration import configspec
 from dlt.common.configuration.specs import CredentialsConfiguration
 from dlt.common.destination.client import DestinationClientDwhConfiguration
+from dlt.common.typing import TSecretStrValue
 from dlt.common.utils import digest128
+from pyiceberg.utils.properties import HEADER_PREFIX as CATALOG_HEADER_PREFIX
+
+TPyIcebergAccessDelegation: TypeAlias = Literal["vended-credentials", "remote-signing"]
 
 
 @configspec(init=False)
 class PyIcebergRestCatalogCredentials(CredentialsConfiguration):
     uri: str = None  # type: ignore
     warehouse: Optional[str] = None
-    access_delegation: Literal["vended-credentials", "remote-signing"] = (
-        "vended-credentials"
-    )
+    access_delegation: TPyIcebergAccessDelegation = "vended-credentials"
+    oauth2_server_uri: Optional[str] = None
+    client_id: Optional[TSecretStrValue] = None
+    client_secret: Optional[TSecretStrValue] = None
+    scope: Optional[str] = None
 
     def as_dict(self) -> Dict[str, str]:
         """Return the credentials as a dictionary suitable for the Catalog constructor"""
-        properties: Dict[str, str] = self.headers_as_properties()
-        for key, value in self.items():
-            if value is None or key == "access_delegation":
-                continue
-            properties[key] = value
+        # Map variable names to property names
+        # client_id & secret need to be combined
+        properties = {"credential": self.client_credential()}
+
+        field_aliases: Dict[str, str] = {
+            "access_delegation": f"{CATALOG_HEADER_PREFIX}X-Iceberg-Access-Delegation",
+            "oauth2_server_uri": "oauth2-server-uri",
+        }
+        skip_fields = ("client_id", "client_secret")
+        properties.update(
+            {
+                field_aliases.get(cls_field, cls_field): value
+                for cls_field, value in self.items()
+                if value is not None and cls_field not in skip_fields
+            }
+        )
 
         return properties
 
-    def headers_as_properties(self) -> Dict[str, str]:
-        from pyiceberg.utils.properties import HEADER_PREFIX
-
-        return {
-            f"{HEADER_PREFIX}X-Iceberg-Access-Delegation": self.access_delegation,
-        }
+    def client_credential(self) -> str:
+        return f"{self.client_id}:{self.client_secret}"
 
 
 PyIcebergCatalogCredentials: TypeAlias = PyIcebergRestCatalogCredentials
