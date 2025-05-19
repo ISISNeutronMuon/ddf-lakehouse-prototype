@@ -31,6 +31,8 @@ from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import (
     SortOrderSpecification,
 )
 
+from e2e_tests.conftest import Warehouse
+
 
 @dataclass
 class PyIcebergDestinationTestConfiguration:
@@ -40,14 +42,33 @@ class PyIcebergDestinationTestConfiguration:
         "pipelines_common.dlt_destinations.pyiceberg"
     )
 
-    def setup(self) -> None:
+    def setup(self, warehouse: Warehouse) -> None:
         """Sets up environment variables for this destination configuration"""
-        # Iceberg catalog details - default to match settings in local docker-compose setup.
-        os.environ.setdefault(
-            "DESTINATION__PYICEBERG__CREDENTIALS__URI", "http://localhost:8181/catalog"
+        os.environ["DESTINATION__PYICEBERG__CREDENTIALS__URI"] = (
+            warehouse.server.settings.catalog_url
         )
-        os.environ.setdefault("DESTINATION__PYICEBERG__CREDENTIALS__WAREHOUSE", "demo")
-        os.environ.setdefault("DESTINATION__PYICEBERG__BUCKET_URL", "s3://examples")
+        os.environ.setdefault(
+            "DESTINATION__PYICEBERG__CREDENTIALS__WAREHOUSE", warehouse.name
+        )
+        os.environ.setdefault(
+            "DESTINATION__PYICEBERG__CREDENTIALS__OAUTH2_SERVER_URI",
+            warehouse.server.token_endpoint,
+        )
+        os.environ.setdefault(
+            "DESTINATION__PYICEBERG__CREDENTIALS__CLIENT_ID",
+            warehouse.server.settings.openid_client_id,
+        )
+        os.environ.setdefault(
+            "DESTINATION__PYICEBERG__CREDENTIALS__CLIENT_SECRET",
+            warehouse.server.settings.openid_client_secret,
+        )
+        os.environ.setdefault(
+            "DESTINATION__PYICEBERG__CREDENTIALS__SCOPE",
+            warehouse.server.settings.openid_scope,
+        )
+        os.environ.setdefault(
+            "DESTINATION__PYICEBERG__BUCKET_URL", warehouse.bucket_url
+        )
         # Avoid collisons on table names when the same ones are created/deleted in quick
         # succession
         os.environ.setdefault(
@@ -57,13 +78,14 @@ class PyIcebergDestinationTestConfiguration:
 
     def setup_pipeline(
         self,
+        warehouse: Warehouse,
         pipeline_name: str,
         dataset_name: str = None,
         dev_mode: bool = False,
         **kwargs,
     ) -> dlt.Pipeline:
         """Convenience method to setup pipeline with this configuration"""
-        self.setup()
+        self.setup(warehouse)
         self.active_pipeline = dlt.pipeline(
             pipeline_name=pipeline_name,
             pipelines_dir=kwargs.pop("pipelines_dir", None),

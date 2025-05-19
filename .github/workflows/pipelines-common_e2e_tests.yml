@@ -40,22 +40,17 @@ jobs:
           ref: ${{ github.event.inputs.ref }}
       # --------------------------------
 
-      - name: Start fresh Lakekeeper instance
+      - name: Bring up Lakekeeper & dependent services
         uses: hoverkraft-tech/compose-action@v2.0.1
         with:
-          compose-file: "infra/local/docker-compose.yml"
-          services: |
-            lakekeeper-createwarehouse
+          compose-file: "pipelines/pipelines-common/tests/docker-compose.yml"
 
-      - name: Run pipeline-common e2e tests
+      - name: Run pipeline-common end-to-end tests
         run: >
-          docker run
-          --rm
-          --network local_lakehouse_net
-          --volume ${{ github.workspace }}/pipelines/pipelines-common:/work
+          docker compose
+          --file tests/docker-compose.yml
+          run
           --env CI=1
-          --env DESTINATION__PYICEBERG__CREDENTIALS__URI=http://lakekeeper:8181/catalog
-          --env UV_LINK_MODE=copy
-          --workdir /work
-          ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+          python-uv
           uv run pytest --durations-min=0.5 --exitfirst tests/e2e_tests --cache-clear
+        working-directory: ./pipelines/pipelines-common

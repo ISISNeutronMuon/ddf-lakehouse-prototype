@@ -1,8 +1,35 @@
-# A minimal test setup designed to mimic the deployed system but locally on a single
-# machine.
 x-lakekeeper-image: &lakekeeper-image ${LAKEKEEPER_TEST__SERVER_IMAGE:-quay.io/lakekeeper/catalog:v0.8.4}
 
 services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.7
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+    volumes:
+      - ./docker/keycloak/realm-iceberg.json:/opt/keycloak/data/import/realm.json
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'exec 3<>/dev/tcp/127.0.0.1/8080;echo -e "GET /realms/master/.well-known/openid-configuration HTTP/1.1\r\nhost: 127.0.0.1:8080\r\nConnection: close\r\n\r\n" >&3;grep "jwks_uri"  <&3',
+        ]
+      interval: 2s
+      timeout: 80s
+      retries: 10
+      start_period: 60s
+    ports:
+      - "8080:8080"
+    command:
+      [
+        "start-dev",
+        "--metrics-enabled=true",
+        "--health-enabled=true",
+        "--import-realm",
+      ]
+    networks:
+      - lakehouse_net
+
   lakekeeper:
     image: *lakekeeper-image
     pull_policy: always
@@ -10,7 +37,9 @@ services:
       - LAKEKEEPER__PG_ENCRYPTION_KEY=This-is-NOT-Secure!
       - LAKEKEEPER__PG_DATABASE_URL_READ=postgresql://postgres:postgres@lakekeeper-db:5432/postgres
       - LAKEKEEPER__PG_DATABASE_URL_WRITE=postgresql://postgres:postgres@lakekeeper-db:5432/postgres
-      - RUST_LOG=info
+      - LAKEKEEPER__OPENID_PROVIDER_URI=http://keycloak:8080/realms/iceberg/
+      - LAKEKEEPER__OPENID_AUDIENCE=lakekeeper
+      - RUST_LOG=warn,iceberg_catalog=trace,iceberg_catalog_bin=trace,iceberg_ext=trace
     command: ["serve"]
     healthcheck:
       test: ["CMD", "/home/nonroot/iceberg-catalog", "healthcheck"]
@@ -19,6 +48,8 @@ services:
       retries: 3
       start_period: 3s
     depends_on:
+      keycloak:
+        condition: service_healthy
       lakekeeper-migrate:
         condition: service_completed_successfully
       lakekeeper-db:
@@ -26,7 +57,7 @@ services:
       minio:
         condition: service_healthy
     networks:
-      lakehouse_net:
+      - lakehouse_net
     ports:
       - "8181:8181"
 
@@ -44,57 +75,7 @@ services:
       lakekeeper-db:
         condition: service_healthy
     networks:
-      lakehouse_net:
-
-  lakekeeper-bootstrap:
-    image: curlimages/curl
-    depends_on:
-      lakekeeper:
-        condition: service_healthy
-    restart: "no"
-    command:
-      - -w
-      - "%{http_code}"
-      - "-X"
-      - "POST"
-      - "-v"
-      - "http://lakekeeper:8181/management/v1/bootstrap"
-      - "-H"
-      - "Content-Type: application/json"
-      - "--data"
-      - '{"accept-terms-of-use": true}'
-      - "-o"
-      - "/dev/null"
-      # - "--fail-with-body"
-    networks:
-      lakehouse_net:
-
-  lakekeeper-createwarehouse:
-    image: curlimages/curl
-    depends_on:
-      lakekeeper:
-        condition: service_healthy
-      lakekeeper-bootstrap:
-        condition: service_completed_successfully
-    restart: "no"
-    command:
-      - -w
-      - "%{http_code}"
-      - "-X"
-      - "POST"
-      - "-v"
-      - "http://lakekeeper:8181/management/v1/warehouse"
-      - "-H"
-      - "Content-Type: application/json"
-      - "--data"
-      - "@create-demo-warehouse.json"
-      - "-o"
-      - "/dev/null"
-      # - "--fail-with-body"
-    volumes:
-      - ./lakekeeper/create-demo-warehouse.json:/home/curl_user/create-demo-warehouse.json
-    networks:
-      lakehouse_net:
+      - lakehouse_net
 
   lakekeeper-db:
     image: bitnami/postgresql:16.3.0
@@ -109,7 +90,7 @@ services:
       retries: 2
       start_period: 10s
     networks:
-      lakehouse_net:
+      - lakehouse_net
 
   minio:
     image: bitnami/minio:latest
@@ -119,7 +100,7 @@ services:
       - MINIO_API_PORT_NUMBER=9000
       - MINIO_CONSOLE_PORT_NUMBER=9001
       - MINIO_SCHEME=http
-      - MINIO_DEFAULT_BUCKETS=examples
+      - MINIO_DEFAULT_BUCKETS=e2e-tests-warehouse
     healthcheck:
       test: ["CMD", "mc", "ls", "local", "|", "grep", "$$MINIO_DEFAULT_BUCKETS"]
       interval: 2s
@@ -127,10 +108,30 @@ services:
       retries: 2
       start_period: 15s
     networks:
-      lakehouse_net:
+      - lakehouse_net
     ports:
       - "9000:9000"
       - "9001:9001"
 
+  python-uv:
+    profiles:
+      - tests
+    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+    working_dir: /opt/app
+    environment:
+      - UV_LINK_MODE=copy
+      - UV_CACHE_DIR=/opt/uv-cache
+      - UV_PROJECT_ENVIRONMENT=/opt/uv-venv
+    depends_on:
+      lakekeeper:
+        condition: service_healthy
+    volumes:
+      - uv_cache:/opt/uv-cache
+      - ..:/opt/app
+    networks:
+      - lakehouse_net
+
 networks:
   lakehouse_net:
+volumes:
+  uv_cache:
