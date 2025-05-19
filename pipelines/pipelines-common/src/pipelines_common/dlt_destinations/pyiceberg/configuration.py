@@ -4,6 +4,7 @@ from typing import Dict, Literal, Final, Optional, TypeAlias
 from dlt.common.configuration import configspec
 from dlt.common.configuration.specs import CredentialsConfiguration
 from dlt.common.destination.client import DestinationClientDwhConfiguration
+from dlt.common.destination.exceptions import DestinationTerminalException
 from dlt.common.typing import TSecretStrValue
 from dlt.common.utils import digest128
 from pyiceberg.utils.properties import HEADER_PREFIX as CATALOG_HEADER_PREFIX
@@ -73,6 +74,21 @@ class IcebergClientConfiguration(DestinationClientDwhConfiguration):
     def normalize_bucket_url(self) -> None:
         """Normalizes bucket_url, i.e. removes any trailing slashes"""
         self.bucket_url = self.bucket_url.rstrip("/")
+
+        # Check we have the minimum number of required authentication properties
+        # if any are supplied
+        auth_props = {
+            prop: getattr(self.credentials, prop)
+            for prop in ("oauth2_server_uri", "client_id", "client_secret")
+        }
+
+        non_null_count = sum(
+            map(lambda x: 1 if x is not None else 0, auth_props.values())
+        )
+        if non_null_count != 0 and non_null_count != 3:
+            raise DestinationTerminalException(
+                f"Missing required configuration value(s) for authentication: {list(name for name, value in auth_props.items() if value is None)}"
+            )
 
     def fingerprint(self) -> str:
         """Returns a fingerprint of a connection string."""
