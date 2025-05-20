@@ -11,4 +11,4 @@ http:
     jupyterhub:
       loadBalancer:
         servers:
-          - url: "http://{{ groups['jupyterhub'][0] }}:{{ jupyterhub_http_port }}"
+          - url: "http://jupyterhub:{{ jupyterhub_http_port }}"

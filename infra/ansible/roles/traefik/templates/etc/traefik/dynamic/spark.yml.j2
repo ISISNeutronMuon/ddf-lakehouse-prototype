@@ -24,4 +24,4 @@ http:
     sparkcontrollerui:
       loadBalancer:
         servers:
-          - url: "http://{{ groups['spark'][0] }}:{{ spark_controller_ui_port }}"
+          - url: "http://spark:{{ spark_controller_ui_port }}"

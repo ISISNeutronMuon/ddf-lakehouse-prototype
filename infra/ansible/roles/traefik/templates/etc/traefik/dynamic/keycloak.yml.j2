@@ -19,4 +19,4 @@ http:
     keycloak:
       loadBalancer:
         servers:
-          - url: "http://{{ groups['keycloak'][0] }}:{{ keycloak_http_port }}"
+          - url: "http://keycloak:{{ keycloak_http_port }}"
