@@ -12,5 +12,5 @@ http:
     minio:
       loadBalancer:
         servers:
-          - url: "http://{{ groups['minio'][0] }}:{{ minio_console_http_port }}"
+          - url: "http://minio:{{ minio_console_http_port }}"
 {% endif %}

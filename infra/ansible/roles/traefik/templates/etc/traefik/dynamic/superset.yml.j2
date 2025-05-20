@@ -11,4 +11,4 @@ http:
     superset:
       loadBalancer:
         servers:
-          - url: "http://{{ groups['superset'][0] }}:{{ superset_http_port }}"
+          - url: "http://superset:{{ superset_http_port }}"

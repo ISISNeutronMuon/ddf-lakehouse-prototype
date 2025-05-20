@@ -21,4 +21,4 @@ http:
     nessie:
       loadBalancer:
         servers:
-          - url: "http://{{ groups['nessie'][0] }}:{{ nessie_http_port }}"
+          - url: "http://nessie:{{ nessie_http_port }}"

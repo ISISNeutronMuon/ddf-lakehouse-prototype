@@ -8,13 +8,24 @@
         cloud: "{{ openstack_cloud_name }}"
       register: vms_info
 
-    - name: Configure inventory groups
+    - name: Configure localhost
       ansible.builtin.blockinfile:
         path: "{{ inventory_filename }}"
         create: true
         block: |
+          localhost ansible_connection=local ansible_python_interpreter=python
+        append_newline: true
+        marker: "# {mark} ANSIBLE MANAGED BLOCK localhost"
+        mode: "u=rw,g=r,o=r"
+        state: present
+
+    - name: Configure inventory groups
+      ansible.builtin.blockinfile:
+        path: "{{ inventory_filename }}"
+        block: |
           [{{ server.name | replace('-', '_') }}]
           {{ server.address }} ansible_user={{ openstack_vm_user }} ansible_python_interpreter=/usr/bin/python3
+        prepend_newline: true
         append_newline: true
         marker: "# {mark} ANSIBLE MANAGED BLOCK {{ server.name }}"
         mode: "u=rw,g=r,o=r"

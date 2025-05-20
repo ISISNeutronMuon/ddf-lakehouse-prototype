@@ -4,7 +4,7 @@ trino_jvm_xmx: 48G
 trino_data_path: "{{ cephfs_mount_mount_path }}/live/trino/data"
 trino_http_port: 8060
 trino_https_port: 8444
-trino_coordinator_url: "http://{{ groups['trino'][0] }}:{{ trino_http_port }}"
+trino_coordinator_url: "http://trino:{{ trino_http_port }}"
 
 trino_admin_user: admin
 trino_admin_passwd: "{{ vault_trino_admin_passwd }}"

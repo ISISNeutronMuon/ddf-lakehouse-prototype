@@ -3,7 +3,7 @@
   hosts: localhost
   gather_facts: True
   vars:
-    openstack_server_name: "keycloak"
+    openstack_server_name: keycloak
     openstack_flavor: l3.micro
     openstack_security_group_name: keycloak
     openstack_security_group_description: Ingress to keycloak ports
@@ -23,3 +23,13 @@
   roles:
     - role: security_group_create
     - role: vm_create
+
+- import_playbook: ../inventory/inventory_persist.yml
+
+- name: (Re-)configure /etc/hosts across all nodes
+  hosts: all:!localhost
+  gather_facts: True
+  vars:
+    inventory_group: keycloak
+  tasks:
+    - ansible.builtin.include_tasks: ../../tasks/configure_etc_hosts.yml
