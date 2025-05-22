@@ -1,0 +1,9 @@
+---
+- name: Configure Lakekeeper to act as an Iceberg catalog
+  hosts: lakekeeper
+  roles:
+    - role: cephfs_mount
+    - role: geerlingguy.docker
+      become: true
+    - role: postgres
+    - role: lakekeeper
