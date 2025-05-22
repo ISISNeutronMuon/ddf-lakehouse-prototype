@@ -1,6 +1,5 @@
 ---
 keycloak_image: quay.io/keycloak/keycloak:26.1.4
-keycloak_container_network: keycloak
 keycloak_http_port: 8080
 keycloak_http_management_port: 9000
 keycloak_base_path: /auth
