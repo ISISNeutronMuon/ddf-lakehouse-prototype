@@ -3,6 +3,13 @@ lakekeeper_image: quay.io/lakekeeper/catalog:v0.8.4
 lakekeeper_container_network: lakekeeper
 lakekeeper_http_port: 8181
 lakekeeper_base_path: /lakekeeper
+lakekeeper_url: "https://{{ top_level_domain }}/lakekeeper"
+
+lakekeeper_catalog:
+  name: isis
+  storage:
+    bucket_name: isis-dataarchitecture-prototypes-lakehouse
+    key_prefix: ""
 
 lakekeeper_store_port: 5432
 lakekeeper_store_dbname: lakekeeperdb
