@@ -20,9 +20,6 @@ function ensure_elt_sources_exist() {
   fi
 }
 
-# Variables required by the pipeline script
-export PIPELINE_ENV=production
-
 # Script arguments - directories are relative to ELT_GIT_DEST
 # As many dbt project directories can be passed as required
 if [ $# -eq 0  ]; then
@@ -36,9 +33,7 @@ ensure_elt_sources_exist
 
 # Extraction
 cd $ELT_GIT_DEST/$extract_and_load_dir
-test -d .venv || uv venv
-uv pip install -r $REQUIREMENTS_TXT
-uv run $EXTRACT_AND_LOAD_SCRIPT --log-level $LOG_LEVEL --on-pipeline-step-failure $ON_PIPELINE_FAILURE
+$EXTRACT_AND_LOAD_SCRIPT --log-level $LOG_LEVEL --on-pipeline-step-failure $ON_PIPELINE_FAILURE
 
 # Transform
 if [ -n "$dbt_project_dir" ]; then
