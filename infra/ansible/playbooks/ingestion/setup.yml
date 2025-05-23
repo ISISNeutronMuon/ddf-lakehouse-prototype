@@ -54,12 +54,21 @@
         state: directory
         mode: "u=rwx,g=rx,o=rx"
 
+    - name: Ensure S3 config file is absent
+      ansible.builtin.file:
+        path: "{{ ansible_env['HOME'] }}/.aws/config"
+        state: absent
+
     - name: Ensure AWS configuration is present
       ansible.builtin.copy:
-        dest: "{{ ansible_env['HOME'] }}/.aws/config"
+        dest: "{{ ansible_env['HOME'] }}/.aws/credentials"
         content: |+
           [default]
+          endpoint = {{ s3_endpoint }}
           request_checksum_calculation = when_required
+          region = local-01
+          aws_access_key_id = {{ s3_access_key_id }}
+          aws_secret_access_key = {{ s3_access_secret }}
         mode: "u=rw,o=r,g=r"
 
     # ---------- Secrets ----------
