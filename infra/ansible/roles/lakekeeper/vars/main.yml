@@ -1,0 +1,3 @@
+---
+lakekeeper_container_name: lakekeeper
+lakekeeper_working_dir: /var/lakekeeper

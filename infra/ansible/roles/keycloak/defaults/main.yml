@@ -1,2 +1,2 @@
+keycloak_container_network: keycloak
 keycloak_working_dir: /var/keycloak
-keycloak_image_optimized_name: keycloak_optimized

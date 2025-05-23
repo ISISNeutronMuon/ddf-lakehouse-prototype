@@ -1,0 +1,24 @@
+http:
+  routers:
+    lakekeeper_tls:
+      entryPoints: web_tls
+      rule: PathPrefix(`{{ lakekeeper_base_path }}`)
+      service: lakekeeper
+{% if lakekeeper_base_path != '/' %}
+      middlewares:
+        - lakekeeper-strip-prefix
+{% endif %}
+      tls: {}
+
+{% if lakekeeper_base_path != '/' %}
+  middlewares:
+    lakekeeper-strip-prefix:
+      stripPrefix:
+        prefixes:
+          - "{{ lakekeeper_base_path }}"
+{% endif %}
+  services:
+    lakekeeper:
+      loadBalancer:
+        servers:
+          - url: "http://lakekeeper:{{ lakekeeper_http_port }}"
