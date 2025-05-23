@@ -143,6 +143,7 @@
     - name: Ensure daily Opralog ingest job exists
       ansible.builtin.cron:
         name: "Opralog ingest"
+        state: "absent"
         minute: "10"
         hour: "2"
         job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/opralogweb > {{ ingestion_elt_cron_log_dir }}/opralogweb/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
