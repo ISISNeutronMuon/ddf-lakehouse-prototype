@@ -17,7 +17,9 @@ class PyIcebergRestCatalogCredentials(CredentialsConfiguration):
     uri: str = None  # type: ignore
     warehouse: Optional[str] = None
     access_delegation: TPyIcebergAccessDelegation = "vended-credentials"
-    oauth2_server_uri: Optional[str] = None
+    oauth2_server_uri: Optional[str] = (
+        None  # This is the endpoint to use to retrieve a token
+    )
     client_id: Optional[TSecretStrValue] = None
     client_secret: Optional[TSecretStrValue] = None
     scope: Optional[str] = None
