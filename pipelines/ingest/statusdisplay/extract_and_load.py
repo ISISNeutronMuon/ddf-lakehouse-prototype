@@ -32,6 +32,7 @@ def statusdisplay() -> DltSource:
 if __name__ == "__main__":
     cli_utils.cli_main(
         pipeline_name="statusdisplay",
+        default_destination="pipelines_common.dlt_destinations.pyiceberg",
         data=statusdisplay(),
         dataset_name="sources_statusdisplay_api",
         default_write_disposition="replace",
