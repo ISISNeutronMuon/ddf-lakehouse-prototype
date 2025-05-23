@@ -2,8 +2,8 @@
 lakekeeper_image: quay.io/lakekeeper/catalog:v0.8.4
 lakekeeper_container_network: lakekeeper
 lakekeeper_http_port: 8181
-lakekeeper_base_path: /lakekeeper
-lakekeeper_url: "https://{{ top_level_domain }}/lakekeeper"
+lakekeeper_base_path: /iceberg
+lakekeeper_url: "https://{{ top_level_domain }}{{ lakekeeper_base_path }}"
 
 lakekeeper_catalog:
   name: isis

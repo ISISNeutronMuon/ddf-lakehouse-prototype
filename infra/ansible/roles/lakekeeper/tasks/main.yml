@@ -48,8 +48,8 @@
       - "{{ lakekeeper_http_port }}:8181"
     env:
       #
-      LAKEKEEPER__BASE_URI="https://{{ top_level_domain }}/lakekeeper"
-      LAKEKEEPER__UI__LAKEKEEPER_URL="https://{{ top_level_domain }}/lakekeeper"
+      LAKEKEEPER__BASE_URI="https://{{ top_level_domain }}{{ lakekeeper_base_path }}"
+      LAKEKEEPER__UI__LAKEKEEPER_URL="https://{{ top_level_domain }}{{ lakekeeper_base_path }}"
       LAKEKEEPER__PG_ENCRYPTION_KEY="{{ lakekeeper_store_encryption_key }}"
       LAKEKEEPER__PG_DATABASE_URL_READ="postgresql://{{ lakekeeper_store_user }}:{{ lakekeeper_store_passwd }}@postgres:5432/{{ lakekeeper_store_dbname }}"
       LAKEKEEPER__PG_DATABASE_URL_WRITE="postgresql://{{ lakekeeper_store_user }}:{{ lakekeeper_store_passwd }}@postgres:5432/{{ lakekeeper_store_dbname }}"
