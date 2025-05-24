@@ -1,3 +1,12 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "pipelines-common",
+# ]
+#
+# [tool.uv.sources]
+# pipelines-common = { path = "../../pipelines-common" }
+# ///
 from collections.abc import Generator, Iterator, Sequence
 
 import dlt
@@ -7,9 +16,6 @@ from html2text import html2text
 import pyarrow as pa
 
 import pipelines_common.cli as cli_utils
-
-# Staging destination
-LOADER_FILE_FORMAT = "parquet"
 
 
 @dlt.transformer(standalone=True)
@@ -61,6 +67,8 @@ def opralogwebdb() -> Generator[DltResource]:
 if __name__ == "__main__":
     cli_utils.cli_main(
         pipeline_name="opralogwebdb",
+        default_destination="pipelines_common.dlt_destinations.pyiceberg",
         data=opralogwebdb(),
+        dataset_name="sources_opralogweb",
         default_write_disposition="append",
     )
