@@ -1,5 +1,5 @@
 from itertools import combinations
-from typing import Any
+from typing import Any, Dict
 
 from dlt.common.configuration import resolve
 from dlt.common.destination.exceptions import DestinationTerminalException
@@ -41,7 +41,7 @@ def _auth_arg_combinations():
         ("client_id", "myclient"),
         ("client_secret", "s3cr3t"),
     ]
-    auth_arg_combinations.extend(combinations(auth_arg_combinations, 2))
+    auth_arg_combinations.extend(combinations(auth_arg_combinations, 2))  # type: ignore
     return auth_arg_combinations
 
 
@@ -50,7 +50,7 @@ def test_missing_required_auth_params_raises_exception(auth_arg_combination):
     if not isinstance(auth_arg_combination[0], tuple):
         auth_arg_combination = [auth_arg_combination]
     with pytest.raises(DestinationTerminalException):
-        config_values = {
+        config_values: Dict[str, Any] = {
             "bucket_url": "s3://mybucket/",
             "dataset_name": "mydataset",
         }
@@ -59,7 +59,7 @@ def test_missing_required_auth_params_raises_exception(auth_arg_combination):
             credentials[key_value_pair[0]] = key_value_pair[1]
         config_values["credentials"] = credentials
 
-        config = resolve.resolve_configuration(
+        resolve.resolve_configuration(
             IcebergClientConfiguration(),
             explicit_value=config_values,
         )

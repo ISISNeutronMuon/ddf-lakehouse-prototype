@@ -1,6 +1,5 @@
 import dataclasses
 from typing import Any, Dict, List, Optional
-import urllib.parse
 import uuid
 
 # patch which providers to enable
@@ -15,7 +14,6 @@ from dlt.common.runtime.run_context import RunContext
 import pytest
 import requests
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -112,7 +110,7 @@ class Server:
         )
         try:
             response.raise_for_status()
-        except Exception as e:
+        except Exception:
             raise ValueError(
                 f"Failed to create warehouse ({response.status_code}): {response.text}."
             )
@@ -129,7 +127,7 @@ class Server:
         try:
             response.raise_for_status()
             print(f"Warehouse {str(warehouse_id)} deleted.")
-        except Exception as e:
+        except Exception:
             raise ValueError(
                 f"Failed to delete warehouse ({response.status_code}): {response.text}."
             )
