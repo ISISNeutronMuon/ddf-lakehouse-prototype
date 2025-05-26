@@ -38,18 +38,14 @@ from e2e_tests.conftest import Warehouse
 class PyIcebergDestinationTestConfiguration:
     """Class for defining test setup for pyiceberg destination."""
 
-    destination: TDestinationReferenceArg = (
-        "pipelines_common.dlt_destinations.pyiceberg"
-    )
+    destination: TDestinationReferenceArg = "pipelines_common.dlt_destinations.pyiceberg"
 
     def setup(self, warehouse: Warehouse) -> None:
         """Sets up environment variables for this destination configuration"""
         os.environ["DESTINATION__PYICEBERG__CREDENTIALS__URI"] = (
             warehouse.server.settings.catalog_url
         )
-        os.environ.setdefault(
-            "DESTINATION__PYICEBERG__CREDENTIALS__WAREHOUSE", warehouse.name
-        )
+        os.environ.setdefault("DESTINATION__PYICEBERG__CREDENTIALS__WAREHOUSE", warehouse.name)
         os.environ.setdefault(
             "DESTINATION__PYICEBERG__CREDENTIALS__OAUTH2_SERVER_URI",
             warehouse.server.token_endpoint,
@@ -66,9 +62,7 @@ class PyIcebergDestinationTestConfiguration:
             "DESTINATION__PYICEBERG__CREDENTIALS__SCOPE",
             warehouse.server.settings.openid_scope,
         )
-        os.environ.setdefault(
-            "DESTINATION__PYICEBERG__BUCKET_URL", warehouse.bucket_url
-        )
+        os.environ.setdefault("DESTINATION__PYICEBERG__BUCKET_URL", warehouse.bucket_url)
         # Avoid collisons on table names when the same ones are created/deleted in quick
         # succession
         os.environ.setdefault(
@@ -90,9 +84,7 @@ class PyIcebergDestinationTestConfiguration:
             pipeline_name=pipeline_name,
             pipelines_dir=kwargs.pop("pipelines_dir", None),
             destination=self.destination,
-            dataset_name=(
-                dataset_name if dataset_name is not None else pipeline_name + "_data"
-            ),
+            dataset_name=(dataset_name if dataset_name is not None else pipeline_name + "_data"),
             dev_mode=dev_mode,
             **kwargs,
         )
@@ -180,9 +172,7 @@ def partition_test_configs() -> List[PyIcebergPartitionTestConfiguration]:
             PyIcebergPartitionTestConfiguration(
                 name=f"partition_date_by_{dt_element}",
                 data=standard_test_data,
-                partition_request=[
-                    getattr(pyiceberg_partition, dt_element)("created_at")
-                ],
+                partition_request=[getattr(pyiceberg_partition, dt_element)("created_at")],
                 expected_spec=PartitionSpec(
                     PartitionField(
                         source_id=3,

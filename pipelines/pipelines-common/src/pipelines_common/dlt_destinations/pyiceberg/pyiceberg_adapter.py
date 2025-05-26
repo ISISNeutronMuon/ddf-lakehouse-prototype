@@ -122,9 +122,7 @@ class pyiceberg_sortorder:
 TPartitionTransformation: TypeAlias = Union[
     str, PartitionTransformation, Sequence[Union[str, PartitionTransformation]]
 ]
-TSortOrderConfiguration: TypeAlias = Union[
-    SortOrderSpecification, Sequence[SortOrderSpecification]
-]
+TSortOrderConfiguration: TypeAlias = Union[SortOrderSpecification, Sequence[SortOrderSpecification]]
 
 
 def pyiceberg_adapter(

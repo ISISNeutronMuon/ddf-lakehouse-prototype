@@ -63,9 +63,7 @@ def find_latest_load_id(pipeline: Pipeline) -> Optional[str]:
         _dlt_loads_df = cast(DataFrame, ds._dlt_loads.df())
         if len(_dlt_loads_df) > 0:
             return (
-                _dlt_loads_df.sort_values("inserted_at", ascending=False)
-                .head(1)["load_id"]
-                .iat[0]
+                _dlt_loads_df.sort_values("inserted_at", ascending=False).head(1)["load_id"].iat[0]
             )
         else:
             return None

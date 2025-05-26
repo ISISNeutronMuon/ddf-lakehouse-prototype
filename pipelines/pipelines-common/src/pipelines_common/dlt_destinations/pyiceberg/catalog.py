@@ -19,9 +19,7 @@ def create_catalog(name: str, **properties: str) -> PyIcebergCatalog:
     return RestCatalog(name, **properties)
 
 
-def namespace_exists(
-    catalog: PyIcebergCatalog, namespace: Union[str, Identifier]
-) -> bool:
+def namespace_exists(catalog: PyIcebergCatalog, namespace: Union[str, Identifier]) -> bool:
     try:
         catalog.load_namespace_properties(namespace)
         return True

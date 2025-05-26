@@ -305,7 +305,6 @@ def test_sort_order_specs_respected(
     destination_config: PyIcebergDestinationTestConfiguration,
     sort_order_config: PyIcebergSortOrderTestConfiguration,
 ):
-
     @dlt.resource()
     def sort_order_data():
         yield sort_order_config.data

@@ -1,6 +1,5 @@
 import dataclasses
 from typing import Any, Dict, List, Optional
-import urllib.parse
 import uuid
 
 # patch which providers to enable
@@ -15,7 +14,6 @@ from dlt.common.runtime.run_context import RunContext
 import pytest
 import requests
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -93,9 +91,7 @@ class Server:
     def warehouse_url(self):
         return self.settings.management_url + "/v1/warehouse"
 
-    def create_warehouse(
-        self, name: str, project_id: uuid.UUID, storage_config: dict
-    ) -> uuid.UUID:
+    def create_warehouse(self, name: str, project_id: uuid.UUID, storage_config: dict) -> uuid.UUID:
         """Create a warehouse in this server"""
 
         create_payload = {
@@ -112,7 +108,7 @@ class Server:
         )
         try:
             response.raise_for_status()
-        except Exception as e:
+        except Exception:
             raise ValueError(
                 f"Failed to create warehouse ({response.status_code}): {response.text}."
             )
@@ -129,7 +125,7 @@ class Server:
         try:
             response.raise_for_status()
             print(f"Warehouse {str(warehouse_id)} deleted.")
-        except Exception as e:
+        except Exception:
             raise ValueError(
                 f"Failed to delete warehouse ({response.status_code}): {response.text}."
             )
@@ -147,9 +143,9 @@ settings = Settings()
 
 @pytest.fixture(scope="session")
 def token_endpoint() -> str:
-    return requests.get(
-        settings.openid_provider_uri + "/.well-known/openid-configuration"
-    ).json()["token_endpoint"]
+    return requests.get(settings.openid_provider_uri + "/.well-known/openid-configuration").json()[
+        "token_endpoint"
+    ]
 
 
 @pytest.fixture(scope="session")
@@ -195,9 +191,7 @@ def project() -> uuid.UUID:
 @pytest.fixture(scope="session")
 def warehouse(server: Server, project: uuid.UUID) -> Warehouse:
     storage_config = settings.storage_config()
-    warehouse_uuid = server.create_warehouse(
-        settings.warehouse_name, project, storage_config
-    )
+    warehouse_uuid = server.create_warehouse(settings.warehouse_name, project, storage_config)
     print(f"Warehouse {warehouse_uuid} created.")
     try:
         yield Warehouse(

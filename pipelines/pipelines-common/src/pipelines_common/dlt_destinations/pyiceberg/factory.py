@@ -6,6 +6,9 @@ from pipelines_common.dlt_destinations.pyiceberg.configuration import (
     IcebergClientConfiguration,
     PyIcebergCatalogCredentials,
 )
+from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import (
+    PyIcebergClient,
+)
 from pipelines_common.dlt_destinations.pyiceberg.schema import PyIcebergTypeMapper
 
 
@@ -34,11 +37,7 @@ class pyiceberg(Destination[IcebergClientConfiguration, "PyIcebergClient"]):
         return caps
 
     @property
-    def client_class(self) -> t.Type["PyIcebergClient"]:
-        from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import (
-            PyIcebergClient,
-        )
-
+    def client_class(self) -> PyIcebergClient:
         return PyIcebergClient
 
     def __init__(

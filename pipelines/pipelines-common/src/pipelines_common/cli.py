@@ -98,7 +98,6 @@ def cli_main(
     LOGGER.debug(pipeline.last_trace.last_load_info)
     LOGGER.info(
         f"Pipeline {pipeline.pipeline_name} completed in {
-        humanize.precisedelta(
-            pipeline.last_trace.finished_at - pipeline.last_trace.started_at
-        )}"
+            humanize.precisedelta(pipeline.last_trace.finished_at - pipeline.last_trace.started_at)
+        }"
     )
