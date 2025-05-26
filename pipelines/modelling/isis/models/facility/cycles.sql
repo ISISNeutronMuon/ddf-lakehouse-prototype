@@ -52,7 +52,7 @@ with schedule_grouped_by_date_block as (
                                 `start` asc
                         ) as `row_number`
                     from
-                        {{ source('sources_statusdisplay_api', 'schedule') }}
+                        {{ source('sources__statusdisplay_api', 'schedule') }}
                 )
         )
 ),

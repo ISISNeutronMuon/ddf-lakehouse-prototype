@@ -1,7 +1,6 @@
 version: 2
 
 sources:
-  - name: sources_statusdisplay_api
+  - name: sources__statusdisplay_api
     tables:
-      - name: _dlt_loads
       - name: schedule
