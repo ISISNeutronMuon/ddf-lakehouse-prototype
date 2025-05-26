@@ -41,6 +41,3 @@ workers = 3
 delete_completed_jobs = true
 raise_on_max_retries = 1
 workers = 5
-
-[destination.filesystem]
-layout = "{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
