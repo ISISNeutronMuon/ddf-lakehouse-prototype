@@ -14,9 +14,7 @@ def _log_filter_factory(keep_records_from: Sequence[str]):
     return _FilterUnwantedRecords()
 
 
-def configure_logging(
-    root_level: int | str, keep_records_from: Sequence[str] | None = None
-):
+def configure_logging(root_level: int | str, keep_records_from: Sequence[str] | None = None):
     """Configure logging to log at the given level
 
     If a module name is given then configure logger to

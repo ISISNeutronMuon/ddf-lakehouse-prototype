@@ -30,16 +30,12 @@ def create_spark_session(
     return spark
 
 
-def create_namespace_if_not_exists(
-    spark: SparkSession, catalog_name: str, namespace_name: str
-):
+def create_namespace_if_not_exists(spark: SparkSession, catalog_name: str, namespace_name: str):
     """Create a given namespace in the catalog if it does not exist"""
     spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog_name}.{namespace_name}")
 
 
-def read_parquet(
-    spark: SparkSession, path: str, load_id: str | None = None
-) -> SparkDataFrame:
+def read_parquet(spark: SparkSession, path: str, load_id: str | None = None) -> SparkDataFrame:
     """Read a set of parquet files found using base path and optional load_id"""
     glob_filter = f"{load_id}*.parquet" if load_id is not None else "*.parquet"
     return spark.read.option("recursiveFileLookup", "true").parquet(

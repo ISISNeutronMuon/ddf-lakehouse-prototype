@@ -59,9 +59,7 @@ class PyIcebergLoadJob(RunnableLoadJob):
         return self.iceberg_client.iceberg_catalog
 
     def run(self):
-        self.iceberg_client.write_to_table(
-            self.load_table_name, pq.read_table(self._file_path)
-        )
+        self.iceberg_client.write_to_table(self.load_table_name, pq.read_table(self._file_path))
 
 
 class PyIcebergClient(JobClientBase, WithStateSync):
@@ -74,18 +72,12 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         super().__init__(schema, config, capabilities)
         self.dataset_name = self.config.normalize_dataset_name(self.schema)
         self.config = config
-        self.iceberg_catalog = create_catalog(
-            name="default", **config.connection_properties
-        )
-        self.type_mapper = cast(
-            PyIcebergTypeMapper, self.capabilities.get_type_mapper()
-        )
+        self.iceberg_catalog = create_catalog(name="default", **config.connection_properties)
+        self.type_mapper = cast(PyIcebergTypeMapper, self.capabilities.get_type_mapper())
 
     # ----- JobClientBase -----
     @pyiceberg_error
-    def initialize_storage(
-        self, truncate_tables: Optional[Iterable[str]] = None
-    ) -> None:
+    def initialize_storage(self, truncate_tables: Optional[Iterable[str]] = None) -> None:
         """Prepares storage to be used ie. creates database schema or file system folder. Truncates requested tables."""
         if not self.is_storage_initialized():
             self.iceberg_catalog.create_namespace(self.dataset_name)
@@ -135,9 +127,7 @@ class PyIcebergClient(JobClientBase, WithStateSync):
 
     def update_schema_in_version_table(self) -> None:
         """Update the dlt version table with details of the current schema"""
-        version_table_dlt_schema = self.schema.tables.get(
-            self.schema.version_table_name
-        )
+        version_table_dlt_schema = self.schema.tables.get(self.schema.version_table_name)
         version_table_dlt_columns = version_table_dlt_schema["columns"]
         schema = self.schema
         values = [
@@ -161,9 +151,7 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         write_disposition = self.schema.get_table(self.schema.version_table_name).get(
             "write_disposition"
         )
-        self.write_to_table(
-            self.schema.version_table_name, data_to_load, write_disposition
-        )
+        self.write_to_table(self.schema.version_table_name, data_to_load, write_disposition)
 
     def create_load_job(
         self,
@@ -209,9 +197,7 @@ class PyIcebergClient(JobClientBase, WithStateSync):
 
         c_schema_name = self.schema.naming.normalize_identifier("schema_name")
         c_inserted_at = self.schema.naming.normalize_identifier("inserted_at")
-        row_filter = (
-            AlwaysTrue() if schema_name is None else EqualTo(c_schema_name, schema_name)
-        )
+        row_filter = AlwaysTrue() if schema_name is None else EqualTo(c_schema_name, schema_name)
         schema_versions = (
             version_table.scan(row_filter=row_filter)
             .to_arrow()
@@ -263,9 +249,7 @@ class PyIcebergClient(JobClientBase, WithStateSync):
             row_filter=EqualTo(c_status, 0), selected_fields=(c_load_id,)
         ).to_arrow()
         try:
-            latest_load_id = load_ids.sort_by([(c_load_id, "descending")]).to_pylist()[
-                0
-            ][c_load_id]
+            latest_load_id = load_ids.sort_by([(c_load_id, "descending")]).to_pylist()[0][c_load_id]
             states = state_table_obj.scan(
                 row_filter=And(
                     EqualTo(c_dlt_load_id, latest_load_id),
@@ -273,17 +257,13 @@ class PyIcebergClient(JobClientBase, WithStateSync):
                 ),
             ).to_arrow()
 
-            return StateInfo.from_normalized_mapping(
-                states.to_pylist()[0], self.schema.naming
-            )
+            return StateInfo.from_normalized_mapping(states.to_pylist()[0], self.schema.naming)
         except IndexError:
             # Table exists but there is no data
             return None
 
     # ----- Helpers  -----
-    def execute_destination_schema_update(
-        self, only_tables: Iterable[str]
-    ) -> TSchemaTables:
+    def execute_destination_schema_update(self, only_tables: Iterable[str]) -> TSchemaTables:
         """Ensure the schemas of the destination tables match what they are expected to be.
 
         The tables are created if they do not exist or their schemas are evolved if they
@@ -335,9 +315,7 @@ class PyIcebergClient(JobClientBase, WithStateSync):
                     field = schema.field(name)
                     storage_columns[name] = {
                         "name": name,
-                        **self.type_mapper.from_destination_type(
-                            field.type, None, None
-                        ),
+                        **self.type_mapper.from_destination_type(field.type, None, None),
                         "nullable": field.nullable,
                     }
                 yield table_name, storage_columns
@@ -353,9 +331,7 @@ class PyIcebergClient(JobClientBase, WithStateSync):
             storage_columns,
             case_sensitive=self.capabilities.generates_case_sensitive_identifiers(),
         )
-        logger.info(
-            f"Found {len(updates)} updates for {table_name} in {self.schema.name}"
-        )
+        logger.info(f"Found {len(updates)} updates for {table_name} in {self.schema.name}")
         return updates
 
     @pyiceberg_error
@@ -371,13 +347,10 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         # same identifier are created/deleted in tight loops, e.g. in tests,
         # then the same location can produce invalid location errors.
         # The location_tag can be used to set to unique string to avoid this
-        location = (
-            f"{self.config.bucket_url}/"
-            + self.config.table_location_layout.format(  # type: ignore
-                dataset_name=self.dataset_name,
-                table_name=table_name.rstrip("/"),
-                location_tag=uniq_id(6),
-            )
+        location = f"{self.config.bucket_url}/" + self.config.table_location_layout.format(  # type: ignore
+            dataset_name=self.dataset_name,
+            table_name=table_name.rstrip("/"),
+            location_tag=uniq_id(6),
         )
         self.iceberg_catalog.create_table(
             self.make_qualified_table_name(table_name),
@@ -411,18 +384,12 @@ class PyIcebergClient(JobClientBase, WithStateSync):
             )
 
     @pyiceberg_error
-    def load_table_from_schema(
-        self, schema_table: PreparedTableSchema
-    ) -> PyIcebergTable:
-        return self.iceberg_catalog.load_table(
-            self.make_qualified_table_name(schema_table["name"])
-        )
+    def load_table_from_schema(self, schema_table: PreparedTableSchema) -> PyIcebergTable:
+        return self.iceberg_catalog.load_table(self.make_qualified_table_name(schema_table["name"]))
 
     @pyiceberg_error
     def load_table_from_name(self, table_name: str) -> PyIcebergTable:
-        return self.iceberg_catalog.load_table(
-            self.make_qualified_table_name(table_name)
-        )
+        return self.iceberg_catalog.load_table(self.make_qualified_table_name(table_name))
 
     def make_qualified_table_name(self, table_name: str) -> Identifier:
         return (self.dataset_name, table_name)

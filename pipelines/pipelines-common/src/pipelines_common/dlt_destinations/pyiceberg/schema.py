@@ -28,9 +28,7 @@ from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import (
 )
 
 TIMESTAMP_PRECISION_TO_UNIT: Dict[int, str] = {0: "s", 3: "ms", 6: "us", 9: "ns"}
-UNIT_TO_TIMESTAMP_PRECISION: Dict[str, int] = {
-    v: k for k, v in TIMESTAMP_PRECISION_TO_UNIT.items()
-}
+UNIT_TO_TIMESTAMP_PRECISION: Dict[str, int] = {v: k for k, v in TIMESTAMP_PRECISION_TO_UNIT.items()}
 
 
 # We use pyarrow types instead of pyiceberg types so that we use the same
@@ -58,9 +56,7 @@ class PyIcebergTypeMapper(TypeMapperImpl):
     }
 
     def to_db_decimal_type(self, column: TColumnSchema) -> pa.Decimal128Type:
-        precision, scale = self.decimal_precision(
-            column.get("precision"), column.get("scale")
-        )
+        precision, scale = self.decimal_precision(column.get("precision"), column.get("scale"))
         return pa.decimal128(precision, scale)
 
     def to_db_datetime_type(

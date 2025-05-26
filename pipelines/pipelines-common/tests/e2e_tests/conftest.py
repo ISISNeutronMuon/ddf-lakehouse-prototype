@@ -91,9 +91,7 @@ class Server:
     def warehouse_url(self):
         return self.settings.management_url + "/v1/warehouse"
 
-    def create_warehouse(
-        self, name: str, project_id: uuid.UUID, storage_config: dict
-    ) -> uuid.UUID:
+    def create_warehouse(self, name: str, project_id: uuid.UUID, storage_config: dict) -> uuid.UUID:
         """Create a warehouse in this server"""
 
         create_payload = {
@@ -145,9 +143,9 @@ settings = Settings()
 
 @pytest.fixture(scope="session")
 def token_endpoint() -> str:
-    return requests.get(
-        settings.openid_provider_uri + "/.well-known/openid-configuration"
-    ).json()["token_endpoint"]
+    return requests.get(settings.openid_provider_uri + "/.well-known/openid-configuration").json()[
+        "token_endpoint"
+    ]
 
 
 @pytest.fixture(scope="session")
@@ -193,9 +191,7 @@ def project() -> uuid.UUID:
 @pytest.fixture(scope="session")
 def warehouse(server: Server, project: uuid.UUID) -> Warehouse:
     storage_config = settings.storage_config()
-    warehouse_uuid = server.create_warehouse(
-        settings.warehouse_name, project, storage_config
-    )
+    warehouse_uuid = server.create_warehouse(settings.warehouse_name, project, storage_config)
     print(f"Warehouse {warehouse_uuid} created.")
     try:
         yield Warehouse(
