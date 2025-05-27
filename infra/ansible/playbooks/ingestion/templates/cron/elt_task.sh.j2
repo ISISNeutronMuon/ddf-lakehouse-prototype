@@ -16,6 +16,7 @@ function ensure_elt_sources_exist() {
   if [ -d "$ELT_GIT_DEST" ]; then
     pushd $ELT_GIT_DEST
     git clean -d -x --force
+    git reset --hard
     git checkout "$ELT_GIT_REF"
     git pull
     popd
