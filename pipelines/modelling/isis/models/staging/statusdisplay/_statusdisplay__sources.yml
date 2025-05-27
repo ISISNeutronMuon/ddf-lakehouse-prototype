@@ -1,6 +1,6 @@
 version: 2
 
 sources:
-  - name: sources__statusdisplay_api
+  - name: src_statusdisplay
     tables:
       - name: schedule
