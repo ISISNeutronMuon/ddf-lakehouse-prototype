@@ -6,6 +6,7 @@
 #     "html2text==2025.4.15",
 #     "pandas>=2.2.3,<2.3.0",
 #     "pipelines-common",
+#     "pymssql>=2.3.4,<2.4.0",
 # ]
 #
 # [tool.uv.sources]
