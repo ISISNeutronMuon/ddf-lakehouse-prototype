@@ -1,6 +1,8 @@
+#!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
+#     "dlt[sql-database]>=1.10.0,<1.11.0",
 #     "pandas>=2.2.3,<2.3.0",
 #     "pipelines-common",
 # ]
