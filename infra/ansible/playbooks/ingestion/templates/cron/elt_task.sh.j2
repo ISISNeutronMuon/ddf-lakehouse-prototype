@@ -39,7 +39,12 @@ ensure_elt_sources_exist
 
 # Extraction
 cd $ELT_GIT_DEST/$extract_and_load_dir
-./$EXTRACT_AND_LOAD_SCRIPT --log-level $LOG_LEVEL --on-pipeline-step-failure $ON_PIPELINE_FAILURE --write-disposition replace
+uv run \
+  --refresh \
+  --script $EXTRACT_AND_LOAD_SCRIPT \
+  --log-level $LOG_LEVEL \
+  --on-pipeline-step-failure $ON_PIPELINE_FAILURE \
+  --write-disposition replace
 
 # Transform
 if [ -n "$dbt_project_dir" ]; then
@@ -47,5 +52,6 @@ if [ -n "$dbt_project_dir" ]; then
   test -d .venv || uv venv
   uv pip install -r requirements/$REQUIREMENTS_TXT
   export SPARK_CONF_DIR
-  uv run dbt run $*
+  uv run \
+    dbt run $*
 fi
