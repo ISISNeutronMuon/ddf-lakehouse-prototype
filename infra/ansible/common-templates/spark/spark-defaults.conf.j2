@@ -7,8 +7,8 @@ spark.broadcast.port                          38001
 spark.driver.port                             38002
 spark.fileserver.port                         38003
 
-spark.cores.max                               8
-spark.executor.memory                         16g
+spark.cores.max                               {{ spark_default_cores_max | default(8) }}
+spark.executor.memory                         {{ spark_default_executor_memory | default("16g") }}
 spark.jars.packages                           {{ spark_default_packages | join(",") }}
 
 spark.hadoop.fs.s3.impl                       org.apache.hadoop.fs.s3a.S3AFileSystem
