@@ -8,10 +8,16 @@ from dlt.common.configuration.specs import ConfigSectionContext
 from dlt.common.libs.pandas import DataFrame
 from dlt.pipeline.progress import TCollectorArg, _NULL_COLLECTOR as NULL_COLLECTOR
 
+from pipelines_common.constants import DATASET_NAME_PREFIX_SRCS
 
 _PIPELINE_ENV_VAR = "PIPELINE_ENV"
 _PIPELINE_ENV_NAME_PROD = "production"
 _PIPELINE_ENV_NAME_DEV = "develop"
+
+
+def dataset_name(suffix: str) -> str:
+    """Given a suffix return the full dataset name"""
+    return f"{DATASET_NAME_PREFIX_SRCS}{suffix}"
 
 
 def _pipeline_environment():

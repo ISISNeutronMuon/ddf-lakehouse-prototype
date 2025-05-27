@@ -66,9 +66,9 @@ def opralogwebdb() -> Generator[DltResource]:
 
 if __name__ == "__main__":
     cli_utils.cli_main(
-        pipeline_name="opralogwebdb",
+        pipeline_name="opralogweb",
         default_destination="pipelines_common.dlt_destinations.pyiceberg",
         data=opralogwebdb(),
-        dataset_name="sources_opralogweb",
+        dataset_name_suffix="opralogweb",
         default_write_disposition="append",
     )
