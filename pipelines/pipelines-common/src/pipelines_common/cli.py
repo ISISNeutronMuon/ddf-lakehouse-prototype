@@ -65,7 +65,7 @@ def create_standard_argparser(
 
 def cli_main(
     pipeline_name: str,
-    data: Any,
+    data_generator: Any,
     dataset_name_suffix: str,
     *,
     default_write_disposition: TWriteDisposition = "append",
@@ -76,7 +76,7 @@ def cli_main(
     """Run a standard extract and load pipeline
 
     :param pipeline_name: Name of dlt pipeline
-    :param data: Data source
+    :param data_generator: Callable returning a dlt.DltSource or dlt.DltResource
     :param dataset_name_suffix: Suffix part of full dataset name in the destination. The given string is prefixed with
                                 a standard string defined in constants.DATASET_NAME_PREFIX_SRCS
     :param default_write_disposition: Default mode for dlt write_disposition defaults to "append"
@@ -105,7 +105,7 @@ def cli_main(
     LOGGER.info("Dropping pending packages to ensure a clean new load")
     pipeline.drop_pending_packages()
     pipeline.run(
-        data,
+        data_generator(),
         loader_file_format=args.loader_file_format,
         write_disposition=args.write_disposition,
     )
