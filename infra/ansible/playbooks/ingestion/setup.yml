@@ -97,6 +97,8 @@
         mode: "u=rw,g=r,o=x"
       vars:
         spark_defaults_include_s3_secrets: True
+        spark_default_cores_max: 24
+        spark_default_executor_memory: "96g"
 
     # ---------- Cron tasks ----------
     - name: Ensure cron scripts directory exists
