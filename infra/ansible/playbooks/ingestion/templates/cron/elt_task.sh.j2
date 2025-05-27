@@ -38,7 +38,7 @@ ensure_elt_sources_exist
 
 # Extraction
 cd $ELT_GIT_DEST/$extract_and_load_dir
-./$EXTRACT_AND_LOAD_SCRIPT --log-level $LOG_LEVEL --on-pipeline-step-failure $ON_PIPELINE_FAILURE
+./$EXTRACT_AND_LOAD_SCRIPT --log-level $LOG_LEVEL --on-pipeline-step-failure $ON_PIPELINE_FAILURE --write-disposition replace
 
 # Transform
 if [ -n "$dbt_project_dir" ]; then
