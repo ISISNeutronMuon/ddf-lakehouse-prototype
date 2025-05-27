@@ -3,6 +3,7 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "dlt[sql-database]>=1.10.0,<1.11.0",
+#     "html2text==2025.4.15",
 #     "pandas>=2.2.3,<2.3.0",
 #     "pipelines-common",
 # ]
