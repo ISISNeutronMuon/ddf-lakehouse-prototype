@@ -25,7 +25,11 @@ def create_standard_argparser(
 ) -> argparse.ArgumentParser:
     """Creates an ArgumentParser with standard options common to most pipelines"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--log-level", choices=logging.getLevelNamesMapping().keys())
+    parser.add_argument(
+        "--log-level",
+        choices=logging.getLevelNamesMapping().keys(),
+        default=logging.INFO,
+    )
     parser.add_argument(
         "--on-pipeline-step-failure",
         type=str,
