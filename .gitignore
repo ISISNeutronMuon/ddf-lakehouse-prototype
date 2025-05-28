@@ -2,3 +2,4 @@
 clouds.yaml
 .env
 .venv/
+**/dbt.log
