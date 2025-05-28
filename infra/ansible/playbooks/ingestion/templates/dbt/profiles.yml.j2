@@ -1,0 +1,13 @@
+isis_catalog:
+  target: trino
+  outputs:
+    trino:
+      type: trino
+      method: ldap
+      user: ingestion
+      password: {{ vault_trino_ingestion_passwd }}
+      host: {{ top_level_domain }}
+      port: {{ trino_https_port }}
+      http_scheme: https
+      database: isis_lakekeeper
+      schema: analytics

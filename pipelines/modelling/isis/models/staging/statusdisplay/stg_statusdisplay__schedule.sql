@@ -23,40 +23,40 @@ source as (
 renamed as (
 
   select
-    `type`,
-    `label`,
-    `start` AS started_at,
-    `end` AS ended_at,
+    type,
+    label,
+    start AS started_at,
+    {{ identifier("end") }} AS ended_at,
     count(group_number) over (
-        order by `start`
+        order by start
     ) as group_number
   from
     (
         select
-            `type`,
-            `label`,
-            `start`,
-            `end`,
+            type,
+            label,
+            start,
+            {{ identifier("end") }},
             case
-            lag(`end`)
-                over (
-                    order by
-                        `start`
-                )
-                when `start` then null
-                else `row_number`
+                lag({{ identifier("end") }})
+                    over (
+                        order by
+                            start
+                    )
+                    when start then null
+                    else row_number
             end as group_number
         from
             (
                 select
-                    `type`,
-                    `label`,
-                    `start`,
-                    `end`,
+                    type,
+                    label,
+                    start,
+                    {{ identifier("end") }},
                     row_number() over (
                         order by
-                            `start` asc
-                    ) as `row_number`
+                            start asc
+                    ) as row_number
                 from
                     source
             )
