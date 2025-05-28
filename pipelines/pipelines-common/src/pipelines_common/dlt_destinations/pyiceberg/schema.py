@@ -66,12 +66,14 @@ class PyIcebergTypeMapper(TypeMapperImpl):
     ) -> pa.TimestampType:
         timezone = column.get("timezone")
         precision = column.get("precision")
-        if timezone is not None or precision is not None:
+        if timezone is not None or (
+            precision is not None and precision != self.capabilities.timestamp_precision
+        ):
             column_name = column.get("name")
             table_name = table["name"]
             raise TerminalValueError(
-                "PyIceberg does not currently support column flags for timezone or precision."
-                f" These flags were used in column '{column_name}' in table '{table_name}'"
+                "PyIceberg does not currently support column flags for timezone or a non-default precision."
+                f" Flags 'timezone={timezone}' & 'precision={precision}' were used in column '{column_name}' in table '{table_name}'"
             )
         unit: str = TIMESTAMP_PRECISION_TO_UNIT[self.capabilities.timestamp_precision]
         return pa.timestamp(unit, "UTC")

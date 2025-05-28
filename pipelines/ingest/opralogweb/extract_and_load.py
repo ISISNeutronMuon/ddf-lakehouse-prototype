@@ -1,3 +1,17 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "dlt[sql-database]>=1.10.0,<1.11.0",
+#     "html2text==2025.4.15",
+#     "pandas>=2.2.3,<2.3.0",
+#     "pipelines-common",
+#     "pymssql>=2.3.4,<2.4.0",
+# ]
+#
+# [tool.uv.sources]
+# pipelines-common = { path = "../../pipelines-common" }
+# ///
 from collections.abc import Generator, Iterator, Sequence
 
 import dlt
@@ -7,9 +21,6 @@ from html2text import html2text
 import pyarrow as pa
 
 import pipelines_common.cli as cli_utils
-
-# Staging destination
-LOADER_FILE_FORMAT = "parquet"
 
 
 @dlt.transformer(standalone=True)
@@ -45,7 +56,8 @@ def opralogwebdb() -> Generator[DltResource]:
         table_names=[table_info["name"] for table_info in tables],
     )
     for table_info in tables:
-        resource = getattr(source, table_info["name"])
+        table_src_name = table_info["name"]
+        resource = getattr(source, table_src_name)
         resource.apply_hints(
             incremental=dlt.sources.incremental(table_info["incremental_id"])
         )
@@ -53,14 +65,16 @@ def opralogwebdb() -> Generator[DltResource]:
             resource = resource | html_to_markdown(
                 column_names=table_info["html_to_markdown_columns"]
             )
-        yield resource.with_name(table_info["name"])
+        yield resource.with_name(table_info.get("destination_name", table_src_name))
 
 
 # ------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     cli_utils.cli_main(
-        pipeline_name="opralogwebdb",
-        data=opralogwebdb(),
+        pipeline_name="opralogweb",
+        default_destination="pipelines_common.dlt_destinations.pyiceberg",
+        data_generator=opralogwebdb,
+        dataset_name_suffix="opralogweb",
         default_write_disposition="append",
     )

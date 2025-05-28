@@ -1,3 +1,15 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "pandas>=2.2.3,<2.3.0",
+#     "pipelines-common",
+# ]
+#
+# [tool.uv.sources]
+# pipelines-common = { path = "../../pipelines-common" }
+# ///
+
 import dlt
 from dlt.extract import DltSource
 from dlt.sources.rest_api import rest_api_source
@@ -21,7 +33,8 @@ def statusdisplay() -> DltSource:
 if __name__ == "__main__":
     cli_utils.cli_main(
         pipeline_name="statusdisplay",
-        data=statusdisplay(),
-        dataset_name="sources_statusdisplay_api",
+        default_destination="pipelines_common.dlt_destinations.pyiceberg",
+        data_generator=statusdisplay,
+        dataset_name_suffix="statusdisplay",
         default_write_disposition="replace",
     )

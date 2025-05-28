@@ -1,122 +1,123 @@
 {{ config(
-    pre_hook=[
-      "{{ create_temp_view_from_parquet('entries', 's3://prod-lakehouse-source-opralogweb/opralogwebdb/entries/') }}",
-      "{{ create_temp_view_from_parquet('chapter_entry', 's3://prod-lakehouse-source-opralogweb/opralogwebdb/chapter_entry/') }}",
-      "{{ create_temp_view_from_parquet('logbook_chapter', 's3://prod-lakehouse-source-opralogweb/opralogwebdb/logbook_chapter/') }}",
-      "{{ create_temp_view_from_parquet('logbooks', 's3://prod-lakehouse-source-opralogweb/opralogwebdb/logbooks/') }}",
-      "{{ create_temp_view_from_parquet('more_entry_columns', 's3://prod-lakehouse-source-opralogweb/opralogwebdb/more_entry_columns/') }}",
-      "{{ create_temp_view_from_parquet('additional_columns', 's3://prod-lakehouse-source-opralogweb/opralogwebdb/additional_columns/') }}"
-    ],
-    post_hook=[
-      "ALTER TABLE {{ this }} WRITE ORDERED BY fault_occurred_at ASC NULLS LAST"
-    ],
-    file_format= "iceberg",
     partition_by=["cycle_name"]
-
 ) }}
-{% set LOGBOOK_NAME = 'MCR Running Log' %}
+{% set MCR_LOGBOOK = 'MCR Running Log' %}
 {% set OPRALOG_EPOCH = '2017-04-25' %} -- Opralog started being used from cycle 2017/01
 
-WITH logbook_denorm AS (
-  SELECT
-    entries.entry_id AS entry_id,
-    entries.entry_timestamp AS fault_occurred_at,
-    TRIM(additional_columns.col_title) AS column_title,
-    TRIM(more_entry_columns.col_data) AS string_data,
-    more_entry_columns.number_value AS number_data,
-    entries.additional_comment AS fault_description
-  FROM
-    entries
-    JOIN chapter_entry ON chapter_entry.entry_id = entries.entry_id
-    JOIN logbook_chapter ON logbook_chapter.logbook_chapter_no = chapter_entry.logbook_chapter_no
-    JOIN logbooks ON logbooks.logbook_id = chapter_entry.logbook_id
-    LEFT OUTER JOIN more_entry_columns ON more_entry_columns.entry_id = entries.entry_id
-    LEFT OUTER JOIN additional_columns ON additional_columns.additional_column_id = more_entry_columns.additional_column_id
-  WHERE
-    logbooks.logbook_name = '{{ LOGBOOK_NAME }}'
-    AND chapter_entry.logbook_id = chapter_entry.principal_logbook
-    AND TRIM(additional_columns.col_title) IN ('Equipment', 'Group', 'Lost Time', 'Group Leader comments')
-    AND (
-      more_entry_columns.col_data IS NOT NULL
-      OR more_entry_columns.number_value IS NOT NULL
+with
+
+staging_entries as ( select * from {{ ref('stg_opralogweb__user_entries') }} ),
+staging_chapter_entry as ( select * from {{ ref('stg_opralogweb__chapter_entry') }} ),
+staging_logbook_chapter as ( select * from {{ ref('stg_opralogweb__logbook_chapter') }} ),
+staging_logbooks as ( select * from {{ ref('stg_opralogweb__logbooks') }} ),
+staging_more_entry_columns as ( select * from {{ ref('stg_opralogweb__more_entry_columns') }} ),
+staging_additional_columns as ( select * from {{ ref('stg_opralogweb__additional_columns') }} ),
+
+denormalized as (
+  select
+    staging_entries.entry_id,
+    staging_entries.fault_occurred_at,
+    staging_entries.fault_date,
+    staging_additional_columns.column_title,
+    staging_more_entry_columns.string_data,
+    staging_more_entry_columns.number_data,
+    staging_entries.fault_description
+  from
+    staging_entries
+    join staging_chapter_entry on staging_chapter_entry.entry_id = staging_entries.entry_id
+    join staging_logbook_chapter on staging_logbook_chapter.logbook_chapter_no = staging_chapter_entry.logbook_chapter_no
+    join staging_logbooks on staging_logbooks.logbook_id = staging_chapter_entry.logbook_id
+    left outer join staging_more_entry_columns on staging_more_entry_columns.entry_id = staging_entries.entry_id
+    left outer join staging_additional_columns on staging_additional_columns.additional_column_id = staging_more_entry_columns.additional_column_id
+  where
+    staging_logbooks.logbook_name = '{{ MCR_LOGBOOK }}'
+    and staging_chapter_entry.logbook_id = staging_chapter_entry.principal_logbook
+    and staging_additional_columns.column_title in ('Equipment', 'Group', 'Lost Time', 'Group Leader comments')
+    and (
+      staging_more_entry_columns.string_data is not null
+      or staging_more_entry_columns.number_data is not null
     )
 ),
 -- downtime records without cycle information
-downtime_records AS (
-  SELECT
+downtime_records as (
+  select
     *
-  FROM
+  from
     (
-      SELECT
+      select
         `entry_id`,
-        TO_DATE(`fault_occurred_at`) AS fault_date,
+        `fault_date`,
         `fault_occurred_at`,
-        MIN(
-          CASE
+        min(
+          case
             `column_title`
-            WHEN 'Equipment' THEN `string_data`
-          END
-        ) AS equipment,
-        MIN(
-          CASE
+            when 'Equipment' then `string_data`
+          end
+        ) as equipment,
+        min(
+          case
             `column_title`
-            WHEN 'Lost Time' THEN `number_data`
-          END
-        ) AS downtime_mins,
-        MIN(
-          CASE
+            when 'Lost Time' then `number_data`
+          end
+        ) as downtime_mins,
+        min(
+          case
             `column_title`
-            WHEN 'Group' THEN `string_data`
-          END
-        ) AS group,
+            when 'Group' then `string_data`
+          end
+        ) as group,
         `fault_description`,
-        MIN(
-          CASE
+        min(
+          case
             `column_title`
-            WHEN 'Group Leader comments' THEN `string_data`
-          END
-        ) AS managers_comments
-      FROM
-        logbook_denorm
-      GROUP BY
+            when 'Group Leader comments' then `string_data`
+          end
+        ) as managers_comments
+      from
+        denormalized
+      group by
         `entry_id`,
         `fault_occurred_at`,
         `fault_date`,
         `fault_description`
     )
-  WHERE
-    `equipment` IS NOT NULL
-    AND `downtime_mins` IS NOT NULL
-    AND `group` IS NOT NULL
-    AND -- Opralog started being used from cycle 2017/01
+  where
+    `equipment` is not null
+    and `downtime_mins` is not null
+    and `group` is not null
+    and -- Opralog started being used from cycle 2017/01
     `fault_occurred_at` >= '{{ OPRALOG_EPOCH }}'
 )
-SELECT
+
+select
   d.`equipment`,
   d.`fault_date`,
   (
-    SELECT
-      FIRST(r.`cycle_name`)
-    FROM
+    select
+      first(r.`cycle_name`)
+    from
       {{ ref('cycles') }} r
-    WHERE
+    where
       d.`fault_occurred_at` >= r.`started_at`
-      AND d.`fault_occurred_at` <= r.`ended_at`
-  ) AS cycle_name,
+      and d.`fault_occurred_at` <= r.`ended_at`
+  ) as cycle_name,
   (
-    SELECT
-      FIRST(r.`label`)
-    FROM
+    select
+      first(r.`label`)
+    from
       {{ ref('cycles') }} r
-    WHERE
+    where
       d.`fault_occurred_at` >= r.`started_at`
-      AND d.`fault_occurred_at` <= r.`ended_at`
-  ) AS cycle_interval,
+      and d.`fault_occurred_at` <= r.`ended_at`
+  ) as cycle_interval,
   d.`downtime_mins`,
   d.`fault_occurred_at`,
   d.`group`,
   d.`fault_description`,
   d.`managers_comments`
-FROM
+
+from
+
   downtime_records d
-ORDER BY fault_occurred_at ASC NULLS LAST
+
+order by fault_occurred_at asc

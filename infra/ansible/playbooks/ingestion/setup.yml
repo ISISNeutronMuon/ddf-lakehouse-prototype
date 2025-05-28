@@ -54,12 +54,21 @@
         state: directory
         mode: "u=rwx,g=rx,o=rx"
 
+    - name: Ensure S3 config file is absent
+      ansible.builtin.file:
+        path: "{{ ansible_env['HOME'] }}/.aws/config"
+        state: absent
+
     - name: Ensure AWS configuration is present
       ansible.builtin.copy:
-        dest: "{{ ansible_env['HOME'] }}/.aws/config"
+        dest: "{{ ansible_env['HOME'] }}/.aws/credentials"
         content: |+
           [default]
+          endpoint = {{ s3_endpoint }}
           request_checksum_calculation = when_required
+          region = local-01
+          aws_access_key_id = {{ s3_access_key_id }}
+          aws_secret_access_key = {{ s3_access_secret }}
         mode: "u=rw,o=r,g=r"
 
     # ---------- Secrets ----------
@@ -88,6 +97,8 @@
         mode: "u=rw,g=r,o=x"
       vars:
         spark_defaults_include_s3_secrets: True
+        spark_default_cores_max: 24
+        spark_default_executor_memory: "96g"
 
     # ---------- Cron tasks ----------
     - name: Ensure cron scripts directory exists
@@ -118,7 +129,7 @@
         name: "Statusdisplay ingest"
         minute: "15"
         hour: "0"
-        job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/statusdisplay pipelines/modelling/isis --select models/facility > {{ ingestion_elt_cron_log_dir }}/statusdisplay/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
+        job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/statusdisplay pipelines/modelling/isis --select '+models/facility' > {{ ingestion_elt_cron_log_dir }}/statusdisplay/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
 
     # ---------- Opralog ----------
     - name: Ensure Opralog cron logs directory exists
@@ -134,6 +145,7 @@
     - name: Ensure daily Opralog ingest job exists
       ansible.builtin.cron:
         name: "Opralog ingest"
+        state: "present"
         minute: "10"
         hour: "2"
-        job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/opralogweb > {{ ingestion_elt_cron_log_dir }}/opralogweb/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
+        job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/opralogweb pipelines/modelling/isis --select '+models/accelerator' > {{ ingestion_elt_cron_log_dir }}/opralogweb/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"

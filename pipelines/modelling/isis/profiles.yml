@@ -11,5 +11,3 @@ spark:
         # catalog configuration and secrets.
         # The directory containing spark-defaults.conf can be set using the SPARK_CONF_DIR environment variable
         "spark.sql.defaultCatalog": "isis"
-        "spark.cores.max": "{{ env_var('DBT_SPARK_CORES_MAX', '8') }}"
-        "spark.executor.memory": "{{ env_var('DBT_SPARK_EXECUTOR_MEMORY', '16g') }}"

@@ -26,7 +26,7 @@ class PyIcebergRestCatalogCredentials(CredentialsConfiguration):
         """Return the credentials as a dictionary suitable for the Catalog constructor"""
         # Map variable names to property names
         # client_id & secret need to be combined
-        properties = {"credential": self.client_credential()}
+        properties = {"credential": self.client_credential()} if self.client_id else {}
 
         field_aliases: Dict[str, str] = {
             "access_delegation": f"{CATALOG_HEADER_PREFIX}X-Iceberg-Access-Delegation",
@@ -73,10 +73,6 @@ class IcebergClientConfiguration(DestinationClientDwhConfiguration):
     def on_resolved(self) -> None:
         self.normalize_bucket_url()
 
-    def normalize_bucket_url(self) -> None:
-        """Normalizes bucket_url, i.e. removes any trailing slashes"""
-        self.bucket_url = self.bucket_url.rstrip("/")
-
         # Check we have the minimum number of required authentication properties
         # if any are supplied
         auth_props = {
@@ -89,6 +85,10 @@ class IcebergClientConfiguration(DestinationClientDwhConfiguration):
             raise DestinationTerminalException(
                 f"Missing required configuration value(s) for authentication: {list(name for name, value in auth_props.items() if value is None)}"
             )
+
+    def normalize_bucket_url(self) -> None:
+        """Normalizes bucket_url, i.e. removes any trailing slashes"""
+        self.bucket_url = self.bucket_url.rstrip("/")
 
     def fingerprint(self) -> str:
         """Returns a fingerprint of a connection string."""

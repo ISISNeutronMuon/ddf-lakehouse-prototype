@@ -13,6 +13,7 @@ from dlt.pipeline.progress import TCollectorArg, _NULL_COLLECTOR as NULL_COLLECT
 import humanize
 
 from . import logging as logging_utils
+from .pipeline import dataset_name
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +26,11 @@ def create_standard_argparser(
 ) -> argparse.ArgumentParser:
     """Creates an ArgumentParser with standard options common to most pipelines"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--log-level", choices=logging.getLevelNamesMapping().keys())
+    parser.add_argument(
+        "--log-level",
+        choices=logging.getLevelNamesMapping().keys(),
+        default=logging.INFO,
+    )
     parser.add_argument(
         "--on-pipeline-step-failure",
         type=str,
@@ -60,15 +65,25 @@ def create_standard_argparser(
 
 def cli_main(
     pipeline_name: str,
-    data: Any,
-    dataset_name: str | None = None,
+    data_generator: Any,
+    dataset_name_suffix: str,
     *,
     default_write_disposition: TWriteDisposition = "append",
     default_destination: TDestinationReferenceArg = "filesystem",
     default_loader_file_format: TLoaderFileFormat = "parquet",
     default_progress: TCollectorArg = NULL_COLLECTOR,
 ):
-    """Run a standard extract and load pipeline"""
+    """Run a standard extract and load pipeline
+
+    :param pipeline_name: Name of dlt pipeline
+    :param data_generator: Callable returning a dlt.DltSource or dlt.DltResource
+    :param dataset_name_suffix: Suffix part of full dataset name in the destination. The given string is prefixed with
+                                a standard string defined in constants.DATASET_NAME_PREFIX_SRCS
+    :param default_write_disposition: Default mode for dlt write_disposition defaults to "append"
+    :param default_destination: Default destination, defaults to "filesystem"
+    :param default_loader_file_format: Default dlt loader file format, defaults to "parquet"
+    :param default_progress: Default progress reporter, defaults to NULL_COLLECTOR
+    """
     args = create_standard_argparser(
         default_destination,
         default_write_disposition,
@@ -82,7 +97,7 @@ def cli_main(
 
     pipeline = dlt.pipeline(
         pipeline_name=pipeline_name,
-        dataset_name=dataset_name,
+        dataset_name=dataset_name(dataset_name_suffix),
         destination=args.destination,
         progress=args.progress,
     )
@@ -90,7 +105,7 @@ def cli_main(
     LOGGER.info("Dropping pending packages to ensure a clean new load")
     pipeline.drop_pending_packages()
     pipeline.run(
-        data,
+        data_generator(),
         loader_file_format=args.loader_file_format,
         write_disposition=args.write_disposition,
     )
