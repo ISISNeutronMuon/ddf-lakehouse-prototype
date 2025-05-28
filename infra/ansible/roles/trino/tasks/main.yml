@@ -48,13 +48,17 @@
   become: true
   ansible.builtin.lineinfile:
     path: "{{ trino_config_path }}/creds/trino.pass"
-    regexp: "^{{ trino_user }}"
-    line: "{{ trino_user }}:{{ trino_user_passwd | password_hash('bcrypt', rounds=10, ident='2y') }}"
+    regexp: "^{{ user.username }}"
+    line: "{{ user.username }}:{{ user.password | password_hash('bcrypt', rounds=10, ident='2y') }}"
     state: present
     create: true
     owner: root
     group: root
     mode: u=rw,g=r,o=r
+  loop: "{{ trino_users }}"
+  loop_control:
+    loop_var: user
+  no_log: true
 
 - name: Ensure Trino container is running
   become: true

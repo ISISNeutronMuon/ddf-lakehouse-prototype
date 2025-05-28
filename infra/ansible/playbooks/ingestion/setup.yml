@@ -71,7 +71,7 @@
           aws_secret_access_key = {{ s3_access_secret }}
         mode: "u=rw,o=r,g=r"
 
-    # ---------- Secrets ----------
+    # ---------- dlt secrets ----------
     - name: Ensure dlt secrets directory exists
       ansible.builtin.file:
         path: "{{ ansible_env['HOME'] }}/.dlt"
@@ -83,22 +83,17 @@
         src: dlt/secrets.toml.j2
         dest: "{{ ansible_env['HOME'] }}/.dlt/secrets.toml"
 
-    # ---------- Remote spark config ----------
-    - name: Ensure Spark config directory exists
+    # ---------- dbt profiles ----------
+    - name: Ensure dbt profiles directory exists
       ansible.builtin.file:
-        path: "{{ ingestion_spark_conf_dir }}"
+        path: "{{ ansible_env['HOME'] }}/.dbt"
         state: directory
         mode: "u=rwx,g=rx,o=rx"
 
-    - name: Create/update Spark defaults
+    - name: Ensure dbt profiles exists
       ansible.builtin.template:
-        src: ../../common-templates/spark/spark-defaults.conf.j2
-        dest: "{{ ingestion_spark_conf_dir }}/spark-defaults.conf"
-        mode: "u=rw,g=r,o=x"
-      vars:
-        spark_defaults_include_s3_secrets: True
-        spark_default_cores_max: 24
-        spark_default_executor_memory: "96g"
+        src: dbt/profiles.yml.j2
+        dest: "{{ ansible_env['HOME'] }}/.dbt/profiles.yml"
 
     # ---------- Cron tasks ----------
     - name: Ensure cron scripts directory exists
