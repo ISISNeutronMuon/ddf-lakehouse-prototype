@@ -63,11 +63,10 @@
     image: "{{ trino_image }}"
     state: started
     detach: true
-    published_ports:
-      - "{{ trino_http_port }}:8060"
     recreate: true
     restart: true
     restart_policy: unless-stopped
+    network_mode: host
     volumes:
       - "{{ trino_data_path }}:/data/trino" # See node.properties
       - "{{ trino_config_path }}/etc:/etc/trino:ro"
