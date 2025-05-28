@@ -27,7 +27,7 @@ spark.sql.catalogImplementation               in-memory
 
 spark.sql.catalog.isis                        org.apache.iceberg.spark.SparkCatalog
 spark.sql.catalog.isis.type                   rest
-spark.sql.catalog.isis.uri                    {{ lakekeeper_url }}/catalog
+spark.sql.catalog.isis.uri                    {{ lakekeeper_catalog.uri }}
 spark.sql.catalog.isis.warehouse              {{ lakekeeper_catalog.name }}
 spark.sql.catalog.isis.oauth2-server-uri      {{ keycloak_token_endpoint_url_isis }}
 spark.sql.catalog.isis.credential             {{ vault_ingestion_catalog_client_id }}:{{ vault_ingestion_catalog_client_secret }}

@@ -33,6 +33,7 @@
     - etc/config.properties.j2
     - etc/jvm.config.j2
     - etc/catalog/isis.properties.j2
+    - etc/catalog/isis_lakekeeper.properties.j2
   loop_control:
     loop_var: trino_template
 
@@ -47,8 +48,8 @@
   become: true
   ansible.builtin.lineinfile:
     path: "{{ trino_config_path }}/creds/trino.pass"
-    regexp: "^{{ trino_admin_user }}"
-    line: "{{ trino_admin_user }}:{{ trino_admin_passwd | password_hash('bcrypt', rounds=10, ident='2y') }}"
+    regexp: "^{{ trino_user }}"
+    line: "{{ trino_user }}:{{ trino_user_passwd | password_hash('bcrypt', rounds=10, ident='2y') }}"
     state: present
     create: true
     owner: root
@@ -62,11 +63,10 @@
     image: "{{ trino_image }}"
     state: started
     detach: true
-    published_ports:
-      - "{{ trino_http_port }}:8060"
     recreate: true
     restart: true
     restart_policy: unless-stopped
+    network_mode: host
     volumes:
       - "{{ trino_data_path }}:/data/trino" # See node.properties
       - "{{ trino_config_path }}/etc:/etc/trino:ro"
