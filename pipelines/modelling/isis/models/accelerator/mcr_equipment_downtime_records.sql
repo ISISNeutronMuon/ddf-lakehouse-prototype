@@ -1,8 +1,8 @@
 {{ config(
     partition_by=["cycle_name"]
 ) }}
-{% set MCR_LOGBOOK = 'MCR Running Log' %}
-{% set OPRALOG_EPOCH = '2017-04-25' %} -- Opralog started being used from cycle 2017/01
+{% set MCR_LOGBOOK = dbt.string_literal("MCR Running Log") %}
+{% set OPRALOG_EPOCH = dbt.string_literal('2017-04-25') %} -- Opralog started being used from cycle 2017/01
 
 with
 
@@ -30,7 +30,7 @@ denormalized as (
     left outer join staging_more_entry_columns on staging_more_entry_columns.entry_id = staging_entries.entry_id
     left outer join staging_additional_columns on staging_additional_columns.additional_column_id = staging_more_entry_columns.additional_column_id
   where
-    staging_logbooks.logbook_name = '{{ MCR_LOGBOOK }}'
+    staging_logbooks.logbook_name = {{ MCR_LOGBOOK }}
     and staging_chapter_entry.logbook_id = staging_chapter_entry.principal_logbook
     and staging_additional_columns.column_title in ('Equipment', 'Group', 'Lost Time', 'Group Leader comments')
     and (
@@ -38,86 +38,92 @@ denormalized as (
       or staging_more_entry_columns.number_data is not null
     )
 ),
--- downtime records without cycle information
+
 downtime_records as (
   select
     *
   from
     (
       select
-        `entry_id`,
-        `fault_date`,
-        `fault_occurred_at`,
+        entry_id,
+        fault_date,
+        fault_occurred_at,
         min(
           case
-            `column_title`
-            when 'Equipment' then `string_data`
+            column_title
+            when 'Equipment' then string_data
           end
         ) as equipment,
         min(
           case
-            `column_title`
-            when 'Lost Time' then `number_data`
+            column_title
+            when 'Lost Time' then number_data
           end
         ) as downtime_mins,
         min(
           case
-            `column_title`
-            when 'Group' then `string_data`
+            column_title
+            when 'Group' then string_data
           end
-        ) as group,
-        `fault_description`,
+        ) as {{ identifier("group") }},
+        fault_description,
         min(
           case
-            `column_title`
-            when 'Group Leader comments' then `string_data`
+            column_title
+            when 'Group Leader comments' then string_data
           end
         ) as managers_comments
       from
         denormalized
       group by
-        `entry_id`,
-        `fault_occurred_at`,
-        `fault_date`,
-        `fault_description`
+        entry_id,
+        fault_occurred_at,
+        fault_date,
+        fault_description
     )
   where
-    `equipment` is not null
-    and `downtime_mins` is not null
-    and `group` is not null
+    equipment is not null
+    and downtime_mins is not null
+    and {{ identifier("group") }} is not null
     and -- Opralog started being used from cycle 2017/01
-    `fault_occurred_at` >= '{{ OPRALOG_EPOCH }}'
+    fault_occurred_at >= from_iso8601_timestamp({{ OPRALOG_EPOCH }})
+),
+
+downtime_records_with_cycle as (
+  select
+    d.equipment,
+    d.fault_date,
+    (
+      select
+        {{ dbt.any_value("r.cycle_name") }}
+      from
+        {{ ref('cycles') }} r
+      where
+        d.fault_occurred_at >= r.started_at
+        and d.fault_occurred_at <= r.ended_at
+    ) as cycle_name,
+    (
+      select
+        {{ dbt.any_value("r.label") }}
+      from
+        {{ ref('cycles') }} r
+      where
+        d.fault_occurred_at >= r.started_at
+        and d.fault_occurred_at <= r.ended_at
+    ) as cycle_interval,
+    d.downtime_mins,
+    d.fault_occurred_at,
+    d.{{ identifier("group") }},
+    d.fault_description,
+    d.managers_comments
+
+  from
+
+    downtime_records d
 )
 
 select
-  d.`equipment`,
-  d.`fault_date`,
-  (
-    select
-      first(r.`cycle_name`)
-    from
-      {{ ref('cycles') }} r
-    where
-      d.`fault_occurred_at` >= r.`started_at`
-      and d.`fault_occurred_at` <= r.`ended_at`
-  ) as cycle_name,
-  (
-    select
-      first(r.`label`)
-    from
-      {{ ref('cycles') }} r
-    where
-      d.`fault_occurred_at` >= r.`started_at`
-      and d.`fault_occurred_at` <= r.`ended_at`
-  ) as cycle_interval,
-  d.`downtime_mins`,
-  d.`fault_occurred_at`,
-  d.`group`,
-  d.`fault_description`,
-  d.`managers_comments`
-
+  *
 from
-
-  downtime_records d
-
+  downtime_records_with_cycle
 order by fault_occurred_at asc

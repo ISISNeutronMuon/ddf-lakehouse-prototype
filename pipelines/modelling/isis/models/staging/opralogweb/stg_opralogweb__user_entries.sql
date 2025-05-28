@@ -6,8 +6,8 @@ source as (
 
 select
     entry_id,
-    entry_timestamp AS fault_occurred_at,
-    to_date(`entry_timestamp`) AS fault_date,
-    TRIM(additional_comment) AS fault_description
+    entry_timestamp as fault_occurred_at,
+    cast({{ identifier("entry_timestamp") }} as date) as fault_date,
+    trim(additional_comment) as fault_description
 from
   source

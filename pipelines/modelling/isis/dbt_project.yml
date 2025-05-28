@@ -1,7 +1,10 @@
 name: isis
 version: "1.0.0"
 
-profile: "spark"
+profile: "isis_catalog"
+
+flags:
+  require_certificate_validation: True
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -15,7 +18,7 @@ clean-targets: # directories to be removed by `dbt clean`
   - "dbt_packages"
 
 models:
-  +file_format: iceberg
+  +file_format: parquet
   +materialized: table
   isis:
     # The full schema name of the final tables is "{target_schema}_"{custom_schema}"
