@@ -1,6 +1,11 @@
-{{ config(
-    partition_by=["cycle_name"]
-) }}
+{{
+  config(
+    properties={
+      "partitioning": "ARRAY['cycle_name']",
+    },
+    on_table_exists = 'drop'
+)
+}}
 {% set MCR_LOGBOOK = dbt.string_literal("MCR Running Log") %}
 {% set OPRALOG_EPOCH = dbt.string_literal('2017-04-25') %} -- Opralog started being used from cycle 2017/01
 

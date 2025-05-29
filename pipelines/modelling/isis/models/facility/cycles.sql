@@ -1,3 +1,9 @@
+{{
+  config(
+    on_table_exists = 'drop'
+)
+}}
+
 with
 
 staging as (
