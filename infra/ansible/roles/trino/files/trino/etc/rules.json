@@ -1,0 +1,14 @@
+{
+  "catalogs": [
+    {
+      "user": "ingestion",
+      "catalog": "isis_lakekeeper",
+      "allow": "all"
+    },
+    {
+      "user": "superset",
+      "catalog": "isis_lakekeeper",
+      "allow": "read-only"
+    }
+  ]
+}
