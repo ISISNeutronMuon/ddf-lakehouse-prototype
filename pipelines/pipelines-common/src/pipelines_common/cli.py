@@ -5,7 +5,6 @@ import logging
 import typing
 from typing import Any
 
-import dlt
 from dlt.common.destination.reference import TDestinationReferenceArg
 from dlt.common.typing import TLoaderFileFormat
 from dlt.common.schema.typing import TWriteDisposition
@@ -13,7 +12,7 @@ from dlt.pipeline.progress import TCollectorArg, _NULL_COLLECTOR as NULL_COLLECT
 import humanize
 
 from . import logging as logging_utils
-from .pipeline import dataset_name
+from .pipeline import create_pipeline
 
 LOGGER = logging.getLogger(__name__)
 
@@ -95,9 +94,8 @@ def cli_main(
         args.log_level, keep_records_from=["dlt", "pipelines_common", "__main__"]
     )
 
-    pipeline = dlt.pipeline(
+    pipeline = create_pipeline(
         pipeline_name=pipeline_name,
-        dataset_name=dataset_name(dataset_name_suffix),
         destination=args.destination,
         progress=args.progress,
     )

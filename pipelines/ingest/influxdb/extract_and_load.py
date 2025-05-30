@@ -30,10 +30,10 @@ from pipelines_common.constants import (
 
 # Runtime
 LOGGER = logging.getLogger(__name__)
-PIPELINE_BASENAME = "influxdb"
+PIPELINE_NAME = "influxdb"
 
 # Source
-DATASET_NAME = "machinestate"
+DATASET_NAME = PIPELINE_NAME
 SCHEMA_NAME_DELIMITER = "::"
 INFLUXDB_MACHINESTATE_BACKFILL_START = pendulum.DateTime(
     2018, 1, 1, tzinfo=pendulum.UTC
@@ -203,6 +203,7 @@ def extract_and_load_machinestate(
     """
     load_info = None
     try:
+        pipeline.drop_pending_packages()
         load_info = pipeline.run(
             machinestate_source_factory(
                 schema_name,
@@ -227,15 +228,6 @@ def extract_and_load_machinestate(
     return load_info
 
 
-def create_pipeline(pipeline_name_fq: str, dataset_name: str):
-    return dlt.pipeline(
-        destination="filesystem",
-        pipeline_name=pipeline_name_fq,
-        dataset_name=dataset_name,
-        progress="log",
-    )
-
-
 def run_pipeline(
     pipeline: dlt.Pipeline,
     influx: InfluxQuery,
@@ -246,7 +238,7 @@ def run_pipeline(
     elt_started_at = pendulum.now()
 
     for channels_batch in itertools.batched(
-        channels_to_load, dlt.config["sources.channel_batch_size"]
+        channels_to_load, dlt.config["influxdb.channel_batch_size"]
     ):
         load_info = extract_and_load_machinestate(
             pipeline, influx, schema_name, channels_batch, on_pipeline_step_failure
@@ -291,18 +283,21 @@ def get_channels_to_load(
         channels_to_load = influx.channel_names()
 
     if skip_existing:
-        with inject_section(ConfigSectionContext(pipeline.pipeline_name)):
-            existing_tables = pipeline.dataset().schema.data_table_names(
-                seen_data_only=True
-            )
-            existing_channels = set(
-                map(
-                    lambda x: x.replace("_", "::", 1).replace("_", ":"), existing_tables
-                )
-            )
-            channels_to_load = list(
-                set(map(lambda x: x.lower(), channels_to_load)) - set(existing_channels)
-            )
+        # with inject_section(ConfigSectionContext(pipeline.pipeline_name)):
+        #     existing_tables = pipeline.dataset().schema.data_table_names(
+        #         seen_data_only=True
+        #     )
+        #     existing_channels = set(
+        #         map(
+        #             lambda x: x.replace("_", "::", 1).replace("_", ":"), existing_tables
+        #         )
+        #     )
+        #     channels_to_load = list(
+        #         set(map(lambda x: x.lower(), channels_to_load)) - set(existing_channels)
+        #     )
+        raise NotImplementedError(
+            "get_channels_to_load: skip_existing not yet implemented"
+        )
 
     schema_to_channels: Dict[str, List[str]] = {}
     for channel in channels_to_load:
@@ -319,7 +314,12 @@ def get_channels_to_load(
 
 
 def parse_args() -> cli_utils.argparse.Namespace:
-    parser = cli_utils.create_standard_argparser()
+    parser = cli_utils.create_standard_argparser(
+        default_destination="pipelines_common.dlt_destinations.pyiceberg",
+        default_write_disposition="append",
+        default_progress="log",
+        default_loader_file_format="parquet",
+    )
     parser.add_argument(
         "--channels",
         nargs="+",
@@ -340,8 +340,11 @@ def main():
     logging_utils.configure_logging(args.log_level, keep_records_from=["__main__"])
 
     pipeline = pipeline_utils.create_pipeline(
-        PIPELINE_BASENAME, "filesystem", DATASET_NAME, progress="log"
+        name="influxdb",
+        destination=args.destination,
+        progress=args.progress,
     )
+
     LOGGER.info(f"-- Pipeline={pipeline.pipeline_name} --")
 
     influx = InfluxQuery(
