@@ -17,23 +17,8 @@
         protocol: tcp
         port_range_min: "{{ datasources_influxdb_port }}"
         port_range_max: "{{ datasources_influxdb_port }}"
-      - direction: ingress
-        ether_type: IPv4
-        protocol: tcp
-        port_range_min: "{{ datasources_spark_port_min }}"
-        port_range_max: "{{ datasources_spark_port_max }}"
     openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
     inventory_group: datasources
   roles:
     - role: security_group_create
     - role: vm_create
-
-- import_playbook: ../inventory/inventory_persist.yml
-
-- name: (Re-)configure /etc/hosts across all nodes
-  hosts: all:!localhost
-  gather_facts: True
-  vars:
-    inventory_group: datasources
-  tasks:
-    - ansible.builtin.include_tasks: ../../tasks/configure_etc_hosts.yml
