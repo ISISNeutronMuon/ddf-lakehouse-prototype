@@ -61,9 +61,7 @@ class IcebergClientConfiguration(DestinationClientDwhConfiguration):
     credentials: PyIcebergCatalogCredentials = None  # type: ignore
 
     # possible placeholders: {dataset_name}, {table_name}, {location_tag}
-    # This is deliberately prefixed with an 'r' to indicate it is not an f-string
-    # and is intended to be expanded later
-    table_location_layout: Optional[str] = r"{dataset_name}/{table_name}"
+    table_location_layout: Optional[str] = None  # type: ignore
 
     @property
     def connection_properties(self) -> Dict[str, str]:

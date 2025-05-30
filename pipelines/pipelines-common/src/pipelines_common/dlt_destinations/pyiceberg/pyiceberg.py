@@ -347,11 +347,15 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         # same identifier are created/deleted in tight loops, e.g. in tests,
         # then the same location can produce invalid location errors.
         # The location_tag can be used to set to unique string to avoid this
-        location = f"{self.config.bucket_url}/" + self.config.table_location_layout.format(  # type: ignore
-            dataset_name=self.dataset_name,
-            table_name=table_name.rstrip("/"),
-            location_tag=uniq_id(6),
-        )
+        if self.config.table_location_layout is not None:
+            location = f"{self.config.bucket_url}/" + self.config.table_location_layout.format(  # type: ignore
+                dataset_name=self.dataset_name,
+                table_name=table_name.rstrip("/"),
+                location_tag=uniq_id(6),
+            )
+        else:
+            location = None
+
         self.iceberg_catalog.create_table(
             self.make_qualified_table_name(table_name),
             schema,
