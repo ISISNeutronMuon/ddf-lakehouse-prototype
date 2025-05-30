@@ -4,7 +4,7 @@ isis_catalog:
     trino:
       type: trino
       method: ldap
-      user: ingestion
+      user: {{ trino_ingestion_username }}
       password: {{ vault_trino_ingestion_passwd }}
       host: {{ top_level_domain }}
       port: {{ trino_https_port }}
