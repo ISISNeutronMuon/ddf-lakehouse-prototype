@@ -95,7 +95,7 @@ def cli_main(
     )
 
     pipeline = create_pipeline(
-        pipeline_name=pipeline_name,
+        name=pipeline_name,
         destination=args.destination,
         progress=args.progress,
     )
