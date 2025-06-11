@@ -33,7 +33,6 @@
     - etc/config.properties.j2
     - etc/jvm.config.j2
     - etc/catalog/isis.properties.j2
-    - etc/catalog/isis_lakekeeper.properties.j2
   loop_control:
     loop_var: trino_template
 

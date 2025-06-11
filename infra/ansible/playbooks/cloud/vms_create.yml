@@ -18,7 +18,7 @@
 - import_playbook: ../ingestion/create.yml
 - import_playbook: ../jupyterhub/create.yml
 - import_playbook: ../keycloak/create.yml
-- import_playbook: ../nessie/create.yml
+- import_playbook: ../lakekeeper/create.yml
 - import_playbook: ../spark/create.yml
 - import_playbook: ../superset/create.yml
 - import_playbook: ../trino/create.yml
