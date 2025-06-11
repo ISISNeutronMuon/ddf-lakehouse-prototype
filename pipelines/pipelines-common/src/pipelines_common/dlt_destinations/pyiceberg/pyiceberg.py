@@ -82,11 +82,7 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         if not self.is_storage_initialized():
             self.iceberg_catalog.create_namespace(self.dataset_name)
         elif truncate_tables:
-            for table_name in truncate_tables:
-                try:
-                    self.load_table_from_name(table_name).delete()
-                except DestinationUndefinedEntity:
-                    pass
+            self.truncate_tables(truncate_tables)
 
     def is_storage_initialized(self) -> bool:
         """Returns if storage is ready to be read/written."""
@@ -152,6 +148,10 @@ class PyIcebergClient(JobClientBase, WithStateSync):
             "write_disposition"
         )
         self.write_to_table(self.schema.version_table_name, data_to_load, write_disposition)
+
+    def drop_tables(self, *tables: str, delete_schema: bool = True) -> None:
+        """Drop given tables and optionally delete schema"""
+        self.truncate_tables(list(tables))
 
     def create_load_job(
         self,
@@ -333,6 +333,14 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         )
         logger.info(f"Found {len(updates)} updates for {table_name} in {self.schema.name}")
         return updates
+
+    @pyiceberg_error
+    def truncate_tables(self, table_names: Iterable[str]) -> None:
+        for table_name in table_names:
+            try:
+                self.load_table_from_name(table_name).delete()
+            except DestinationUndefinedEntity:
+                pass
 
     @pyiceberg_error
     def execute_destination_schema_create_table(
