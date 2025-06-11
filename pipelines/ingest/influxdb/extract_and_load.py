@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 import dlt
 from dlt.common.configuration.resolve import inject_section
 from dlt.common.configuration.specs import ConfigSectionContext
+from dlt.common.schema.typing import TWriteDispositionConfig
 from dlt.extract import DltResource
 from dlt.pipeline.exceptions import PipelineStepFailed
 
@@ -206,7 +207,7 @@ def extract_and_load_machinestate(
     schema_name: str,
     channels: Sequence[str],
     on_pipeline_step_failed: str,
-    write_disposition: str,
+    write_disposition: TWriteDispositionConfig,
 ):
     """Extract and load the Influxdb machinestate channels to the destination
 
@@ -249,7 +250,7 @@ def run_pipeline(
     schema_name: str,
     channels_to_load: Sequence[str],
     on_pipeline_step_failure: str,
-    write_disposition: str,
+    write_disposition: TWriteDispositionConfig,
 ):
     elt_started_at = pendulum.now()
 
