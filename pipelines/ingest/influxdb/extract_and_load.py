@@ -317,6 +317,7 @@ def get_channels_to_load(
                 existing_tables,
             )
         )
+        LOGGER.info(f"Skipping existing channels: {existing_channels}")
         channels_to_load = list(
             set(map(lambda x: x.lower(), channels_to_load)) - set(existing_channels)
         )
