@@ -17,13 +17,3 @@ workers = 3
 delete_completed_jobs = true
 raise_on_max_retries = 1
 workers = 1
-
-[destination.filesystem]
-layout = "{schema_name}/{table_name}/{YYYY}/{MM}/{DD}/{load_id}.{file_id}.{ext}"
-
-[dev_influxdb.destination.filesystem]
-bucket_url = "./dev-lakehouse-source-accelerator-influxdb/"
-auto_mkdir = true
-
-[influxdb.destination.filesystem]
-bucket_url = "s3://prod-lakehouse-source-accelerator-influxdb/"
