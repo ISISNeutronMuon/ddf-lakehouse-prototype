@@ -1,7 +1,7 @@
 ---
 # This instance supports running ELT scripts
 - name: Configure Ingestion instance
-  hosts: ingestion
+  hosts: "{{ inventory_hosts | default('ingestion') }}"
   vars:
     uv_python_version: "3.12"
     ingestion_elt_git_url: https://github.com/ISISNeutronMuon/ddf-lakehouse-prototype.git
@@ -9,12 +9,7 @@
     ingestion_elt_cron_scripts_dir: "{{ ansible_env['HOME'] }}/etc/cron"
     ingestion_elt_cron_log_dir: "{{ ansible_env['HOME'] }}/var/log/elt-pipelines/cron"
     ingestion_spark_conf_dir: "{{ ansible_env['HOME'] }}/etc/spark/conf"
-  roles:
-    - role: geerlingguy.java
-      become: true
-      vars:
-        java_packages:
-          - openjdk-11-jre
+    ingestion_create_cron_tasks: true
   tasks:
     # ---------- UV & Python ----------
     - name: Check if uv exists
@@ -96,51 +91,6 @@
         dest: "{{ ansible_env['HOME'] }}/.dbt/profiles.yml"
 
     # ---------- Cron tasks ----------
-    - name: Ensure cron scripts directory exists
-      ansible.builtin.file:
-        path: "{{ ingestion_elt_cron_scripts_dir }}"
-        state: directory
-        mode: "u=rwx,g=rx,o=rx"
-
-    - name: Create/update ELT cron script template
-      ansible.builtin.template:
-        src: ./cron/elt_task.sh.j2
-        dest: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh"
-        mode: "u=rwx,g=rx,o=rx"
-
-    # ---------- statusdisplay ----------
-    - name: Ensure statusdisplay cron logs directory exists
-      become: true
-      ansible.builtin.file:
-        path: "{{ ingestion_elt_cron_log_dir }}/statusdisplay"
-        state: directory
-        recurse: true
-        mode: "u=rwx,g=rx,o=rx"
-        owner: 1000
-        group: 1000
-
-    - name: Ensure daily statusdisplay ingest job exists
-      ansible.builtin.cron:
-        name: "Statusdisplay ingest"
-        minute: "15"
-        hour: "0"
-        job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/statusdisplay pipelines/modelling/isis --select '+models/facility' > {{ ingestion_elt_cron_log_dir }}/statusdisplay/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
-
-    # ---------- Opralog ----------
-    - name: Ensure Opralog cron logs directory exists
-      become: true
-      ansible.builtin.file:
-        path: "{{ ingestion_elt_cron_log_dir }}/opralogweb"
-        state: directory
-        recurse: true
-        mode: "u=rwx,g=rx,o=rx"
-        owner: 1000
-        group: 1000
-
-    - name: Ensure daily Opralog ingest job exists
-      ansible.builtin.cron:
-        name: "Opralog ingest"
-        state: "present"
-        minute: "10"
-        hour: "2"
-        job: "{{ ingestion_elt_cron_scripts_dir }}/elt_task.sh pipelines/ingest/opralogweb pipelines/modelling/isis --select '+models/accelerator' > {{ ingestion_elt_cron_log_dir }}/opralogweb/elt-$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).log 2>&1"
+    - name: Configure cron jobs
+      ansible.builtin.include_tasks: ./configure_elt_cron_jobs.yml
+      when: ingestion_create_cron_tasks | bool
