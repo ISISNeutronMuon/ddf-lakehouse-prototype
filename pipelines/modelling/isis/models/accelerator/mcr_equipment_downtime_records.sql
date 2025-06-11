@@ -115,7 +115,16 @@ downtime_records_with_cycle as (
       where
         d.fault_occurred_at >= r.started_at
         and d.fault_occurred_at <= r.ended_at
-    ) as cycle_interval,
+    ) as cycle_interval_label,
+    (
+      select
+        {{ dbt.any_value("r.type") }}
+      from
+        {{ ref('cycles') }} r
+      where
+        d.fault_occurred_at >= r.started_at
+        and d.fault_occurred_at <= r.ended_at
+    ) as cycle_interval_type,
     d.downtime_mins,
     d.fault_occurred_at,
     d.{{ identifier("group") }},
