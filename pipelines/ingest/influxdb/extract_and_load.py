@@ -321,9 +321,9 @@ def get_channels_to_load(
             except Exception:
                 continue
 
-        LOGGER.info(f"Skipping existing channels: {existing_channels}")
+        LOGGER.debug(f"Skipping existing channels: {existing_channels}")
         channels_to_load = list(set(channels_to_load) - set(existing_channels))
-        LOGGER.info(f"Final channels to load: {channels_to_load}")
+        LOGGER.debug(f"Final channels to load: {channels_to_load}")
 
     schema_to_channels: Dict[str, List[str]] = {}
     for channel in channels_to_load:
