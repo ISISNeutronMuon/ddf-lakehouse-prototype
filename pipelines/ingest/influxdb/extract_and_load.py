@@ -15,14 +15,12 @@
 from collections.abc import Generator
 import itertools
 import logging
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, cast
 import subprocess as subp
 import sys
 from zoneinfo import ZoneInfo
 
 import dlt
-from dlt.common.configuration.resolve import inject_section
-from dlt.common.configuration.specs import ConfigSectionContext
 from dlt.common.schema.typing import TWriteDispositionConfig
 from dlt.extract import DltResource
 from dlt.pipeline.exceptions import PipelineStepFailed
@@ -35,6 +33,7 @@ import requests
 import pipelines_common.cli as cli_utils
 import pipelines_common.logging as logging_utils
 import pipelines_common.pipeline as pipeline_utils
+from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import PyIcebergClient
 
 
 from pipelines_common.constants import (
@@ -304,20 +303,22 @@ def get_channels_to_load(
         channels_to_load = influx.channel_names()
 
     if skip_existing:
-        # with inject_section(ConfigSectionContext(pipeline.pipeline_name)):
-        #     existing_tables = pipeline.dataset().schema.data_table_names(
-        #         seen_data_only=True
-        #     )
-        #     existing_channels = set(
-        #         map(
-        #             lambda x: x.replace("_", "::", 1).replace("_", ":"), existing_tables
-        #         )
-        #     )
-        #     channels_to_load = list(
-        #         set(map(lambda x: x.lower(), channels_to_load)) - set(existing_channels)
-        #     )
-        raise NotImplementedError(
-            "get_channels_to_load: skip_existing not yet implemented"
+        cli = cast(PyIcebergClient, pipeline.destination_client())
+        existing_tables = [
+            table_id[1]
+            for table_id in cli.iceberg_catalog.list_tables(f"{pipeline.dataset_name}")
+            if not table_id[1].startswith("_dlt_")
+        ]
+        # dlt normalizes the channel names and replaces the colons but we need them back.
+        # we assume the first underscore is schema delimiter (::) and the remainder are single colons
+        existing_channels = set(
+            map(
+                lambda x: x.replace("_", SCHEMA_NAME_DELIMITER, 1).replace("_", ":"),
+                existing_tables,
+            )
+        )
+        channels_to_load = list(
+            set(map(lambda x: x.lower(), channels_to_load)) - set(existing_channels)
         )
 
     schema_to_channels: Dict[str, List[str]] = {}
