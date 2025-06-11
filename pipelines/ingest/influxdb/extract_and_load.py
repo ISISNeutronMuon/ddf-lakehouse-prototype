@@ -4,6 +4,7 @@
 # dependencies = [
 #     "dlt>=1.10.0,<1.11.0",
 #     "humanize>=4.12.3,<4.13.0",
+#     "pandas>=2.2.3,<2.3.0",
 #     "pipelines-common",
 #     "requests>=2.32.4,<2.33.0",
 # ]
