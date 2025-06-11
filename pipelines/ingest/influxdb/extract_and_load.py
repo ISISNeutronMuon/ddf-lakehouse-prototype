@@ -325,6 +325,7 @@ def get_channels_to_load(
         channels_to_load = list(
             set(map(lambda x: x.lower(), channels_to_load)) - set(existing_channels)
         )
+        LOGGER.info(f"Final channels to load: {channels_to_load}")
 
     schema_to_channels: Dict[str, List[str]] = {}
     for channel in channels_to_load:
