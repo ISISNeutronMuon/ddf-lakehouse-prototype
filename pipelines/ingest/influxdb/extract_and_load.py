@@ -192,6 +192,7 @@ def extract_and_load_machinestate(
     schema_name: str,
     channels: Sequence[str],
     on_pipeline_step_failed: str,
+    write_disposition: str,
 ):
     """Extract and load the Influxdb machinestate channels to the destination
 
@@ -212,7 +213,7 @@ def extract_and_load_machinestate(
                 backfill_range=(INFLUXDB_MACHINESTATE_BACKFILL_START, None),
             ),
             loader_file_format=LOADER_FILE_FORMAT,
-            write_disposition="append",
+            write_disposition=write_disposition,
         )
         LOGGER.debug(load_info)
     except PipelineStepFailed as step_exc:
@@ -234,6 +235,7 @@ def run_pipeline(
     schema_name: str,
     channels_to_load: Sequence[str],
     on_pipeline_step_failure: str,
+    write_disposition: str,
 ):
     elt_started_at = pendulum.now()
 
@@ -241,7 +243,12 @@ def run_pipeline(
         channels_to_load, dlt.config["influxdb.channel_batch_size"]
     ):
         load_info = extract_and_load_machinestate(
-            pipeline, influx, schema_name, channels_batch, on_pipeline_step_failure
+            pipeline,
+            influx,
+            schema_name,
+            channels_batch,
+            on_pipeline_step_failure,
+            write_disposition,
         )
         if load_info is not None:
             if LOGGER.level == logging.DEBUG:
@@ -369,7 +376,12 @@ def main():
             f"Running pipeline for {len(channels)} channel in schema '{schema_name}'"
         )
         run_pipeline(
-            pipeline, influx, schema_name, channels, args.on_pipeline_step_failure
+            pipeline,
+            influx,
+            schema_name,
+            channels,
+            args.on_pipeline_step_failure,
+            args.write_disposition,
         )
     else:
         complete_elt_started_at = pendulum.now()
