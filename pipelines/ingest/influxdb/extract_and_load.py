@@ -304,19 +304,23 @@ def get_channels_to_load(
 
     if skip_existing:
         cli = cast(PyIcebergClient, pipeline.destination_client())
-        existing_tables = [
-            table_id[1]
-            for table_id in cli.iceberg_catalog.list_tables(f"{pipeline.dataset_name}")
-            if not table_id[1].startswith("_dlt_")
-        ]
-        # dlt normalizes the channel names and replaces the colons but we need them back.
-        # we assume the first underscore is schema delimiter (::) and the remainder are single colons
-        existing_channels = set(
-            map(
-                lambda x: x.replace("_", SCHEMA_NAME_DELIMITER, 1).replace("_", ":"),
-                existing_tables,
-            )
-        )
+        catalog = cli.iceberg_catalog
+        existing_channels = []
+        for table_id in filter(
+            lambda table_id: not table_id[1].startswith("_dlt_"),
+            catalog.list_tables(f"{pipeline.dataset_name}"),
+        ):
+            try:
+                table = catalog.load_table(table_id)
+                channel_name = str(
+                    table.scan(selected_fields=("channel",), limit=1).to_arrow()[
+                        "channel"
+                    ][0]
+                )
+                existing_channels.append(channel_name)
+            except Exception:
+                continue
+
         LOGGER.info(f"Skipping existing channels: {existing_channels}")
         channels_to_load = list(
             set(map(lambda x: x.lower(), channels_to_load)) - set(existing_channels)
