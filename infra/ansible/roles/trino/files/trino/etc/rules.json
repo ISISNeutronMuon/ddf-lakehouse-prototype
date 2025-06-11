@@ -2,12 +2,12 @@
   "catalogs": [
     {
       "user": "ingestion",
-      "catalog": "isis_lakekeeper",
+      "catalog": "isis",
       "allow": "all"
     },
     {
       "user": "superset",
-      "catalog": "isis_lakekeeper",
+      "catalog": "isis",
       "allow": "read-only"
     }
   ]
