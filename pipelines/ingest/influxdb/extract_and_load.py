@@ -6,6 +6,7 @@
 #     "humanize>=4.12.3,<4.13.0",
 #     "pandas>=2.2.3,<2.3.0",
 #     "pipelines-common",
+#     "psutil>=7.0.0,<7.1.0",
 #     "requests>=2.32.4,<2.33.0",
 # ]
 #
