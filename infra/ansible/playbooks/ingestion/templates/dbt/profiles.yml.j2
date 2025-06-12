@@ -9,5 +9,5 @@ isis_catalog:
       host: {{ top_level_domain }}
       port: {{ trino_https_port }}
       http_scheme: https
-      database: isis_lakekeeper
+      database: {{ lakekeeper_catalog.name }}
       schema: analytics
