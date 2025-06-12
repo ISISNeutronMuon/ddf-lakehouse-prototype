@@ -284,7 +284,6 @@ def get_channels_to_load(
     cli_args: List[str],
     influx: InfluxQuery,
     pipeline: dlt.Pipeline,
-    skip_existing: bool,
 ) -> Dict[str, List[str]]:
     """Determine which channels should be loaded, given the arguments from the cli.
 
@@ -294,35 +293,12 @@ def get_channels_to_load(
     :param cli_args: Arguments from the command line. These take precendence
     :param influx: InfluxQuery object
     :param pipeline: A dlt.Pipeline object that can query the destination
-    :param skip_existing: If true, filter out channels that already exist in the destination
     :return: A map of {schema_name: [channels]}. Schema name is defined as the string before the ::
     """
     if cli_args:
         channels_to_load = cli_args
     else:
         channels_to_load = influx.channel_names()
-
-    if skip_existing:
-        cli = cast(PyIcebergClient, pipeline.destination_client())
-        catalog = cli.iceberg_catalog
-        existing_channels = []
-        for table_id in filter(
-            lambda table_id: not table_id[1].startswith("_dlt_"),
-            catalog.list_tables(f"{pipeline.dataset_name}"),
-        ):
-            try:
-                table = catalog.load_table(table_id)
-                channel_name = str(
-                    table.scan(selected_fields=("channel",), limit=1).to_arrow()[
-                        "channel"
-                    ][0]
-                )
-                existing_channels.append(channel_name)
-            except Exception:
-                continue
-
-        LOGGER.info(f"Skipping {len(existing_channels)} existing channels: ")
-        channels_to_load = list(set(channels_to_load) - set(existing_channels))
 
     schema_to_channels: Dict[str, List[str]] = {}
     for channel in channels_to_load:
@@ -351,11 +327,6 @@ def parse_args() -> cli_utils.argparse.Namespace:
         default=[],
         help="A whitespace-separate list of channel names to load to the warehouse. By default all channels from the source will be loaded.",
     )
-    parser.add_argument(
-        "--skip-existing",
-        action="store_true",
-        help="If provided then don't query Influx for new data for channels that exist in the destination.",
-    )
 
     return parser.parse_args()
 
@@ -378,9 +349,7 @@ def main():
         dlt.config["influxdb.base_url"],
         dlt.secrets["influxdb.auth_token"],
     )
-    channels_to_load = get_channels_to_load(
-        args.channels, influx, pipeline, args.skip_existing
-    )
+    channels_to_load = get_channels_to_load(args.channels, influx, pipeline)
     if not channels_to_load:
         LOGGER.info("No channels have been found to load. Exiting.")
         return
