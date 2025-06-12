@@ -15,7 +15,7 @@
 from collections.abc import Generator
 import itertools
 import logging
-from typing import Any, Dict, List, Optional, Sequence, Tuple, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 import subprocess as subp
 import sys
 from zoneinfo import ZoneInfo
@@ -33,7 +33,10 @@ import requests
 import pipelines_common.cli as cli_utils
 import pipelines_common.logging as logging_utils
 import pipelines_common.pipeline as pipeline_utils
-from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import PyIcebergClient
+from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import (
+    pyiceberg_adapter,
+    pyiceberg_partition,
+)
 
 
 from pipelines_common.constants import (
@@ -191,11 +194,12 @@ def machinestate_source_factory(
                 )
             }
             table_name = channel_name
-            yield (
+            resource = (
                 influxdb_get_measurement(influx, channel_name, **time_args)
                 .with_name(table_name)
                 .apply_hints(table_name=table_name)
             )
+            yield pyiceberg_adapter(resource, pyiceberg_partition.year("time"))
 
     return machinestate()
 
