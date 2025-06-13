@@ -82,13 +82,16 @@ class InfluxQuery:
     def last_time(
         self,
         channel_name: str,
-    ) -> pendulum.DateTime:
+    ) -> pendulum.DateTime | None:
         query = f'SELECT LAST("value") FROM "{channel_name}"'
-        timestamp_us = self._query(query)["values"][0][0]
-        return pendulum.from_timestamp(
-            timestamp_us / MICROSECONDS_PER_SEC,
-            tz="UTC",
-        )
+        try:
+            timestamp_us = self._query(query)["values"][0][0]
+            return pendulum.from_timestamp(
+                timestamp_us / MICROSECONDS_PER_SEC,
+                tz="UTC",
+            )
+        except ValueError:
+            return None
 
     def select_channel(
         self,
@@ -180,7 +183,14 @@ def influxdb_measurement(influx: InfluxQuery, channel_name: str, full_load: bool
                 pass
 
     # Consume everything influx has by setting the end time just past the last time value.
-    time_end = next_microsecond(influx.last_time(channel_name))
+    last_time_influx = influx.last_time(channel_name)
+    if last_time_influx:
+        time_end = next_microsecond(last_time_influx)
+    else:
+        LOGGER.debug(
+            f"No last time value found for '{channel_name}'. Assuming no data available."
+        )
+        return None
     LOGGER.debug(
         f"Pulling measurement '{channel_name}' for time range [{time_start}, {time_end})"
     )
