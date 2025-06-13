@@ -15,7 +15,7 @@
 # ///
 import itertools
 import logging
-from multiprocessing import Process
+import multiprocessing as mp
 from typing import Any, List, Optional, Sequence, cast
 from zoneinfo import ZoneInfo
 
@@ -284,10 +284,13 @@ def main():
 
     # If run for a large number of channels then the memory of the main process can creep up.
     # Using subprocesses (but not in parallel) helps keep the memory under control.
+    mp.set_start_method("spawn")
     for channels_batch in itertools.batched(
         channels_to_load, dlt.config["influxdb.channels_per_subprocess"]
     ):
-        process = Process(target=run_pipeline, args=(cli_args, influx, channels_batch))
+        process = mp.Process(
+            target=run_pipeline, args=(cli_args, influx, channels_batch)
+        )
         process.start()
         process.join()
 
