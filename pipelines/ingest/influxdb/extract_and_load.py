@@ -215,11 +215,12 @@ def run_pipeline(
         destination=args.destination,
         progress=args.progress,
     )
-    LOGGER.info(f"-- Pipeline={pipeline.pipeline_name} --")
+    LOGGER.info(f"Pipeline:{pipeline.pipeline_name}")
     LOGGER.info(f"Loading {len(channels_to_load)} channels")
 
     elt_started_at = pendulum.now()
     for channel in channels_to_load:
+        LOGGER.info(f"Loading channel '{channel}'")
         pipeline.drop_pending_packages()
         resource = pyiceberg_adapter(
             influxdb_measurement(
@@ -236,7 +237,7 @@ def run_pipeline(
 
     elt_ended_at = pendulum.now()
     LOGGER.info(
-        f"ELT for {len(channels_to_load)} completed in {
+        f"ELT for {len(channels_to_load)} channels completed in {
             humanize.precisedelta(elt_ended_at - elt_started_at)
         }"
     )
