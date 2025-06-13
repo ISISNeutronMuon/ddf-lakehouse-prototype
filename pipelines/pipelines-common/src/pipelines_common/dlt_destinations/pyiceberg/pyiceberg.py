@@ -246,11 +246,19 @@ class PyIcebergClient(JobClientBase, WithStateSync):
             ("load_id", "_dlt_load_id", "pipeline_name", "status"),
         )
 
-        load_ids = loads_table_obj.scan(
-            row_filter=EqualTo(c_status, 0), selected_fields=(c_load_id,)
-        ).to_arrow()
         try:
-            latest_load_id = load_ids.sort_by([(c_load_id, "descending")]).to_pylist()[0][c_load_id]
+            load_ids = loads_table_obj.scan(
+                row_filter=EqualTo(c_status, 0), selected_fields=(c_load_id,)
+            ).to_arrow()
+            latest_load_id = (
+                load_ids.sort_by([(c_load_id, "descending")])
+                .slice(offset=1, length=1)[c_load_id]
+                .to_pylist()[0]
+            )
+        except IndexError as exc:
+            logger.debug(f"Error extracting data from loads table: {str(exc)}")
+            return None
+        try:
             states = state_table_obj.scan(
                 row_filter=And(
                     EqualTo(c_dlt_load_id, latest_load_id),
@@ -260,7 +268,7 @@ class PyIcebergClient(JobClientBase, WithStateSync):
 
             return StateInfo.from_normalized_mapping(states.to_pylist()[0], self.schema.naming)
         except IndexError as exc:
-            logger.debug(f"Error extracting data from state table: {str(exc)}")
+            logger.debug(f"Error extracting data from states table: {str(exc)}")
             # Table exists but there is no data
             return None
 
