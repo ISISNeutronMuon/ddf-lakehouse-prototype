@@ -212,7 +212,7 @@ def run_pipeline(
     for channel in channels_to_load:
         pipeline.drop_pending_packages()
         resource = pyiceberg_adapter(
-            influxdb_measurement(influx, channel),
+            influxdb_measurement(influx, channel).with_name(influx.bucket_name),
             partition=destination_partition_config(influx.bucket_name),
         )
         load_info = pipeline.run(
