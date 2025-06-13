@@ -162,7 +162,10 @@ def influxdb_measurement(influx: InfluxQuery, channel_name: str, full_load: bool
         if catalog.table_exists(table_id):
             table = catalog.load_table(table_id)
             df = (
-                table.scan(selected_fields=("channel", "time"))
+                table.scan(
+                    row_filter=f"channel == '{channel_name}'",
+                    selected_fields=("channel", "time"),
+                )
                 .to_arrow()
                 .sort_by([("time", "descending")])
             )
