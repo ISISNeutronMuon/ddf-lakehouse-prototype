@@ -164,9 +164,13 @@ def influxdb_measurement(influx: InfluxQuery, channel_name: str):
             .to_arrow()
             .sort_by([("time", "descending")])
         )
-        time_start = pendulum.instance(
-            df.slice(offset=0, length=1)["time"].to_pylist()[0]
-        )
+        try:
+            time_start = pendulum.instance(
+                df.slice(offset=0, length=1)["time"].to_pylist()[0]
+            )
+        except IndexError:
+            # No data in table
+            time_start = INFLUXDB_MACHINESTATE_BACKFILL_START
     else:
         time_start = INFLUXDB_MACHINESTATE_BACKFILL_START
 
