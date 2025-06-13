@@ -238,7 +238,7 @@ class PyIcebergClient(JobClientBase, WithStateSync):
             state_table_obj = self.load_table_from_name(self.schema.state_table_name)
             loads_table_obj = self.load_table_from_name(self.schema.loads_table_name)
         except DestinationUndefinedEntity as exc:
-            logger.debug(f"Unable to load stored state: {str(exc)}")
+            logger.debug(f"Unable to load stored state tables: {str(exc)}")
             return None
 
         c_load_id, c_dlt_load_id, c_pipeline_name, c_status = map(
@@ -259,7 +259,8 @@ class PyIcebergClient(JobClientBase, WithStateSync):
             ).to_arrow()
 
             return StateInfo.from_normalized_mapping(states.to_pylist()[0], self.schema.naming)
-        except IndexError:
+        except IndexError as exc:
+            logger.debug(f"Error extracting data from state table: {str(exc)}")
             # Table exists but there is no data
             return None
 
