@@ -139,7 +139,7 @@ class InfluxQuery:
 
 
 @dlt.resource()
-def influxdb_measurement(influx: InfluxQuery, channel_name: str):
+def influxdb_measurement(influx: InfluxQuery, channel_name: str, full_load: bool):
     """Load data for a given channel."""
 
     def next_chunk_start(ts: pendulum.DateTime) -> pendulum.DateTime:
@@ -150,29 +150,31 @@ def influxdb_measurement(influx: InfluxQuery, channel_name: str):
     def next_microsecond(ts: pendulum.DateTime) -> pendulum.DateTime:
         return (ts.add(microseconds=1)).astimezone(pendulum.UTC)
 
-    # The start time of the load is determined by checking the latest loaded value in the
-    # destination
-    current_pipeline = dlt.current.pipeline()
-    catalog = cast(
-        PyIcebergClient, current_pipeline.destination_client()
-    ).iceberg_catalog
-    table_id = (current_pipeline.dataset_name, influx.bucket_name)
-    if catalog.table_exists(table_id):
-        table = catalog.load_table(table_id)
-        df = (
-            table.scan(selected_fields=("channel", "time"))
-            .to_arrow()
-            .sort_by([("time", "descending")])
-        )
-        try:
-            time_start = next_microsecond(
-                pendulum.instance(df.slice(offset=0, length=1)["time"].to_pylist()[0])
+    # If a full load is not requested the start time of the load is determined by checking the
+    # latest loaded value in the destination
+    time_start = INFLUXDB_MACHINESTATE_BACKFILL_START
+    if not full_load:
+        current_pipeline = dlt.current.pipeline()
+        catalog = cast(
+            PyIcebergClient, current_pipeline.destination_client()
+        ).iceberg_catalog
+        table_id = (current_pipeline.dataset_name, influx.bucket_name)
+        if catalog.table_exists(table_id):
+            table = catalog.load_table(table_id)
+            df = (
+                table.scan(selected_fields=("channel", "time"))
+                .to_arrow()
+                .sort_by([("time", "descending")])
             )
-        except IndexError:
-            # No data in table
-            time_start = INFLUXDB_MACHINESTATE_BACKFILL_START
-    else:
-        time_start = INFLUXDB_MACHINESTATE_BACKFILL_START
+            try:
+                time_start = next_microsecond(
+                    pendulum.instance(
+                        df.slice(offset=0, length=1)["time"].to_pylist()[0]
+                    )
+                )
+            except IndexError:
+                # No data in table
+                pass
 
     # Consume everything influx has by setting the end time just past the last time value.
     time_end = next_microsecond(influx.last_time(channel_name))
@@ -218,7 +220,9 @@ def run_pipeline(
     for channel in channels_to_load:
         pipeline.drop_pending_packages()
         resource = pyiceberg_adapter(
-            influxdb_measurement(influx, channel).with_name(influx.bucket_name),
+            influxdb_measurement(
+                influx, channel, full_load=(args.write_disposition == "replace")
+            ).with_name(influx.bucket_name),
             partition=destination_partition_config(influx.bucket_name),
         )
         load_info = pipeline.run(
