@@ -187,7 +187,7 @@ def influxdb_measurement(influx: InfluxQuery, channel_name: str, full_load: bool
     if last_time_influx:
         time_end = next_microsecond(last_time_influx)
     else:
-        LOGGER.debug(
+        LOGGER.warning(
             f"No last time value found for '{channel_name}'. Assuming no data available."
         )
         return None
