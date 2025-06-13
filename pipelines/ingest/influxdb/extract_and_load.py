@@ -139,9 +139,7 @@ class InfluxQuery:
 
 
 @dlt.resource()
-def influxdb_measurement(
-    influx: InfluxQuery, channel_name: str, time_end: pendulum.DateTime | None
-):
+def influxdb_measurement(influx: InfluxQuery, channel_name: str):
     """Load data for a given channel."""
 
     def next_chunk_start(ts: pendulum.DateTime) -> pendulum.DateTime:
@@ -170,13 +168,8 @@ def influxdb_measurement(
     else:
         time_start = INFLUXDB_MACHINESTATE_BACKFILL_START
 
-    # Consume everything influx has by setting the end time just past the last time value if not told
-    # otherwise
-    time_end = (
-        time_end
-        if time_end is not None
-        else next_microsecond(influx.last_time(channel_name))
-    )
+    # Consume everything influx has by setting the end time just past the last time value.
+    time_end = next_microsecond(influx.last_time(channel_name))
     LOGGER.debug(
         f"Pulling measurement '{channel_name}' for time range [{time_start}, {time_end})"
     )
