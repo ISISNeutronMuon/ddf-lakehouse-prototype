@@ -237,7 +237,8 @@ class PyIcebergClient(JobClientBase, WithStateSync):
         try:
             state_table_obj = self.load_table_from_name(self.schema.state_table_name)
             loads_table_obj = self.load_table_from_name(self.schema.loads_table_name)
-        except DestinationUndefinedEntity:
+        except DestinationUndefinedEntity as exc:
+            logger.debug(f"Unable to load stored state: {str(exc)}")
             return None
 
         c_load_id, c_dlt_load_id, c_pipeline_name, c_status = map(
