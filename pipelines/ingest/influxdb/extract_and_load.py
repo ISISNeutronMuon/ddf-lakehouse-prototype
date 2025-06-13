@@ -13,18 +13,13 @@
 # [tool.uv.sources]
 # pipelines-common = { path = "../../pipelines-common" }
 # ///
-from collections.abc import Generator
 import itertools
 import logging
-from typing import Any, Dict, List, Optional, Sequence, Tuple
-import subprocess as subp
-import sys
+from multiprocessing import Process
+from typing import Any, List, Optional, Sequence, cast
 from zoneinfo import ZoneInfo
 
 import dlt
-from dlt.common.schema.typing import TWriteDispositionConfig
-from dlt.extract import DltResource
-from dlt.pipeline.exceptions import PipelineStepFailed
 
 import humanize
 import pandas as pd
@@ -34,9 +29,11 @@ import requests
 import pipelines_common.cli as cli_utils
 import pipelines_common.logging as logging_utils
 import pipelines_common.pipeline as pipeline_utils
+from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import PyIcebergClient
 from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import (
     pyiceberg_adapter,
     pyiceberg_partition,
+    PartitionTransformation,
 )
 
 
@@ -48,10 +45,8 @@ from pipelines_common.constants import (
 
 # Runtime
 LOGGER = logging.getLogger(__name__)
-PIPELINE_NAME = "influxdb"
 
 # Source
-DATASET_NAME = PIPELINE_NAME
 SCHEMA_NAME_DELIMITER = "::"
 INFLUXDB_MACHINESTATE_BACKFILL_START = pendulum.DateTime(
     2018, 1, 1, tzinfo=pendulum.UTC
@@ -73,6 +68,10 @@ class InfluxQuery:
         self._bucket_name = bucket_name
         self._base_url = base_url
         self._auth_token = auth_token
+
+    @property
+    def bucket_name(self) -> str:
+        return self._bucket_name
 
     def channel_names(self) -> List[str]:
         def flatten(nested):
@@ -125,7 +124,7 @@ class InfluxQuery:
             f"{self._base_url}/query",
             headers={"Authorization": f"Token {self._auth_token}"},
             params={
-                "db": self._bucket_name,
+                "db": self.bucket_name,
                 "epoch": MICROSECONDS_STR_INFLUX,
                 "q": query,
             },
@@ -140,10 +139,8 @@ class InfluxQuery:
 
 
 @dlt.resource()
-def influxdb_get_measurement(
-    influx: InfluxQuery,
-    channel_name: str,
-    time: dlt.sources.incremental = dlt.sources.incremental("time"),
+def influxdb_measurement(
+    influx: InfluxQuery, channel_name: str, time_end: pendulum.DateTime | None
 ):
     """Load data for a given channel."""
 
@@ -155,14 +152,29 @@ def influxdb_get_measurement(
     def next_microsecond(ts: pendulum.DateTime) -> pendulum.DateTime:
         return (ts.add(microseconds=1)).astimezone(pendulum.UTC)
 
-    # The start time of the load is determined through the dlt.incremental mechanism tracking the
-    # value of the last load. If no end time is specified the last time within Influx
-    # is queried and a microsecond is added to ensure we capture all values
+    # The start time of the load is determined by checking the latest loaded value in the
+    # destination
+    current_pipeline = dlt.current.pipeline()
+    catalog = cast(
+        PyIcebergClient, current_pipeline.destination_client()
+    ).iceberg_catalog
+    table_id = (current_pipeline.dataset_name, influx.bucket_name)
+    if catalog.table_exists(table_id):
+        table = catalog.load_table(table_id)
+        df = (
+            table.scan(selected_fields=("channel", "time"))
+            .to_arrow()
+            .sort_by([("time", "descending")])
+        )
+        time_start = pendulum.instance(df.slice(offset=0, length=1).to_pylist()["time"])
+    else:
+        time_start = INFLUXDB_MACHINESTATE_BACKFILL_START
 
-    time_start = time.start_value
+    # Consume everything influx has by setting the end time just past the last time value if not told
+    # otherwise
     time_end = (
-        time.end_value
-        if time.end_value is not None
+        time_end
+        if time_end is not None
         else next_microsecond(influx.last_time(channel_name))
     )
     LOGGER.debug(
@@ -178,105 +190,48 @@ def influxdb_get_measurement(
         chunk_end = min(next_chunk_start(chunk_end), time_end)
 
 
-def machinestate_source_factory(
-    schema_name: str,
-    channels: Sequence[str],
-    influx: InfluxQuery,
-    backfill_range: Tuple[pendulum.DateTime, Optional[pendulum.DateTime]],
-):
-    @dlt.source(name=schema_name, parallelized=True, max_table_nesting=0)
-    def machinestate() -> Generator[DltResource]:
-        time_end_value = backfill_range[1] if backfill_range[1] is not None else None
-        for channel_name in channels:
-            initial_time_value = backfill_range[0]
-            time_args = {
-                "time": dlt.sources.incremental(
-                    initial_value=initial_time_value, end_value=time_end_value
-                )
-            }
-            table_name = channel_name
-            resource = (
-                influxdb_get_measurement(influx, channel_name, **time_args)
-                .with_name(table_name)
-                .apply_hints(table_name=table_name)
-            )
-            yield pyiceberg_adapter(resource, pyiceberg_partition.year("time"))
-
-    return machinestate()
-
-
-def extract_and_load_machinestate(
-    pipeline: dlt.Pipeline,
-    influx: InfluxQuery,
-    schema_name: str,
-    channels: Sequence[str],
-    on_pipeline_step_failed: str,
-    write_disposition: TWriteDispositionConfig,
-):
-    """Extract and load the Influxdb machinestate channels to the destination
-
-    :param pipeline: A dlt.pipeline object configured with the appropriate destination
-    :param influx: An InfluxQuery instance
-    :param schema_name: The name of the source schema
-    :param channels: A list of channels to load.
-    :param on_pipeline_step_failed: What action to take on a pipeline step failure: options=(raise, log_and_continue)
-    """
-    load_info = None
-    try:
-        pipeline.drop_pending_packages()
-        load_info = pipeline.run(
-            machinestate_source_factory(
-                schema_name,
-                channels,
-                influx,
-                backfill_range=(INFLUXDB_MACHINESTATE_BACKFILL_START, None),
-            ),
-            loader_file_format=LOADER_FILE_FORMAT,
-            write_disposition=write_disposition,
+def destination_partition_config(
+    bucket_name: str,
+) -> List[str | PartitionTransformation]:
+    """Create a partition config for the destination based on the Influx bucket"""
+    if bucket_name == "machinestate":
+        return ["channel", pyiceberg_partition.year("time")]
+    else:
+        raise ValueError(
+            f"Partition configuration: Unknown bucket_name: '{bucket_name}'."
         )
-        LOGGER.debug(load_info)
-    except PipelineStepFailed as step_exc:
-        if on_pipeline_step_failed == "raise":
-            raise
-        else:
-            LOGGER.info(f"Pipeline step failed with error: {str(step_exc)}")
-            LOGGER.debug(f"  {str(step_exc.exception)}")
-
-            # If any packages failed to load we don't want to load them again.
-            pipeline.drop_pending_packages(with_partial_loads=True)
-
-    return load_info
 
 
 def run_pipeline(
-    pipeline: dlt.Pipeline,
+    args: cli_utils.argparse.Namespace,
     influx: InfluxQuery,
-    schema_name: str,
     channels_to_load: Sequence[str],
-    on_pipeline_step_failure: str,
-    write_disposition: TWriteDispositionConfig,
 ):
-    elt_started_at = pendulum.now()
+    pipeline = pipeline_utils.create_pipeline(
+        name="influxdb",
+        destination=args.destination,
+        progress=args.progress,
+    )
+    LOGGER.info(f"-- Pipeline={pipeline.pipeline_name} --")
+    LOGGER.info(f"Loading {len(channels_to_load)} channels")
 
-    for channels_batch in itertools.batched(
-        channels_to_load, dlt.config["influxdb.channel_batch_size"]
-    ):
-        load_info = extract_and_load_machinestate(
-            pipeline,
-            influx,
-            schema_name,
-            channels_batch,
-            on_pipeline_step_failure,
-            write_disposition,
+    elt_started_at = pendulum.now()
+    for channel in channels_to_load:
+        pipeline.drop_pending_packages()
+        resource = pyiceberg_adapter(
+            influxdb_measurement(influx, channel),
+            partition=destination_partition_config(influx.bucket_name),
         )
-        if load_info is not None:
-            if LOGGER.level == logging.DEBUG:
-                for load_id in load_info.loads_ids:
-                    LOGGER.debug(pipeline.get_load_package_info(load_id))
+        load_info = pipeline.run(
+            resource,
+            loader_file_format=LOADER_FILE_FORMAT,
+            write_disposition=args.write_disposition,
+        )
+        LOGGER.debug(load_info)
 
     elt_ended_at = pendulum.now()
     LOGGER.info(
-        f"ELT for schema {schema_name} completed in {
+        f"ELT for {len(channels_to_load)} completed in {
             humanize.precisedelta(elt_ended_at - elt_started_at)
         }"
     )
@@ -285,38 +240,17 @@ def run_pipeline(
 
 
 # ------------------------------------------------------------------------------
-def get_channels_to_load(
-    cli_args: List[str],
-    influx: InfluxQuery,
-    pipeline: dlt.Pipeline,
-) -> Dict[str, List[str]]:
+
+
+def get_channels_to_load(cli_args: List[str], influx: InfluxQuery) -> List[str]:
     """Determine which channels should be loaded, given the arguments from the cli.
 
-    The return value is a list of dictionaries where each item in the list contains
-    roughly the same number of channels. This aids batching up the loading process.
-
-    :param cli_args: Arguments from the command line. These take precendence
-    :param influx: InfluxQuery object
-    :param pipeline: A dlt.Pipeline object that can query the destination
-    :return: A map of {schema_name: [channels]}. Schema name is defined as the string before the ::
+    :param cli_args: Arguments from the command line. These take precendence.
+    :param influx: InfluxQuery object to query all of the available channels
+    :return: A list of channel names, sorted alphabetically.
     """
-    if cli_args:
-        channels_to_load = cli_args
-    else:
-        channels_to_load = influx.channel_names()
-
-    schema_to_channels: Dict[str, List[str]] = {}
-    for channel in channels_to_load:
-        if SCHEMA_NAME_DELIMITER not in channel:
-            LOGGER.warning(
-                f"Channel '{channel}' does not contain expected '{SCHEMA_NAME_DELIMITER}'. Skipping"
-            )
-            continue
-        schema_name = channel.split(SCHEMA_NAME_DELIMITER)[0]
-        channels = schema_to_channels.setdefault(schema_name, [])
-        channels.append(channel)
-
-    return schema_to_channels
+    channels = cli_args if cli_args else influx.channel_names()
+    return sorted(channels)
 
 
 def parse_args() -> cli_utils.argparse.Namespace:
@@ -337,75 +271,26 @@ def parse_args() -> cli_utils.argparse.Namespace:
 
 
 def main():
-    args = parse_args()
-    logging_utils.configure_logging(args.log_level, keep_records_from=["__main__"])
-
-    pipeline = pipeline_utils.create_pipeline(
-        name="influxdb",
-        dataset_name=pipeline_utils.source_dataset_name("influxdb_machinestate"),
-        destination=args.destination,
-        progress=args.progress,
-    )
-
-    LOGGER.info(f"-- Pipeline={pipeline.pipeline_name} --")
-
+    cli_args = parse_args()
+    logging_utils.configure_logging(cli_args.log_level, keep_records_from=["__main__"])
     influx = InfluxQuery(
         dlt.config["influxdb.bucket_name"],
         dlt.config["influxdb.base_url"],
         dlt.secrets["influxdb.auth_token"],
     )
-    channels_to_load = get_channels_to_load(args.channels, influx, pipeline)
+    channels_to_load = get_channels_to_load(cli_args.channels, influx)
     if not channels_to_load:
         LOGGER.info("No channels have been found to load. Exiting.")
         return
 
-    # If run for a large number of channels then the memory of the main
-    # process can creep up. Using subprocesses (but not in parallel)
-    # helps keep the memory under control
-    schemas_total_count = len(channels_to_load)
-    if schemas_total_count == 1:
-        schema_name, channels = channels_to_load.popitem()
-        LOGGER.info(
-            f"Running pipeline for {len(channels)} channel in schema '{schema_name}'"
-        )
-        run_pipeline(
-            pipeline,
-            influx,
-            schema_name,
-            channels,
-            args.on_pipeline_step_failure,
-            args.write_disposition,
-        )
-    else:
-        complete_elt_started_at = pendulum.now()
-        for schema_index, (schema_name, channels) in enumerate(
-            channels_to_load.items()
-        ):
-            LOGGER.info(
-                f"Starting subprocess for schema {schema_index + 1}/{schemas_total_count}"
-            )
-            cmd = [sys.executable, __file__]
-            # Pass all arguments from parent to child with exception of the channels list that we want to be smaller
-            cmd.extend(
-                filter(
-                    lambda x: (x != "--channels" and x not in args.channels),
-                    sys.argv[1:],
-                )
-            )
-            cmd.append("--channels")
-            cmd.extend(channels)
-            LOGGER.debug(f"Executing '{cmd}'")
-            subp.run(cmd, check=(args.on_pipeline_step_failure == "raise"))
-            LOGGER.info(
-                f"Completed subprocess {schema_index + 1}/{schemas_total_count}"
-            )
-
-        complete_elt_ended_at = pendulum.now()
-        LOGGER.info(
-            f"Complete ELT completed in {
-                humanize.precisedelta(complete_elt_ended_at - complete_elt_started_at)
-            }"
-        )
+    # If run for a large number of channels then the memory of the main process can creep up.
+    # Using subprocesses (but not in parallel) helps keep the memory under control.
+    for channels_batch in itertools.batched(
+        channels_to_load, dlt.config["influxdb.channels_per_subprocess"]
+    ):
+        process = Process(target=run_pipeline, args=(cli_args, influx, channels_batch))
+        process.start()
+        process.join()
 
 
 if __name__ == "__main__":

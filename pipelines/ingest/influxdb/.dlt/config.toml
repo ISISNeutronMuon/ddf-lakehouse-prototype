@@ -5,7 +5,7 @@ log_level = "WARNING"
 [influxdb]
 base_url = "http://192.168.42.241:8086"
 bucket_name = "machinestate"
-channel_batch_size = 3
+channels_per_subprocess = 1000
 
 [sources.data_writer]
 file_max_items = 100000
