@@ -208,6 +208,8 @@ def run_pipeline(
     influx: InfluxQuery,
     channels_to_load: Sequence[str],
 ):
+    logging_utils.configure_logging(args.log_level)
+
     pipeline = pipeline_utils.create_pipeline(
         name="influxdb",
         destination=args.destination,
