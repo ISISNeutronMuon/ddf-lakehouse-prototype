@@ -1,0 +1,35 @@
+---
+- name: Provision VM for Jaeger service
+  hosts: localhost
+  gather_facts: False
+  vars:
+    openstack_security_group_name: jaeger
+    openstack_security_group_description: Ingress to jaeger ports
+    openstack_security_group_rules:
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ jaeger_grpc_port }}"
+        port_range_max: "{{ jaeger_grpc_port }}"
+      - direction: ingress
+        ether_type: IPv4
+        protocol: tcp
+        port_range_min: "{{ jaeger_ui_port }}"
+        port_range_max: "{{ jaeger_ui_port }}"
+    openstack_flavor: l3.tiny
+    openstack_server_name: jaeger
+    openstack_security_groups: [default, "{{ openstack_security_group_name }}"]
+    inventory_group: jaeger
+  roles:
+    - role: security_group_create
+    - role: vm_create
+
+- import_playbook: ../inventory/inventory_persist.yml
+
+- name: (Re-)configure /etc/hosts across all nodes
+  hosts: all:!localhost
+  gather_facts: True
+  vars:
+    inventory_group: jaeger
+  tasks:
+    - ansible.builtin.include_tasks: ../../tasks/configure_etc_hosts.yml

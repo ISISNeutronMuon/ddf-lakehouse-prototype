@@ -1,0 +1,3 @@
+---
+jaeger_grpc_port: 4317
+jaeger_ui_port: 16686

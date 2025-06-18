@@ -9,3 +9,6 @@ http-server.process-forwarded=true
 
 http-server.authentication.type=PASSWORD
 internal-communication.shared-secret={{ trino_shared_secret }}
+
+tracing.enabled=true
+tracing.exporter.endpoint=http://jaeger:4317
