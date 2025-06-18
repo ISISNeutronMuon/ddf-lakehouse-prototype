@@ -1,0 +1,40 @@
+---
+- name: Ensure Jaeger directories exist
+  become: true
+  ansible.builtin.file:
+    path: "{{ jaeger_dir.path }}"
+    state: directory
+    mode: "u=rwx,g=rx,o=rx"
+    owner: "{{ jaeger_dir.owner }}"
+    group: "{{ jaeger_dir.group }}"
+  loop:
+    - { path: "{{ jaeger_data_path }}", owner: "10001", group: "10001" }
+    - { path: "{{ jaeger_config_path }}", owner: "root", group: "root" }
+  loop_control:
+    loop_var: jaeger_dir
+
+- name: Ensure Jaeger config files are present
+  become: true
+  ansible.posix.synchronize:
+    use_ssh_args: true
+    src: ./
+    dest: "{{ jaeger_config_path }}"
+    archive: false
+    recursive: true
+    delete: true
+
+- name: Ensure Jaeger container is running
+  become: true
+  community.docker.docker_container:
+    name: jaeger
+    image: "{{ jaeger_image }}"
+    command: ["--config", "/jaeger/config.yaml"]
+    state: started
+    detach: true
+    recreate: true
+    restart: true
+    restart_policy: unless-stopped
+    network_mode: host
+    volumes:
+      - "{{ jaeger_config_path }}/config-badger.yml:/jaeger/config.yaml"
+      - "{{ jaeger_data_path }}:/data"

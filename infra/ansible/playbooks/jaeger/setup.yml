@@ -7,20 +7,4 @@
       become: true
     - role: geerlingguy.docker
       become: true
-
-- name: Configure jaeger
-  hosts: jaeger
-  vars:
-    jaeger_image: jaegertracing/jaeger:2.7.0
-  tasks:
-    - name: Ensure Jaeger container is running
-      become: true
-      community.docker.docker_container:
-        name: jaeger
-        image: "{{ jaeger_image }}"
-        state: started
-        detach: true
-        recreate: true
-        restart: true
-        restart_policy: unless-stopped
-        network_mode: host
+    - role: jaeger

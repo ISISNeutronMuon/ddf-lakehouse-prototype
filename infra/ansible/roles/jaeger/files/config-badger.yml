@@ -1,0 +1,60 @@
+service:
+  extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [jaeger_storage_exporter]
+  telemetry:
+    resource:
+      service.name: jaeger
+    metrics:
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+    logs:
+      level: info
+    # TODO Initialize telemetry tracer once OTEL released new feature.
+    # https://github.com/open-telemetry/opentelemetry-collector/issues/10663
+
+extensions:
+  healthcheckv2:
+    use_v2: true
+    http:
+
+  jaeger_query:
+    storage:
+      traces: trace_store
+      traces_archive: trace_archive_store
+
+  jaeger_storage:
+    backends:
+      trace_store:
+        badger:
+          directories:
+            keys: "/data/badger/keys"
+            values: "/data/badger/values"
+          ephemeral: false
+      trace_archive_store:
+        badger:
+          directories:
+            keys: "/data/badger_archive/keys"
+            values: "/data/badger_archive/values"
+          ephemeral: false
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+processors:
+  batch:
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: trace_store

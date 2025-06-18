@@ -1,3 +1,5 @@
 ---
 jaeger_grpc_port: 4317
 jaeger_ui_port: 16686
+
+jaeger_data_path: "{{ cephfs_mount_mount_path }}/live/jaeger/data"

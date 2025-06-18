@@ -1,0 +1,4 @@
+---
+jaeger_config_path: /var/jaeger
+jaeger_data_path: /var/lib/jaeger/data
+jaeger_image: jaegertracing/jaeger:2.7.0
