@@ -21,7 +21,7 @@ chardet==5.2.0
     #   sqlfluff
 charset-normalizer==3.4.2
     # via requests
-click==8.2.1
+click==8.1.8
     # via
     #   dbt-core
     #   dbt-semantic-interfaces
@@ -52,6 +52,8 @@ deepdiff==7.0.1
     # via dbt-common
 diff-cover==9.3.2
     # via sqlfluff
+exceptiongroup==1.3.0
+    # via pytest
 idna==3.10
     # via requests
 importlib-metadata==6.11.0
@@ -82,7 +84,7 @@ leather==0.4.0
     # via agate
 markupsafe==3.0.2
     # via jinja2
-mashumaro==3.14
+mashumaro[msgpack]==3.14
     # via
     #   dbt-adapters
     #   dbt-common
@@ -91,7 +93,7 @@ more-itertools==10.7.0
     # via dbt-semantic-interfaces
 msgpack==1.1.0
     # via mashumaro
-networkx==3.5
+networkx==3.2.1
     # via dbt-core
 ordered-set==4.1.0
     # via deepdiff
@@ -178,6 +180,10 @@ tblib==3.1.0
     # via sqlfluff
 text-unidecode==1.3
     # via python-slugify
+toml==0.10.2
+    # via sqlfluff
+tomli==2.2.1
+    # via pytest
 tqdm==4.67.1
     # via sqlfluff
 typing-extensions==4.14.0
@@ -186,6 +192,7 @@ typing-extensions==4.14.0
     #   dbt-common
     #   dbt-core
     #   dbt-semantic-interfaces
+    #   exceptiongroup
     #   mashumaro
     #   pydantic
     #   pydantic-core
@@ -194,7 +201,7 @@ typing-extensions==4.14.0
     #   typing-inspection
 typing-inspection==0.4.1
     # via pydantic
-urllib3==2.4.0
+urllib3==2.5.0
     # via requests
 zipp==3.23.0
     # via importlib-metadata
