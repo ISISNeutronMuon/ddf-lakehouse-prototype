@@ -221,8 +221,6 @@ def run_pipeline(
     influx: InfluxQuery,
     channels_to_load: Sequence[str],
 ):
-    logging_utils.configure_logging(args.log_level)
-
     pipeline = pipeline_utils.create_pipeline(
         name="influxdb",
         destination=args.destination,
@@ -292,7 +290,7 @@ def parse_args() -> cli_utils.argparse.Namespace:
 
 def main():
     cli_args = parse_args()
-    logging_utils.configure_logging(cli_args.log_level, keep_records_from=["__main__"])
+    logging_utils.configure_logging(cli_args.log_level)
     influx = InfluxQuery(
         dlt.config["influxdb.bucket_name"],
         dlt.config["influxdb.base_url"],
@@ -303,19 +301,20 @@ def main():
         LOGGER.info("No channels have been found to load. Exiting.")
         return
 
-    # If run for a large number of channels then the memory of the main process can creep up.
-    # Using subprocesses (but not in parallel) helps keep the memory under control.
-    mp.set_start_method("spawn")
-    batches = list(
-        itertools.batched(
-            channels_to_load, dlt.config["influxdb.channels_per_subprocess"]
-        )
-    )
-    num_batches = len(batches)
-    with mp.Pool(1) as pool:
-        for index, channels_batch in enumerate(batches):
-            pool.apply(run_pipeline, args=(cli_args, influx, channels_batch))
-            LOGGER.info(f"Completed batch {index + 1}/{num_batches}")
+    run_pipeline(cli_args, influx, channels_to_load)
+    # # If run for a large number of channels then the memory of the main process can creep up.
+    # # Using subprocesses (but not in parallel) helps keep the memory under control.
+    # mp.set_start_method("spawn")
+    # batches = list(
+    #     itertools.batched(
+    #         channels_to_load, dlt.config["influxdb.channels_per_subprocess"]
+    #     )
+    # )
+    # num_batches = len(batches)
+    # with mp.Pool(1) as pool:
+    #     for index, channels_batch in enumerate(batches):
+    #         pool.apply(run_pipeline, args=(cli_args, influx, channels_batch))
+    #         LOGGER.info(f"Completed batch {index + 1}/{num_batches}")
 
 
 if __name__ == "__main__":
