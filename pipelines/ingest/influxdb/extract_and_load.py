@@ -221,19 +221,19 @@ def run_pipeline(
     influx: InfluxQuery,
     channels_to_load: Sequence[str],
 ):
-    pipeline_name = "influxdb"
-    LOGGER.info(f"Pipeline: {pipeline_name}")
+    logging_utils.configure_logging(args.log_level)
+
+    pipeline = pipeline_utils.create_pipeline(
+        name="influxdb",
+        destination=args.destination,
+        progress=args.progress,
+    )
+    LOGGER.info(f"Pipeline:{pipeline.pipeline_name}")
     LOGGER.info(f"Loading {len(channels_to_load)} channels")
 
-    num_channels = len(channels_to_load)
     elt_started_at = pendulum.now()
-    for index, channel in enumerate(channels_to_load):
-        LOGGER.info(f"Loading channel '{channel}' ({index + 1}/{num_channels})")
-        pipeline = pipeline_utils.create_pipeline(
-            name=pipeline_name,
-            destination=args.destination,
-            progress=args.progress,
-        )
+    for channel in channels_to_load:
+        LOGGER.info(f"Loading channel '{channel}'")
         pipeline.drop_pending_packages()
         resource = pyiceberg_adapter(
             influxdb_measurement(
@@ -247,8 +247,6 @@ def run_pipeline(
             write_disposition=args.write_disposition,
         )
         LOGGER.debug(load_info)
-        # Drop all resources
-        del pipeline
 
     elt_ended_at = pendulum.now()
     LOGGER.info(
@@ -293,7 +291,7 @@ def parse_args() -> cli_utils.argparse.Namespace:
 
 def main():
     cli_args = parse_args()
-    logging_utils.configure_logging(cli_args.log_level)
+    logging_utils.configure_logging(cli_args.log_level, keep_records_from=["__main__"])
     influx = InfluxQuery(
         dlt.config["influxdb.bucket_name"],
         dlt.config["influxdb.base_url"],
@@ -304,20 +302,18 @@ def main():
         LOGGER.info("No channels have been found to load. Exiting.")
         return
 
-    run_pipeline(cli_args, influx, channels_to_load)
-    # # If run for a large number of channels then the memory of the main process can creep up.
-    # # Using subprocesses (but not in parallel) helps keep the memory under control.
-    # mp.set_start_method("spawn")
-    # batches = list(
-    #     itertools.batched(
-    #         channels_to_load, dlt.config["influxdb.channels_per_subprocess"]
-    #     )
-    # )
-    # num_batches = len(batches)
-    # with mp.Pool(1) as pool:
-    #     for index, channels_batch in enumerate(batches):
-    #         pool.apply(run_pipeline, args=(cli_args, influx, channels_batch))
-    #         LOGGER.info(f"Completed batch {index + 1}/{num_batches}")
+    # If run for a large number of channels then the memory of the main process can creep up.
+    # Using subprocesses (but not in parallel) helps keep the memory under control.
+    mp.set_start_method("spawn")
+    for channels_batch in itertools.batched(
+        channels_to_load, dlt.config["influxdb.channels_per_subprocess"]
+    ):
+        process = mp.Process(
+            target=run_pipeline, args=(cli_args, influx, channels_batch)
+        )
+        process.start()
+        process.join()
+        process.close()
 
 
 if __name__ == "__main__":
