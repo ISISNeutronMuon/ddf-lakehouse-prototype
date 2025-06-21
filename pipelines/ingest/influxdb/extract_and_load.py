@@ -231,9 +231,10 @@ def run_pipeline(
     LOGGER.info(f"Pipeline:{pipeline.pipeline_name}")
     LOGGER.info(f"Loading {len(channels_to_load)} channels")
 
+    num_channels = len(channels_to_load)
     elt_started_at = pendulum.now()
-    for channel in channels_to_load:
-        LOGGER.info(f"Loading channel '{channel}'")
+    for index, channel in enumerate(channels_to_load):
+        LOGGER.info(f"Loading channel '{channel}' ({index + 1}/{num_channels})")
         pipeline.drop_pending_packages()
         resource = pyiceberg_adapter(
             influxdb_measurement(
@@ -305,14 +306,16 @@ def main():
     # If run for a large number of channels then the memory of the main process can creep up.
     # Using subprocesses (but not in parallel) helps keep the memory under control.
     mp.set_start_method("spawn")
-    for channels_batch in itertools.batched(
-        channels_to_load, dlt.config["influxdb.channels_per_subprocess"]
-    ):
-        process = mp.Process(
-            target=run_pipeline, args=(cli_args, influx, channels_batch)
+    batches = list(
+        itertools.batched(
+            channels_to_load, dlt.config["influxdb.channels_per_subprocess"]
         )
-        process.start()
-        process.join()
+    )
+    num_batches = len(batches)
+    with mp.Pool(1) as pool:
+        for index, channels_batch in enumerate(batches):
+            pool.apply(run_pipeline, args=(cli_args, influx, channels_batch))
+            LOGGER.info(f"Completed batch {index + 1}/{num_batches}")
 
 
 if __name__ == "__main__":
