@@ -221,18 +221,19 @@ def run_pipeline(
     influx: InfluxQuery,
     channels_to_load: Sequence[str],
 ):
-    pipeline = pipeline_utils.create_pipeline(
-        name="influxdb",
-        destination=args.destination,
-        progress=args.progress,
-    )
-    LOGGER.info(f"Pipeline:{pipeline.pipeline_name}")
+    pipeline_name = "influxdb"
+    LOGGER.info(f"Pipeline: {pipeline_name}")
     LOGGER.info(f"Loading {len(channels_to_load)} channels")
 
     num_channels = len(channels_to_load)
     elt_started_at = pendulum.now()
     for index, channel in enumerate(channels_to_load):
         LOGGER.info(f"Loading channel '{channel}' ({index + 1}/{num_channels})")
+        pipeline = pipeline_utils.create_pipeline(
+            name=pipeline_name,
+            destination=args.destination,
+            progress=args.progress,
+        )
         pipeline.drop_pending_packages()
         resource = pyiceberg_adapter(
             influxdb_measurement(
@@ -246,6 +247,8 @@ def run_pipeline(
             write_disposition=args.write_disposition,
         )
         LOGGER.debug(load_info)
+        # Drop all resources
+        del pipeline
 
     elt_ended_at = pendulum.now()
     LOGGER.info(
