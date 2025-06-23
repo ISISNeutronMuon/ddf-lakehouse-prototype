@@ -25,9 +25,9 @@
       LAKEKEEPER__PG_DATABASE_URL_READ="postgresql://{{ lakekeeper_store_user }}:{{ lakekeeper_store_passwd }}@postgres:5432/{{ lakekeeper_store_dbname }}"
       LAKEKEEPER__PG_DATABASE_URL_WRITE="postgresql://{{ lakekeeper_store_user }}:{{ lakekeeper_store_passwd }}@postgres:5432/{{ lakekeeper_store_dbname }}"
       LAKEKEEPER__OPENID_PROVIDER_URI="http://{{ top_level_domain }}/auth/realms/isis"
-      LAKEKEEPER__OPENID_AUDIENCE=lakekeeper
-      LAKEKEEPER__UI__OPENID_CLIENT_ID=lakekeeper
-      RUST_LOG=warn,iceberg_catalog=trace,iceberg_catalog_bin=trace,iceberg_ext=trace
+      LAKEKEEPER__OPENID_AUDIENCE="lakekeeper"
+      LAKEKEEPER__UI__OPENID_CLIENT_ID="lakekeeper"
+      RUST_LOG="error"
     networks:
       - name: "{{ lakekeeper_container_network }}"
     comparisons:
@@ -48,8 +48,6 @@
       - "{{ lakekeeper_http_port }}:8181"
     env:
       #
-      LAKEKEEPER__BASE_URI="https://{{ top_level_domain }}{{ lakekeeper_base_path }}"
-      LAKEKEEPER__UI__LAKEKEEPER_URL="https://{{ top_level_domain }}{{ lakekeeper_base_path }}"
       LAKEKEEPER__PG_ENCRYPTION_KEY="{{ lakekeeper_store_encryption_key }}"
       LAKEKEEPER__PG_DATABASE_URL_READ="postgresql://{{ lakekeeper_store_user }}:{{ lakekeeper_store_passwd }}@postgres:5432/{{ lakekeeper_store_dbname }}"
       LAKEKEEPER__PG_DATABASE_URL_WRITE="postgresql://{{ lakekeeper_store_user }}:{{ lakekeeper_store_passwd }}@postgres:5432/{{ lakekeeper_store_dbname }}"
@@ -57,7 +55,7 @@
       LAKEKEEPER__OPENID_AUDIENCE="lakekeeper"
       LAKEKEEPER__UI__OPENID_CLIENT_ID="lakekeeper"
       LAKEKEEPER__UI__OPENID_PROVIDER_URI="http://{{ top_level_domain }}/auth/realms/isis"
-      RUST_LOG="info,iceberg_catalog=info,iceberg_catalog_bin=info,iceberg_ext=info"
+      RUST_LOG="error"
     networks:
       - name: "{{ lakekeeper_container_network }}"
     comparisons:
