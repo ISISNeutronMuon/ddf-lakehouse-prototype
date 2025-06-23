@@ -108,8 +108,8 @@ AUTH_USER_REGISTRATION = True
 AUTH_ROLES_SYNC_AT_LOGIN = True
 AUTH_USER_REGISTRATION_ROLE_NAMES = [
     "Gamma",
-    "can read schema isis.analytics_facility",
-    "can read schema isis.analytics_accelerator",
+    "can_read_schema__isis.analytics_facility",
+    "can_read_schema__isis.analytics_accelerator",
     "sql_lab",
 ]
 AUTH_LDAP_FIRSTNAME_FIELD = "givenName"
