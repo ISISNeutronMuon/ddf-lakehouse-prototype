@@ -59,8 +59,6 @@ dogpile-cache==1.4.0
     # via openstacksdk
 filelock==3.18.0
     # via ansible-lint
-gnureadline==8.2.13
-    # via cmd2
 idna==3.10
     # via requests
 importlib-metadata==8.7.0
@@ -260,8 +258,6 @@ ruamel-yaml==0.18.14
     # via ansible-lint
 ruamel-yaml-clib==0.2.12
     # via ruamel-yaml
-setuptools==80.9.0
-    # via pbr
 six==1.17.0
     # via python-dateutil
 stevedore==5.4.1
@@ -288,7 +284,7 @@ tzdata==2025.2
     # via
     #   oslo-serialization
     #   oslo-utils
-urllib3==2.4.0
+urllib3==2.5.0
     # via requests
 wcmatch==10.0
     # via ansible-lint
