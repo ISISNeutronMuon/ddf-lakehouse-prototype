@@ -31,12 +31,12 @@
     mode: "u=r,o=,g="
   loop:
     - {
-        filename: "{{ traefik_certs_root }}/dataplatform_cert.pem",
-        content: "{{ vault_tls_domain_certificate_cert }}",
+        filename: "{{ traefik_certs_root }}/cert__data-accelerator_isis_cclrc_ac_uk.pem",
+        content: "{{ vault_tls_cert__data_accelerator_isis_cclrc_ac_uk }}",
       }
     - {
-        filename: "{{ traefik_certs_root }}/dataplatform_key.pem",
-        content: "{{ vault_tls_domain_certificate_private_key }}",
+        filename: "{{ traefik_certs_root }}/key__data-accelerator_isis_cclrc_ac_uk.pem",
+        content: "{{ vault_tls_key__data_accelerator_isis_cclrc_ac_uk }}",
       }
   loop_control:
     loop_var: traefik_tls
@@ -57,19 +57,21 @@
     cleanup: true
     detach: true
     restart: true
+    recreate: true
     restart_policy: unless-stopped
     network_mode: host
     mounts:
       - type: bind
-        source: "{{ traefik_certs_root }}/dataplatform_cert.pem"
-        target: /certs/dataplatform_cert.pem
+        source: "{{ traefik_certs_root }}/cert__data-accelerator_isis_cclrc_ac_uk.pem"
+        target: /certs/cert__data-accelerator_isis_cclrc_ac_uk.pem
         read_only: true
       - type: bind
-        source: "{{ traefik_certs_root }}/dataplatform_key.pem"
-        target: /certs/dataplatform_key.pem
+        source: "{{ traefik_certs_root }}/key__data-accelerator_isis_cclrc_ac_uk.pem"
+        target: /certs/key__data-accelerator_isis_cclrc_ac_uk.pem
         read_only: true
     volumes:
       - "{{ traefik_config_root }}/{{ traefik_etc_path_relative }}:/etc/traefik"
+      - "{{ traefik_certs_root }}:/certs"
       - "{{ traefik_config_root }}/logs/traefik:/var/log/traefik"
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/localtime:/etc/localtime:ro
