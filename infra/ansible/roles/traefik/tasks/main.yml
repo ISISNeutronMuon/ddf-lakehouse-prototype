@@ -38,6 +38,14 @@
         filename: "{{ traefik_certs_root }}/key__data-accelerator_isis_cclrc_ac_uk.pem",
         content: "{{ vault_tls_key__data_accelerator_isis_cclrc_ac_uk }}",
       }
+    - {
+        filename: "{{ traefik_certs_root }}/cert__analytics_isis_cclrc_ac_uk.pem",
+        content: "{{ vault_tls_cert__analytics_isis_cclrc_ac_uk }}",
+      }
+    - {
+        filename: "{{ traefik_certs_root }}/key__analytics_isis_cclrc_ac_uk.pem",
+        content: "{{ vault_tls_key__analytics_isis_cclrc_ac_uk }}",
+      }
   loop_control:
     loop_var: traefik_tls
 
@@ -68,6 +76,14 @@
       - type: bind
         source: "{{ traefik_certs_root }}/key__data-accelerator_isis_cclrc_ac_uk.pem"
         target: /certs/key__data-accelerator_isis_cclrc_ac_uk.pem
+        read_only: true
+      - type: bind
+        source: "{{ traefik_certs_root }}/cert__analytics_isis_cclrc_ac_uk.pem"
+        target: /certs/cert__analytics_isis_cclrc_ac_uk.pem
+        read_only: true
+      - type: bind
+        source: "{{ traefik_certs_root }}/key__analytics_isis_cclrc_ac_uk.pem"
+        target: /certs/key__analytics_isis_cclrc_ac_uk.pem
         read_only: true
     volumes:
       - "{{ traefik_config_root }}/{{ traefik_etc_path_relative }}:/etc/traefik"
