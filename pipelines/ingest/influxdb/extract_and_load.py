@@ -29,7 +29,10 @@ import requests
 import pipelines_common.cli as cli_utils
 import pipelines_common.logging as logging_utils
 import pipelines_common.pipeline as pipeline_utils
-from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import PyIcebergClient
+from pipelines_common.dlt_destinations.pyiceberg.pyiceberg import (
+    PyIcebergClient,
+    PyIcebergTable,
+)
 from pipelines_common.dlt_destinations.pyiceberg.pyiceberg_adapter import (
     pyiceberg_adapter,
     pyiceberg_partition,
@@ -141,6 +144,13 @@ class InfluxQuery:
             )
 
 
+def destination_table(pipeline: dlt.Pipeline, table_name: str) -> PyIcebergTable | None:
+    """Attempt to load a table from the destination catalog"""
+    catalog = cast(PyIcebergClient, pipeline.destination_client()).iceberg_catalog
+    table_id = (pipeline.dataset_name, table_name)
+    return catalog.load_table(table_id) if catalog.table_exists(table_id) else None
+
+
 @dlt.resource()
 def influxdb_measurement(influx: InfluxQuery, channel_name: str, full_load: bool):
     """Load data for a given channel."""
@@ -157,13 +167,8 @@ def influxdb_measurement(influx: InfluxQuery, channel_name: str, full_load: bool
     # latest loaded value in the destination
     time_start = INFLUXDB_MACHINESTATE_BACKFILL_START
     if not full_load:
-        current_pipeline = dlt.current.pipeline()
-        catalog = cast(
-            PyIcebergClient, current_pipeline.destination_client()
-        ).iceberg_catalog
-        table_id = (current_pipeline.dataset_name, influx.bucket_name)
-        if catalog.table_exists(table_id):
-            table = catalog.load_table(table_id)
+        table = destination_table(dlt.current.pipeline(), influx.bucket_name)
+        if table:
             df = (
                 table.scan(
                     row_filter=f"channel == '{channel_name}'",
@@ -216,18 +221,21 @@ def destination_partition_config(
         )
 
 
+def create_pipeline(args: cli_utils.argparse.Namespace):
+    return pipeline_utils.create_pipeline(
+        name="influxdb",
+        destination=args.destination,
+        progress=args.progress,
+    )
+
+
 def run_pipeline(
     args: cli_utils.argparse.Namespace,
     influx: InfluxQuery,
     channels_to_load: Sequence[str],
 ):
     logging_utils.configure_logging(args.log_level)
-
-    pipeline = pipeline_utils.create_pipeline(
-        name="influxdb",
-        destination=args.destination,
-        progress=args.progress,
-    )
+    pipeline = create_pipeline(args)
     LOGGER.info(f"Pipeline:{pipeline.pipeline_name}")
     LOGGER.info(f"Loading {len(channels_to_load)} channels")
 
@@ -261,15 +269,39 @@ def run_pipeline(
 # ------------------------------------------------------------------------------
 
 
-def get_channels_to_load(cli_args: List[str], influx: InfluxQuery) -> List[str]:
+def get_channels_to_load(
+    cli_args: List[str],
+    influx: InfluxQuery,
+    skip_existing: bool,
+    pipeline: dlt.Pipeline | None,
+) -> List[str]:
     """Determine which channels should be loaded, given the arguments from the cli.
 
     :param cli_args: Arguments from the command line. These take precendence.
     :param influx: InfluxQuery object to query all of the available channels
     :return: A list of channel names, sorted alphabetically.
     """
-    channels = cli_args if cli_args else influx.channel_names()
-    return sorted(channels)
+    channels = sorted(cli_args if cli_args else influx.channel_names())
+    if not skip_existing:
+        return channels
+
+    if not pipeline:
+        raise ValueError(
+            "get_channels_to_load: skip_existing requires the pipeline argument to be provided"
+        )
+
+    table = destination_table(pipeline, influx.bucket_name)
+    if not table:
+        return channels
+
+    # We rely on the partition spec having the channel as the first field...
+    if not table.spec().fields[0].name.startswith("channel"):
+        raise ValueError(
+            f"Expected table '{influx.bucket_name}' to have channel partition has the first partition field.\nFound {table.spec()}"
+        )
+    partition_info = table.inspect.partitions()
+    existing_channels = {str(partition[0]) for partition in partition_info["partition"]}
+    return list(set(channels) - existing_channels)
 
 
 def parse_args() -> cli_utils.argparse.Namespace:
@@ -285,6 +317,11 @@ def parse_args() -> cli_utils.argparse.Namespace:
         default=[],
         help="A whitespace-separate list of channel names to load to the warehouse. By default all channels from the source will be loaded.",
     )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip any channels that have records in the table already.",
+    )
 
     return parser.parse_args()
 
@@ -297,7 +334,12 @@ def main():
         dlt.config["influxdb.base_url"],
         dlt.secrets["influxdb.auth_token"],
     )
-    channels_to_load = get_channels_to_load(cli_args.channels, influx)
+    channels_to_load = get_channels_to_load(
+        cli_args.channels,
+        influx,
+        cli_args.skip_existing,
+        (create_pipeline(cli_args) if cli_args.skip_existing else None),
+    )
     if not channels_to_load:
         LOGGER.info("No channels have been found to load. Exiting.")
         return
