@@ -344,6 +344,7 @@ def main():
         LOGGER.info("No channels have been found to load. Exiting.")
         return
 
+    LOGGER.info(f"Found {len(channels_to_load)} channels to load")
     # If run for a large number of channels then the memory of the main process can creep up.
     # Using subprocesses (but not in parallel) helps keep the memory under control.
     mp.set_start_method("spawn")
