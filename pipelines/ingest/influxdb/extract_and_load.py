@@ -60,8 +60,18 @@ COLUMN_CHANNEL_NAME = "channel"
 LOADER_FILE_FORMAT = "parquet"
 
 
-def _to_utc_str(timestamp: pendulum.DateTime) -> str:
+def to_utc_str(timestamp: pendulum.DateTime) -> str:
     return timestamp.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def next_year(ts: pendulum.DateTime) -> pendulum.DateTime:
+    # A bug in Pendulum drops the timezone on addition with days:
+    # https://github.com/python-pendulum/pendulum/issues/669
+    return (ts.add(weeks=52)).astimezone(pendulum.UTC)
+
+
+def next_microsecond(ts: pendulum.DateTime) -> pendulum.DateTime:
+    return (ts.add(microseconds=1)).astimezone(pendulum.UTC)
 
 
 class InfluxQuery:
@@ -102,7 +112,7 @@ class InfluxQuery:
         time_start: pendulum.DateTime,
         time_end: pendulum.DateTime,
     ) -> Optional[pd.DataFrame]:
-        query_t0, query_t1 = _to_utc_str(time_start), _to_utc_str(time_end)
+        query_t0, query_t1 = to_utc_str(time_start), to_utc_str(time_end)
         query = f"SELECT \"value\" FROM \"{channel_name}\" WHERE time >= '{query_t0}' AND time < '{query_t1}'"
         try:
             series = self._query(query)
@@ -151,17 +161,8 @@ def destination_table(pipeline: dlt.Pipeline, table_name: str) -> PyIcebergTable
     return catalog.load_table(table_id) if catalog.table_exists(table_id) else None
 
 
-@dlt.resource()
 def influxdb_measurement(influx: InfluxQuery, channel_name: str, full_load: bool):
     """Load data for a given channel."""
-
-    def next_chunk_start(ts: pendulum.DateTime) -> pendulum.DateTime:
-        # A bug in Pendulum drops the timezone on addition with days:
-        # https://github.com/python-pendulum/pendulum/issues/669
-        return (ts.add(weeks=52)).astimezone(pendulum.UTC)
-
-    def next_microsecond(ts: pendulum.DateTime) -> pendulum.DateTime:
-        return (ts.add(microseconds=1)).astimezone(pendulum.UTC)
 
     # If a full load is not requested the start time of the load is determined by checking the
     # latest loaded value in the destination
@@ -200,13 +201,20 @@ def influxdb_measurement(influx: InfluxQuery, channel_name: str, full_load: bool
         f"Pulling measurement '{channel_name}' for time range [{time_start}, {time_end})"
     )
 
-    chunk_start, chunk_end = time_start, min(next_chunk_start(time_start), time_end)
+    chunk_start, chunk_end = time_start, min(next_year(time_start), time_end)
     while chunk_start < chunk_end:
         df = influx.select_channel(channel_name, chunk_start, chunk_end)
         yield df
         # next chunk
         chunk_start = chunk_end
-        chunk_end = min(next_chunk_start(chunk_end), time_end)
+        chunk_end = min(next_year(chunk_end), time_end)
+
+
+@dlt.resource()
+def influxdb_resource(influx: InfluxQuery, channel_names: List[str], full_load: bool):
+    for channel_name in channel_names:
+        LOGGER.info(f"Loading channel '{channel_name}'")
+        yield from influxdb_measurement(influx, channel_name, full_load)
 
 
 def destination_partition_config(
@@ -240,21 +248,22 @@ def run_pipeline(
     LOGGER.info(f"Loading {len(channels_to_load)} channels")
 
     elt_started_at = pendulum.now()
-    for channel in channels_to_load:
-        LOGGER.info(f"Loading channel '{channel}'")
-        pipeline.drop_pending_packages()
-        resource = pyiceberg_adapter(
-            influxdb_measurement(
-                influx, channel, full_load=(args.write_disposition == "replace")
-            ).with_name(influx.bucket_name),
-            partition=destination_partition_config(influx.bucket_name),
-        )
+    resource = pyiceberg_adapter(
+        influxdb_resource(
+            influx, channels_to_load, full_load=(args.write_disposition == "replace")
+        ).with_name(influx.bucket_name),
+        partition=destination_partition_config(influx.bucket_name),
+    )
+    try:
         load_info = pipeline.run(
             resource,
             loader_file_format=LOADER_FILE_FORMAT,
             write_disposition=args.write_disposition,
         )
         LOGGER.debug(load_info)
+    finally:
+        # Clean up anything for a fresh load next time
+        pipeline.drop_pending_packages()
 
     elt_ended_at = pendulum.now()
     LOGGER.info(
