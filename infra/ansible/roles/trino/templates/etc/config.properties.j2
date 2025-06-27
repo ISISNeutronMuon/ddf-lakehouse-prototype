@@ -1,5 +1,6 @@
 coordinator=true
 node-scheduler.include-coordinator=true
+
 catalog.management=static
 transaction.idle-timeout=8h
 
@@ -9,3 +10,5 @@ http-server.process-forwarded=true
 
 http-server.authentication.type=PASSWORD
 internal-communication.shared-secret={{ trino_shared_secret }}
+
+web-ui.preview.enabled=true
