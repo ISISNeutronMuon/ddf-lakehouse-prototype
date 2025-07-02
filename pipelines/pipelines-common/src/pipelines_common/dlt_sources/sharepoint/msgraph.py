@@ -62,6 +62,7 @@ class MSGraphV1:
         response.raise_for_status()
         return response.json()
 
+    # ----- private -----
     def _add_bearer_token_header(self, headers: Dict[str, str], token: str) -> Dict[str, str]:
         headers.update({"Authorization": f"Bearer {token}"})
         return headers
