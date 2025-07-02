@@ -1,7 +1,7 @@
-from pipelines_common.dlt_sources.sharepoint.msgraph import (
+from pipelines_common.sharepoint.msgraph import (
     MSGraphV1,
 )
-from pipelines_common.dlt_sources.sharepoint.sharepoint import SharePointSite
+from pipelines_common.sharepoint.sharepoint import SharePointSite
 
 import pytest
 from pytest_mock import MockerFixture
@@ -10,9 +10,7 @@ from pytest_mock import MockerFixture
 def test_sharepointsite_init_raises_error_request_raises_error(
     graph_client_with_access_token: MSGraphV1, mocker: MockerFixture
 ) -> None:
-    patched_requests_get = mocker.patch(
-        "pipelines_common.dlt_sources.sharepoint.sharepoint.requests.get"
-    )
+    patched_requests_get = mocker.patch("pipelines_common.sharepoint.sharepoint.requests.get")
     patched_requests_get.side_effect = RuntimeError("requests error")
 
     with pytest.raises(Exception) as excinfo:
@@ -28,12 +26,10 @@ def test_sharepointsite_init_stores_id_of_site(
     mock_id = f"{hostname},0000000-1111-2222-3333-444444444444,55555555-6666-7777-8888-99999999999"
 
     patched_requests_response = mocker.patch(
-        "pipelines_common.dlt_sources.sharepoint.sharepoint.requests.Response"
+        "pipelines_common.sharepoint.sharepoint.requests.Response"
     )
     patched_requests_response.json.return_value = {"id": mock_id}
-    patched_requests_get = mocker.patch(
-        "pipelines_common.dlt_sources.sharepoint.sharepoint.requests.get"
-    )
+    patched_requests_get = mocker.patch("pipelines_common.sharepoint.sharepoint.requests.get")
     patched_requests_get.return_value = patched_requests_response
 
     sp_site = SharePointSite(graph_client_with_access_token, hostname, relative_path)
@@ -55,11 +51,9 @@ def test_sharepoint_default_document_library_produces_drive_with_expected_id(
     )
     mock_drive_id = "K9z4mkx?yn:zIBXWxeAT%PiZKNg7-ZcycW81a4B%.I9DT%l}@8o5sGm',kdpr4L__nI"
     patched_requests_response = mocker.patch(
-        "pipelines_common.dlt_sources.sharepoint.sharepoint.requests.Response"
+        "pipelines_common.sharepoint.sharepoint.requests.Response"
     )
-    patched_requests_get = mocker.patch(
-        "pipelines_common.dlt_sources.sharepoint.sharepoint.requests.get"
-    )
+    patched_requests_get = mocker.patch("pipelines_common.sharepoint.sharepoint.requests.get")
 
     patched_requests_response.json.return_value = {"id": mock_site_id}
     patched_requests_get.return_value = patched_requests_response

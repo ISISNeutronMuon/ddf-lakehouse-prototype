@@ -1,7 +1,7 @@
 import pytest
 from pytest_mock import MockerFixture
 
-from pipelines_common.dlt_sources.sharepoint.msgraph import (
+from pipelines_common.sharepoint.msgraph import (
     MSGraphV1,
 )
 
@@ -34,7 +34,7 @@ def patch_msal_with_access_token(mocker: MockerFixture):
 
 def patch_msal_to_return(msal_response: dict, mocker: MockerFixture):
     patched_client_app = mocker.patch(
-        "pipelines_common.dlt_sources.sharepoint.msgraph.ConfidentialClientApplication"
+        "pipelines_common.sharepoint.msgraph.ConfidentialClientApplication"
     )
     patched_client_app.return_value.acquire_token_for_client.return_value = msal_response
 

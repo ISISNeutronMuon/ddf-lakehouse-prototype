@@ -1,11 +1,11 @@
-from pipelines_common.dlt_sources.sharepoint.msgraph import (
+from pipelines_common.sharepoint.msgraph import (
     MSGraphV1,
 )
 
 import pytest
 from pytest_mock import MockerFixture
 
-from unit_tests.dlt_sources.sharepoint.conftest import (
+from unit_tests.sharepoint.conftest import (
     MSGraphTestSettings,
     patch_msal_with_access_token,
     patch_msal_to_return,
@@ -53,7 +53,7 @@ def test_acquire_token_returns_access_token_from_response_if_exists(
 def test_get_prepends_api_url_to_endpoint(
     graph_client_with_access_token: MSGraphV1, mocker: MockerFixture
 ):
-    patched_requests = mocker.patch("pipelines_common.dlt_sources.sharepoint.msgraph.requests")
+    patched_requests = mocker.patch("pipelines_common.sharepoint.msgraph.requests")
 
     graph_client_with_access_token.get("sites/MySite")
 
