@@ -4,12 +4,12 @@ import requests
 from .msgraph import MSGraphV1
 
 
-class MSGraphAccessor:
+class _MSGraphAccessor:
     def __init__(self, graph_client: MSGraphV1) -> None:
         self.graph_client = graph_client
 
 
-class M365Drive(MSGraphAccessor):
+class M365Drive(_MSGraphAccessor):
     ENDPOINT: str = "drives"
 
     def __init__(self, graph_client: MSGraphV1, drive_id: str) -> None:
@@ -32,7 +32,7 @@ class M365Drive(MSGraphAccessor):
         return io.BytesIO(response.content)
 
 
-class SharePointSite(MSGraphAccessor):
+class SharePointSite(_MSGraphAccessor):
     ENDPOINT: str = "sites"
 
     def __init__(self, graph_client: MSGraphV1, hostname: str, relative_path: str) -> None:
