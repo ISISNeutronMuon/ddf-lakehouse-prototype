@@ -7,10 +7,19 @@ from pipelines_common.sharepoint.msgraph import (
 
 
 class MSGraphTestSettings:
-    TENANT_ID = "tenant1"
-    CLIENT_ID = "client1"
-    CLIENT_SECRET = "clients3cr3t"
-    ACCESS_TOKEN = "0987654321abcdefg"
+    TENANT_ID: str = "tenant1"
+    CLIENT_ID: str = "client1"
+    CLIENT_SECRET: str = "clients3cr3t"
+    ACCESS_TOKEN: str = "0987654321abcdefg"
+
+
+class SharePointTestSettings:
+    HOSTNAME: str = "site.domain.com"
+    SITE_PATH: str = "sites/MySite"
+    SITE_ID: str = (
+        f"{HOSTNAME},0000000-1111-2222-3333-444444444444,55555555-6666-7777-8888-99999999999"
+    )
+    DRIVE_ID: str = "K9z4mkx?yn:zIBXWxeAT%PiZKNg7-ZcycW81a4B%.I9DT%l}@8o5sGm',kdpr4L__nI"
 
 
 @pytest.fixture

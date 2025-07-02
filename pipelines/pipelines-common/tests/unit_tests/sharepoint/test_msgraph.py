@@ -4,6 +4,7 @@ from pipelines_common.sharepoint.msgraph import (
 
 import pytest
 from pytest_mock import MockerFixture
+from requests_mock.mocker import Mocker as RequestsMocker
 
 from unit_tests.sharepoint.conftest import (
     MSGraphTestSettings,
@@ -51,16 +52,13 @@ def test_acquire_token_returns_access_token_from_response_if_exists(
 
 
 def test_get_prepends_api_url_to_endpoint(
-    graph_client_with_access_token: MSGraphV1, mocker: MockerFixture
+    graph_client_with_access_token: MSGraphV1, requests_mock: RequestsMocker
 ):
-    patched_requests = mocker.patch("pipelines_common.sharepoint.msgraph.requests")
+    expected_url = f"{graph_client_with_access_token.api_url}/sites/MySite"
+    requests_mock.get(expected_url, json={"access_code": MSGraphTestSettings.ACCESS_TOKEN})
 
     graph_client_with_access_token.get("sites/MySite")
 
-    assert patched_requests.get.call_count == 1
-    assert (
-        patched_requests.get.call_args[0][0]
-        == f"{graph_client_with_access_token.api_url}/sites/MySite"
-    )
-    assert "headers" in patched_requests.get.call_args[1]
-    assert "Authorization" in patched_requests.get.call_args[1]["headers"]
+    assert requests_mock.call_count == 1
+    assert requests_mock.request_history[0].url == expected_url
+    assert "Authorization" in requests_mock.request_history[0].headers
