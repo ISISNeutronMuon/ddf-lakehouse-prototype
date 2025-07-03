@@ -7,6 +7,10 @@ import requests
 
 @dataclasses.dataclass
 class MSGraphV1:
+    class Key:
+        ID: str = "id"
+        DOWNLOADURL = "@microsoft.graph.downloadUrl"
+
     tenant_id: str
     client_id: str
     client_secret: str

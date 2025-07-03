@@ -21,6 +21,14 @@ class SharePointTestSettings:
     )
     DRIVE_ID: str = "K9z4mkx?yn:zIBXWxeAT%PiZKNg7-ZcycW81a4B%.I9DT%l}@8o5sGm',kdpr4L__nI"
 
+    @classmethod
+    def site_api_url(cls, graph_client: MSGraphV1) -> str:
+        return f"{graph_client.api_url}/sites/{cls.HOSTNAME}:/{cls.SITE_PATH}"
+
+    @classmethod
+    def site_library_item_api_url(cls, graph_client: MSGraphV1, relative_path: str) -> str:
+        return f"{graph_client.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive/root:/{relative_path}"
+
 
 @pytest.fixture
 def graph_client() -> MSGraphV1:
