@@ -4,7 +4,7 @@ import requests
 from pipelines_common.m365.msgraph import (
     MSGraphV1,
 )
-from pipelines_common.m365.sharepoint import SharePointSite
+from pipelines_common.m365.sharepoint import Site
 
 import pytest
 from requests_mock.mocker import Mocker as RequestsMocker
@@ -15,13 +15,13 @@ from unit_tests.m365.conftest import SharePointTestSettings
 @pytest.fixture
 def sharepoint_site(
     graph_client_with_access_token: MSGraphV1, requests_mock: RequestsMocker
-) -> SharePointSite:
+) -> Site:
     requests_mock.get(
         SharePointTestSettings.site_api_url(graph_client_with_access_token),
         json={MSGraphV1.Key.ID: SharePointTestSettings.SITE_ID},
     )
 
-    return SharePointSite(
+    return Site(
         graph_client_with_access_token,
         SharePointTestSettings.HOSTNAME,
         SharePointTestSettings.SITE_PATH,
@@ -34,19 +34,19 @@ def test_sharepointsite_init_raises_error_request_raises_error(
     requests_mock.get(re.compile(".*"), exc=requests.exceptions.InvalidURL)
 
     with pytest.raises(requests.exceptions.InvalidURL):
-        SharePointSite(
+        Site(
             graph_client_with_access_token,
             SharePointTestSettings.HOSTNAME,
             SharePointTestSettings.SITE_PATH,
         )
 
 
-def test_sharepointsite_init_stores_id_of_site(sharepoint_site: SharePointSite) -> None:
+def test_sharepointsite_init_stores_id_of_site(sharepoint_site: Site) -> None:
     assert sharepoint_site.id == SharePointTestSettings.SITE_ID
 
 
 def test_fetch_item_content_raises_exception_for_non_existant_file(
-    sharepoint_site: SharePointSite, requests_mock: RequestsMocker
+    sharepoint_site: Site, requests_mock: RequestsMocker
 ):
     non_existing_file_path = "NotAFolder/NotAFile.txt"
     requests_mock.get(
@@ -63,7 +63,7 @@ def test_fetch_item_content_raises_exception_for_non_existant_file(
 
 
 def test_fetch_item_content_retrieves_content_of_existing_file_from_download_url(
-    sharepoint_site: SharePointSite, requests_mock: RequestsMocker
+    sharepoint_site: Site, requests_mock: RequestsMocker
 ):
     existing_file_path, existing_file_content = "SubFolder/AFile.txt", b"some test file content"
     test_downloadurl = "https://test.download.com/34534efwef54"

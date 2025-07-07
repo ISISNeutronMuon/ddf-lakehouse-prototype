@@ -4,7 +4,7 @@ import requests
 from .msgraph import MSGraphV1
 
 
-class SharePointSite:
+class Site:
     ENDPOINT: str = "sites"
 
     def __init__(self, graph_client: MSGraphV1, hostname: str, relative_path: str) -> None:
