@@ -1,8 +1,8 @@
 import re
 import requests
 
-from pipelines_common.m365.msgraph import (
-    MSGraphV1,
+from pipelines_common.m365.graphapi import (
+    GraphClientV1,
 )
 from pipelines_common.m365.sharepoint import Site
 
@@ -14,11 +14,11 @@ from unit_tests.m365.conftest import SharePointTestSettings
 
 @pytest.fixture
 def sharepoint_site(
-    graph_client_with_access_token: MSGraphV1, requests_mock: RequestsMocker
+    graph_client_with_access_token: GraphClientV1, requests_mock: RequestsMocker
 ) -> Site:
     requests_mock.get(
         SharePointTestSettings.site_api_url(graph_client_with_access_token),
-        json={MSGraphV1.Key.ID: SharePointTestSettings.SITE_ID},
+        json={GraphClientV1.Key.ID: SharePointTestSettings.SITE_ID},
     )
 
     return Site(
@@ -29,7 +29,7 @@ def sharepoint_site(
 
 
 def test_sharepointsite_init_raises_error_request_raises_error(
-    graph_client_with_access_token: MSGraphV1, requests_mock: RequestsMocker
+    graph_client_with_access_token: GraphClientV1, requests_mock: RequestsMocker
 ) -> None:
     requests_mock.get(re.compile(".*"), exc=requests.exceptions.InvalidURL)
 
@@ -71,7 +71,7 @@ def test_fetch_item_content_retrieves_content_of_existing_file_from_download_url
         SharePointTestSettings.site_library_item_api_url(
             sharepoint_site.graph_client, existing_file_path
         ),
-        json={MSGraphV1.Key.DOWNLOADURL: test_downloadurl},
+        json={GraphClientV1.Key.DOWNLOADURL: test_downloadurl},
     )
     requests_mock.get(test_downloadurl, content=existing_file_content)
 

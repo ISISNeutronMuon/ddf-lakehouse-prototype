@@ -1,4 +1,4 @@
-from pipelines_common.m365.msgraph import MSGraphV1, MsalCredentials
+from pipelines_common.m365.graphapi import GraphClientV1, MsalCredentials
 
 import pytest
 from pytest_mock import MockerFixture
@@ -13,13 +13,13 @@ from unit_tests.m365.conftest import (
 
 def test_initialization_stores_credentials() -> None:
     credentials = MsalCredentials("ten1", "cli1", "s3c1")
-    graph_client = MSGraphV1(credentials)
+    graph_client = GraphClientV1(credentials)
 
     assert graph_client.credentials == credentials
 
 
 def test_acquire_token_raises_runtimeerror_when_error_in_response(
-    graph_client: MSGraphV1,
+    graph_client: GraphClientV1,
     mocker: MockerFixture,
 ) -> None:
     patch_msal_to_return(
@@ -37,7 +37,7 @@ def test_acquire_token_raises_runtimeerror_when_error_in_response(
 
 
 def test_acquire_token_returns_access_token_from_response_if_exists(
-    graph_client: MSGraphV1, mocker: MockerFixture
+    graph_client: GraphClientV1, mocker: MockerFixture
 ) -> None:
     patched_client_app = patch_msal_with_access_token(mocker)
 
@@ -48,7 +48,7 @@ def test_acquire_token_returns_access_token_from_response_if_exists(
 
 
 def test_get_prepends_api_url_to_endpoint(
-    graph_client_with_access_token: MSGraphV1, requests_mock: RequestsMocker
+    graph_client_with_access_token: GraphClientV1, requests_mock: RequestsMocker
 ):
     expected_url = f"{graph_client_with_access_token.api_url}/sites/MySite"
     requests_mock.get(expected_url, json={"access_code": MSGraphTestSettings.ACCESS_TOKEN})

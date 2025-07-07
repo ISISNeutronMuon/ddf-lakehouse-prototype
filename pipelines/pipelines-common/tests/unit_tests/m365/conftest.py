@@ -1,9 +1,9 @@
 import pytest
 from pytest_mock import MockerFixture
 
-from pipelines_common.m365.msgraph import (
+from pipelines_common.m365.graphapi import (
     MsalCredentials,
-    MSGraphV1,
+    GraphClientV1,
 )
 
 
@@ -23,17 +23,17 @@ class SharePointTestSettings:
     DRIVE_ID: str = "K9z4mkx?yn:zIBXWxeAT%PiZKNg7-ZcycW81a4B%.I9DT%l}@8o5sGm',kdpr4L__nI"
 
     @classmethod
-    def site_api_url(cls, graph_client: MSGraphV1) -> str:
+    def site_api_url(cls, graph_client: GraphClientV1) -> str:
         return f"{graph_client.api_url}/sites/{cls.HOSTNAME}:/{cls.SITE_PATH}"
 
     @classmethod
-    def site_library_item_api_url(cls, graph_client: MSGraphV1, relative_path: str) -> str:
+    def site_library_item_api_url(cls, graph_client: GraphClientV1, relative_path: str) -> str:
         return f"{graph_client.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive/root:/{relative_path}"
 
 
 @pytest.fixture
-def graph_client() -> MSGraphV1:
-    return MSGraphV1(
+def graph_client() -> GraphClientV1:
+    return GraphClientV1(
         MsalCredentials(
             MSGraphTestSettings.TENANT_ID,
             MSGraphTestSettings.CLIENT_ID,
@@ -43,7 +43,9 @@ def graph_client() -> MSGraphV1:
 
 
 @pytest.fixture
-def graph_client_with_access_token(graph_client: MSGraphV1, mocker: MockerFixture) -> MSGraphV1:
+def graph_client_with_access_token(
+    graph_client: GraphClientV1, mocker: MockerFixture
+) -> GraphClientV1:
     patch_msal_with_access_token(mocker)
     return graph_client
 
@@ -53,7 +55,9 @@ def patch_msal_with_access_token(mocker: MockerFixture):
 
 
 def patch_msal_to_return(msal_response: dict, mocker: MockerFixture):
-    patched_client_app = mocker.patch("pipelines_common.m365.msgraph.ConfidentialClientApplication")
+    patched_client_app = mocker.patch(
+        "pipelines_common.m365.graphapi.ConfidentialClientApplication"
+    )
     patched_client_app.return_value.acquire_token_for_client.return_value = msal_response
 
     return patched_client_app
