@@ -27,8 +27,14 @@ class SharePointTestSettings:
         return f"{graph_client.api_url}/sites/{cls.HOSTNAME}:/{cls.SITE_PATH}"
 
     @classmethod
+    def site_library_api_url(cls, graph_client: GraphClientV1) -> str:
+        return f"{graph_client.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive"
+
+    @classmethod
     def site_library_item_api_url(cls, graph_client: GraphClientV1, relative_path: str) -> str:
-        return f"{graph_client.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive/root:/{relative_path}"
+        return (
+            f"{graph_client.api_url}/drives/{SharePointTestSettings.DRIVE_ID}/root:/{relative_path}"
+        )
 
 
 @pytest.fixture
