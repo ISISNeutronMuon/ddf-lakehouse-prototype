@@ -18,10 +18,6 @@ class MsalCredentials:
 
 @dataclasses.dataclass
 class GraphClientV1:
-    class Key:
-        ID: str = "id"
-        DOWNLOADURL = "@microsoft.graph.downloadUrl"
-
     credentials: MsalCredentials
 
     @property
@@ -95,5 +91,5 @@ class GraphClientV1:
 
 @dataclasses.dataclass
 class GraphItem:
-    id: str
     graph_client: GraphClientV1
+    id: str

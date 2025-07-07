@@ -1,6 +1,3 @@
-import io
-import requests
-
 from .drive import Drive
 from .graphapi import GraphClientV1, GraphItem
 
@@ -10,15 +7,4 @@ class Site(GraphItem):
 
     def document_library(self) -> Drive:
         response = self.graph_client.get(f"{self.ENDPOINT}/{self.id}/drive")
-        return Drive(graph_client=self.graph_client, id=response[GraphClientV1.Key.ID])
-
-    def fetch_library_item_content(self, relative_path: str) -> io.BytesIO:
-        """Fetch the content of a file item on a given relative path to the sharepoint site library
-
-        :param relative_path: Path relative to the library root. The path will be url-encoded before being passsed to the graph API.
-        """
-        response = self.graph_client.get(f"{self.ENDPOINT}/{self.id}/drive/root:/{relative_path}")
-        download_url = response[GraphClientV1.Key.DOWNLOADURL]
-        response = requests.get(download_url)
-        response.raise_for_status()
-        return io.BytesIO(response.content)
+        return Drive(graph_client=self.graph_client, id=response["id"])

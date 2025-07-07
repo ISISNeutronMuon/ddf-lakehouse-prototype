@@ -20,7 +20,7 @@ class SharePointTestSettings:
     SITE_ID: str = (
         f"{HOSTNAME},0000000-1111-2222-3333-444444444444,55555555-6666-7777-8888-99999999999"
     )
-    DRIVE_ID: str = "K9z4mkx?yn:zIBXWxeAT%PiZKNg7-ZcycW81a4B%.I9DT%l}@8o5sGm',kdpr4L__nI"
+    LIBRARY_ID: str = "b!umnFmiec4Blh4I3Cv5be8uPs4IEW9cGoyL2iMLaafz2yjlrRtGbxqbR31mJiv5hCZfL"
 
     @classmethod
     def site_api_url(cls, graph_client: GraphClientV1) -> str:
@@ -30,15 +30,22 @@ class SharePointTestSettings:
     def site_library_api_url(cls, graph_client: GraphClientV1) -> str:
         return f"{graph_client.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive"
 
+
+class DriveTestSettings:
+    ID: str = "b!ejiYvIQW9PJmAu7cuils0N8UUvV7zURwlBMY4DJi1NRD58OMbRFXjb16RGKIn5ujQ"
+
     @classmethod
-    def site_library_item_api_url(cls, graph_client: GraphClientV1, relative_path: str) -> str:
-        return (
-            f"{graph_client.api_url}/drives/{SharePointTestSettings.DRIVE_ID}/root:/{relative_path}"
-        )
+    def root_api_url(cls, graph_client: GraphClientV1) -> str:
+        return f"{graph_client.api_url}/drives/{cls.ID}/root"
+
+    @classmethod
+    def item_api_url(cls, graph_client: GraphClientV1, file_path: str) -> str:
+        return f"{graph_client.api_url}/drives/{cls.ID}/root:/{file_path}"
 
 
 @pytest.fixture
-def graph_client() -> GraphClientV1:
+def graph_client(mocker: MockerFixture) -> GraphClientV1:
+    patch_msal_with_access_token(mocker)
     return GraphClientV1(
         MsalCredentials(
             MSGraphTestSettings.TENANT_ID,
@@ -46,14 +53,6 @@ def graph_client() -> GraphClientV1:
             MSGraphTestSettings.CLIENT_SECRET,
         )
     )
-
-
-@pytest.fixture
-def graph_client_with_access_token(
-    graph_client: GraphClientV1, mocker: MockerFixture
-) -> GraphClientV1:
-    patch_msal_with_access_token(mocker)
-    return graph_client
 
 
 def patch_msal_with_access_token(mocker: MockerFixture):
