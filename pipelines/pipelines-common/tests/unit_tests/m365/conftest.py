@@ -1,7 +1,8 @@
 import pytest
 from pytest_mock import MockerFixture
 
-from pipelines_common.sharepoint.msgraph import (
+from pipelines_common.m365.msgraph import (
+    MsalCredentials,
     MSGraphV1,
 )
 
@@ -33,9 +34,11 @@ class SharePointTestSettings:
 @pytest.fixture
 def graph_client() -> MSGraphV1:
     return MSGraphV1(
-        MSGraphTestSettings.TENANT_ID,
-        MSGraphTestSettings.CLIENT_ID,
-        MSGraphTestSettings.CLIENT_SECRET,
+        MsalCredentials(
+            MSGraphTestSettings.TENANT_ID,
+            MSGraphTestSettings.CLIENT_ID,
+            MSGraphTestSettings.CLIENT_SECRET,
+        )
     )
 
 
@@ -50,9 +53,7 @@ def patch_msal_with_access_token(mocker: MockerFixture):
 
 
 def patch_msal_to_return(msal_response: dict, mocker: MockerFixture):
-    patched_client_app = mocker.patch(
-        "pipelines_common.sharepoint.msgraph.ConfidentialClientApplication"
-    )
+    patched_client_app = mocker.patch("pipelines_common.m365.msgraph.ConfidentialClientApplication")
     patched_client_app.return_value.acquire_token_for_client.return_value = msal_response
 
     return patched_client_app

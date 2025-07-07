@@ -6,14 +6,19 @@ import requests
 
 
 @dataclasses.dataclass
+class MsalCredentials:
+    tenant_id: str
+    client_id: str
+    client_secret: str
+
+
+@dataclasses.dataclass
 class MSGraphV1:
     class Key:
         ID: str = "id"
         DOWNLOADURL = "@microsoft.graph.downloadUrl"
 
-    tenant_id: str
-    client_id: str
-    client_secret: str
+    credentials: MsalCredentials
 
     @property
     def base_url(self) -> str:
@@ -33,9 +38,9 @@ class MSGraphV1:
     def acquire_token(self) -> str:
         """Acquire token via MSAL library"""
         app = ConfidentialClientApplication(
-            authority=self.authority_url(self.tenant_id),
-            client_id=f"{self.client_id}",
-            client_credential=f"{self.client_secret}",
+            authority=self.authority_url(self.credentials.tenant_id),
+            client_id=f"{self.credentials.client_id}",
+            client_credential=f"{self.credentials.client_secret}",
         )
         response = app.acquire_token_for_client(scopes=[self.default_scope])
         if response:

@@ -1,25 +1,21 @@
-from pipelines_common.sharepoint.msgraph import (
-    MSGraphV1,
-)
+from pipelines_common.m365.msgraph import MSGraphV1, MsalCredentials
 
 import pytest
 from pytest_mock import MockerFixture
 from requests_mock.mocker import Mocker as RequestsMocker
 
-from unit_tests.sharepoint.conftest import (
+from unit_tests.m365.conftest import (
     MSGraphTestSettings,
     patch_msal_with_access_token,
     patch_msal_to_return,
 )
 
 
-def test_initialization_stores_variables_in_expected_fields() -> None:
-    tenant_id, client_id, client_secret = "ten1", "cli1", "s3c1"
-    graph_client = MSGraphV1(tenant_id, client_id, client_secret)
+def test_initialization_stores_credentials() -> None:
+    credentials = MsalCredentials("ten1", "cli1", "s3c1")
+    graph_client = MSGraphV1(credentials)
 
-    assert graph_client.tenant_id == tenant_id
-    assert graph_client.client_id == client_id
-    assert graph_client.client_secret == client_secret
+    assert graph_client.credentials == credentials
 
 
 def test_acquire_token_raises_runtimeerror_when_error_in_response(

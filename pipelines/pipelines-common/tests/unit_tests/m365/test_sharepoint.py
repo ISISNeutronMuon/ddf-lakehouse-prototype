@@ -1,15 +1,15 @@
 import re
 import requests
 
-from pipelines_common.sharepoint.msgraph import (
+from pipelines_common.m365.msgraph import (
     MSGraphV1,
 )
-from pipelines_common.sharepoint.sharepoint import SharePointSite
+from pipelines_common.m365.sharepoint import SharePointSite
 
 import pytest
 from requests_mock.mocker import Mocker as RequestsMocker
 
-from unit_tests.sharepoint.conftest import SharePointTestSettings
+from unit_tests.m365.conftest import SharePointTestSettings
 
 
 @pytest.fixture
