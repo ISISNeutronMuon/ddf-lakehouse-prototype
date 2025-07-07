@@ -1,20 +1,11 @@
 import io
 import requests
 
-from .graphapi import GraphClientV1
+from .graphapi import GraphClientV1, GraphItem
 
 
-class Site:
+class Site(GraphItem):
     ENDPOINT: str = "sites"
-
-    def __init__(self, graph_client: GraphClientV1, hostname: str, relative_path: str) -> None:
-        self.graph_client = graph_client
-        response = graph_client.get(f"{self.ENDPOINT}/{hostname}:/{relative_path}")
-        self._id = response[GraphClientV1.Key.ID]
-
-    @property
-    def id(self):
-        return self._id
 
     def fetch_library_item_content(self, relative_path: str) -> io.BytesIO:
         """Fetch the content of a file item on a given relative path to the sharepoint site library

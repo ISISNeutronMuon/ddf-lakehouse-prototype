@@ -1,7 +1,9 @@
+import re
 from pipelines_common.m365.graphapi import GraphClientV1, MsalCredentials
 
 import pytest
 from pytest_mock import MockerFixture
+import requests
 from requests_mock.mocker import Mocker as RequestsMocker
 
 from unit_tests.m365.conftest import (
@@ -9,6 +11,7 @@ from unit_tests.m365.conftest import (
     patch_msal_with_access_token,
     patch_msal_to_return,
 )
+from unit_tests.m365.conftest import SharePointTestSettings
 
 
 def test_initialization_stores_credentials() -> None:
@@ -58,3 +61,27 @@ def test_get_prepends_api_url_to_endpoint(
     assert requests_mock.call_count == 1
     assert requests_mock.request_history[0].url == expected_url
     assert "Authorization" in requests_mock.request_history[0].headers
+
+
+def test_site_raises_when_request_raises_error(
+    graph_client_with_access_token: GraphClientV1, requests_mock: RequestsMocker
+) -> None:
+    requests_mock.get(re.compile(".*"), exc=requests.exceptions.InvalidURL)
+
+    with pytest.raises(requests.exceptions.InvalidURL):
+        graph_client_with_access_token.site(weburl="https://name.host.com/sites/NotASite")
+
+
+def test_site_returns_site_instance_for_valid_url(
+    graph_client_with_access_token: GraphClientV1, requests_mock: RequestsMocker
+) -> None:
+    requests_mock.get(
+        SharePointTestSettings.site_api_url(graph_client_with_access_token),
+        json={GraphClientV1.Key.ID: SharePointTestSettings.SITE_ID},
+    )
+
+    site = graph_client_with_access_token.site(
+        weburl=f"https://{SharePointTestSettings.HOSTNAME}/{SharePointTestSettings.SITE_PATH}"
+    )
+
+    assert site.id == SharePointTestSettings.SITE_ID

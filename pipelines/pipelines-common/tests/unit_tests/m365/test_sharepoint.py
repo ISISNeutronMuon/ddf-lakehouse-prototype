@@ -1,44 +1,18 @@
-import re
-import requests
-
 from pipelines_common.m365.graphapi import (
     GraphClientV1,
 )
 from pipelines_common.m365.sharepoint import Site
 
 import pytest
+import requests
 from requests_mock.mocker import Mocker as RequestsMocker
 
 from unit_tests.m365.conftest import SharePointTestSettings
 
 
 @pytest.fixture
-def sharepoint_site(
-    graph_client_with_access_token: GraphClientV1, requests_mock: RequestsMocker
-) -> Site:
-    requests_mock.get(
-        SharePointTestSettings.site_api_url(graph_client_with_access_token),
-        json={GraphClientV1.Key.ID: SharePointTestSettings.SITE_ID},
-    )
-
-    return Site(
-        graph_client_with_access_token,
-        SharePointTestSettings.HOSTNAME,
-        SharePointTestSettings.SITE_PATH,
-    )
-
-
-def test_sharepointsite_init_raises_error_request_raises_error(
-    graph_client_with_access_token: GraphClientV1, requests_mock: RequestsMocker
-) -> None:
-    requests_mock.get(re.compile(".*"), exc=requests.exceptions.InvalidURL)
-
-    with pytest.raises(requests.exceptions.InvalidURL):
-        Site(
-            graph_client_with_access_token,
-            SharePointTestSettings.HOSTNAME,
-            SharePointTestSettings.SITE_PATH,
-        )
+def sharepoint_site(graph_client_with_access_token: GraphClientV1) -> Site:
+    return Site(graph_client=graph_client_with_access_token, id=SharePointTestSettings.SITE_ID)
 
 
 def test_sharepointsite_init_stores_id_of_site(sharepoint_site: Site) -> None:
