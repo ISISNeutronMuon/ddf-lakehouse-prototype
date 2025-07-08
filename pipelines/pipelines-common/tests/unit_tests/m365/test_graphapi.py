@@ -76,7 +76,7 @@ def test_site_returns_site_instance_for_valid_url(
     graph_client: GraphClientV1, requests_mock: RequestsMocker
 ) -> None:
     requests_mock.get(
-        SharePointTestSettings.site_api_url(graph_client),
+        SharePointTestSettings.site_api_url(),
         json={"id": SharePointTestSettings.SITE_ID},
     )
 

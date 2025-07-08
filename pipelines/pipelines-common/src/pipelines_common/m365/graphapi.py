@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Dict, TYPE_CHECKING
+from typing import Any, ClassVar, Dict, TYPE_CHECKING
 import urllib.parse as urlparser
 
 from msal import ConfidentialClientApplication
@@ -18,19 +18,13 @@ class MsalCredentials:
 
 @dataclasses.dataclass
 class GraphClientV1:
+    # Constants
+    base_url: ClassVar[str] = "https://graph.microsoft.com"
+    api_url: ClassVar[str] = f"{base_url}/v1.0"
+    default_scope: ClassVar[str] = f"{base_url}/.default"
+
+    # Instance variables
     credentials: MsalCredentials
-
-    @property
-    def base_url(self) -> str:
-        return "https://graph.microsoft.com"
-
-    @property
-    def api_url(self) -> str:
-        return f"{self.base_url}/v1.0"
-
-    @property
-    def default_scope(self) -> str:
-        return f"{self.base_url}/.default"
 
     def authority_url(self, tenant_id: str) -> str:
         return f"https://login.microsoftonline.com/{tenant_id}"

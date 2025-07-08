@@ -1,5 +1,7 @@
 """Reads files from a SharePoint documents library"""
 
+from typing import Iterator, List
+
 import dlt
 from dlt.extract import decorators
 
@@ -7,8 +9,7 @@ from dlt.common.configuration.specs import configspec
 from dlt.common.typing import TSecretStrValue
 
 from pipelines_common.m365.graphapi import GraphClientV1, MsalCredentials
-from pipelines_common.m365.drive import DriveItem as M365DriveItem
-from pipelines_common.m365.sharepoint import Site as SharePointSite
+from pipelines_common.m365.drive import DriveFileItem as M365DriveFileItem
 
 
 @configspec
@@ -28,22 +29,22 @@ class MsalCredentialsResource:
 # transformer
 @decorators.resource(standalone=True)
 def sharepoint(
-    hostname: str = dlt.config.value,
-    site_path: str = dlt.config.value,
+    site_url: str = dlt.config.value,
     credentials: MsalCredentialsResource = dlt.secrets.value,
     file_glob: str = dlt.config.value,
-):
+) -> Iterator[List[M365DriveFileItem]]:
     """A dlt resource to pull files stored in a SharePoint document library.
 
-    :param hostname: The hostname portion of the SharePoint site
-    :param site_path: The site path relative to the root of the hostname
+    :param site_url: The absolute url to the main page of the SharePoint site
     :param file_glob: A glob pattern, relative to the site's document library root.
                        For example, if a file called 'file_to_ingest.csv' exists in the "Documents"
                        library in folder 'incoming' then the file_path would be 'incoming/file_to_ingest.csv'
     :return: List[DltResource]: A list of DriveItems representing the file
     """
-    return None
-    # graph_client = GraphClientV1(credentials=credentials.as_msal())
-    # site = SharePointSite(graph_client, hostname, site_path)
+    if any(char in file_glob for char in ("*", "?", "[")):
+        raise NotImplementedError("Glob syntax not implmented...")
 
-    # return [M365DriveItem("DummyValue", "DummyValue", "DummyValue", b"DummyValue")]
+    graph_client = GraphClientV1(credentials=credentials.as_msal())
+    site = graph_client.site(site_url)
+
+    yield [site.document_library().root().get_file(file_glob)]

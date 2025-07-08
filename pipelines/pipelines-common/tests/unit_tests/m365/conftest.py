@@ -23,12 +23,12 @@ class SharePointTestSettings:
     LIBRARY_ID: str = "b!umnFmiec4Blh4I3Cv5be8uPs4IEW9cGoyL2iMLaafz2yjlrRtGbxqbR31mJiv5hCZfL"
 
     @classmethod
-    def site_api_url(cls, graph_client: GraphClientV1) -> str:
-        return f"{graph_client.api_url}/sites/{cls.HOSTNAME}:/{cls.SITE_PATH}"
+    def site_api_url(cls) -> str:
+        return f"{GraphClientV1.api_url}/sites/{cls.HOSTNAME}:/{cls.SITE_PATH}"
 
     @classmethod
-    def site_library_api_url(cls, graph_client: GraphClientV1) -> str:
-        return f"{graph_client.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive"
+    def site_library_api_url(cls) -> str:
+        return f"{GraphClientV1.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive"
 
 
 class DriveTestSettings:
