@@ -47,7 +47,7 @@ def test_drive_folder_get_file_raises_requests_exception_error_if_path_does_not_
 
 def test_drive_folder_get_file_raises_value_error_if_path_exists_but_is_folder(
     drive_root: DriveFolderItem, requests_mock: RequestsMocker
-):
+) -> None:
     folder_path = "FolderA"
     requests_mock.get(
         DriveTestSettings.item_api_url(drive_root.graph_client, folder_path),
@@ -58,6 +58,38 @@ def test_drive_folder_get_file_raises_value_error_if_path_exists_but_is_folder(
         drive_root.get_file(folder_path)
 
     assert "but is a folder" in str(exc)
+
+
+def test_drive_folder_get_file_returns_file_item_when_it_exists(
+    drive_root: DriveFolderItem, requests_mock: RequestsMocker
+) -> None:
+    folder, file_name = "Folder", "report.csv"
+    file_path = f"{folder}/{file_name}"
+    download_url = "https://download.domain.com/468hhnce1047tsh0503856583"
+    requests_mock.get(
+        DriveTestSettings.item_api_url(drive_root.graph_client, file_path),
+        json={
+            "id": "LKTRFZXCVBOYITUYRHERSG9384",
+            "name": file_name,
+            "@microsoft.graph.downloadUrl": download_url,
+        },
+    )
+
+    drive_item = drive_root.get_file(file_path)
+
+    assert isinstance(drive_item, DriveFileItem)
+    assert drive_item.drive_id == DriveTestSettings.ID
+    assert drive_item.name == file_name
+    assert drive_item.download_url == download_url
+
+    # Success if the download url is available
+    file_content = b"colA,colB\n1,2"
+    requests_mock.get(download_url, content=file_content)
+    assert drive_item.content == file_content
+
+    requests_mock.get(download_url, status_code=401)
+    with pytest.raises(requests.exceptions.HTTPError):
+        drive_item.content
 
 
 # def test_drive_folder_glob_returns_expected_files(

@@ -66,9 +66,9 @@ def test_get_includes_auth_token(graph_client: GraphClientV1, requests_mock: Req
 def test_site_raises_when_request_raises_error(
     graph_client: GraphClientV1, requests_mock: RequestsMocker
 ) -> None:
-    requests_mock.get(re.compile(".*"), exc=requests.exceptions.InvalidURL)
+    requests_mock.get(re.compile(".*"), status_code=404)
 
-    with pytest.raises(requests.exceptions.InvalidURL):
+    with pytest.raises(requests.exceptions.HTTPError):
         graph_client.site(weburl="https://name.host.com/sites/NotASite")
 
 

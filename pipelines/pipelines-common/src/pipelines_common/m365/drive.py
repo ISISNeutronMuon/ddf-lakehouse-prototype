@@ -1,10 +1,8 @@
-import io
 from dataclasses import dataclass
-from typing import List
 
 import requests
 
-from .graphapi import GraphClientV1, GraphItem
+from .graphapi import GraphItem
 
 
 @dataclass
@@ -13,10 +11,18 @@ class DriveItem(GraphItem):
     name: str
 
 
+@dataclass
 class DriveFileItem(DriveItem):
     """Represents a single M365 file item with downloadable content"""
 
-    pass
+    download_url: str
+
+    @property
+    def content(self) -> bytes:
+        """Fetch the content from the pre-authenticated download url"""
+        response = requests.get(self.download_url)
+        response.raise_for_status()
+        return response.content
 
 
 class DriveFolderItem(DriveItem):
@@ -25,7 +31,7 @@ class DriveFolderItem(DriveItem):
     def get_file(self, file_path: str) -> DriveFileItem:
         """Return a single file item representing the file at the path relatieve to the drive root
 
-        :param file_path: _description_
+        :param file_path: Path to the file to retrieve
         :return: A DriveFileItem or raises
             - a requests.exception.RequestsException if the file could not be retrieved
             - a ValueError if the file_path exists but is a folder
@@ -36,7 +42,8 @@ class DriveFolderItem(DriveItem):
                 graph_client=self.graph_client,
                 id=response_json["id"],
                 drive_id=self.drive_id,
-                name=file_path,
+                name=response_json["name"],
+                download_url=response_json["@microsoft.graph.downloadUrl"],
             )
         else:
             raise ValueError(f"Path '{file_path}' exists but is a folder.")
