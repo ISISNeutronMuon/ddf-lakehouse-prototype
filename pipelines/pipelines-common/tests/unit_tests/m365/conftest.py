@@ -1,11 +1,12 @@
 import itertools
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List
 
 import pytest
 from pytest_mock import MockerFixture
 from requests_mock.mocker import Mocker as RequestsMocker
 
+from pipelines_common.m365.drive import Drive
 from pipelines_common.m365.graphapi import (
     MsalCredentials,
     GraphClientV1,
@@ -60,46 +61,111 @@ class SharePointTestSettings:
 
 class DriveTestSettings:
     ID: str = "b!ejiYvIQW9PJmAu7cuils0N8UUvV7zURwlBMY4DJi1NRD58OMbRFXjb16RGKIn5ujQ"
+    DOWNLOAD_BASE_URL: str = "https://example.file.download.url"
 
     @classmethod
     def root_api_url(cls) -> str:
-        return f"{GraphClientV1.api_url}/drives/{cls.ID}/root"
+        return f"{GraphClientV1.api_url}/drives/{cls.ID}/root?$select={','.join(Drive.FOLDER_SELECT_ATTRS)}"
 
     @classmethod
-    def item_api_url(cls, path: str, *, select=None) -> str:
-        select = select if select is not None else ["id"]
+    def item_api_url(cls, path: str, is_file: bool) -> str:
+        select = Drive.FILE_SELECT_ATTRS if is_file else Drive.FOLDER_SELECT_ATTRS
         return f"{GraphClientV1.api_url}/drives/{cls.ID}/root:/{path}?$select={','.join(select)}"
 
-    @classmethod
+    def __init__(self, glob_pattern: str, expected_matching_files: List[str]) -> None:
+        self.glob_pattern = glob_pattern
+        self.expected_matching_files = expected_matching_files
+
+    @property
+    def name(self) -> str:
+        return self.glob_pattern
+
     def mock_requests_for_driveitem_children(
-        cls,
-        parent_id: str,
-        requests_mock: RequestsMocker,
-    ) -> List[Dict[str, Any]]:
-        children = [{"id": "dir1", "name": "DirectoryName", "folder": {}}]
-        # add a mix of file types
-        csv_files = [f"{file_num}.csv" for file_num in range(3)]
-        docx_files = [f"{file_num}.docx" for file_num in range(3)]
-        download_base_url = "https://example.file.download.url"
-        children.extend(
-            [
-                {
-                    "id": f"file{index}",
-                    "name": filename,
-                    "@microsoft.graph.downloadUrl": f"{download_base_url}/{filename}",
-                    "file": {},
-                }
-                for index, filename in enumerate(itertools.chain(csv_files, docx_files))
+        self, requests_mock: RequestsMocker, root_id: str
+    ) -> List[str]:
+        # We create a fake directory structure:
+        #  - subdir-0/
+        #    |- subsubdir-0/
+        #       |- subsubdir-0-0.csv
+        #       |- subsubdir-0-1.csv
+        #       |- subsubdir-0-0.docx
+        #       |- subsubdir-0-1.docx
+        #    |- subdir-0-0.csv
+        #    |- subdir-0-1.csv
+        #    |- subdir-0-0.docx
+        #    |- subdir-0-1.docx
+        #  - subdir-1/
+        #  - root-0.csv
+        #  - root-1.csv
+        #  - root-1.docx
+        #  - root-1.docx
+        def create_dirs_json(prefix: str, num: int):
+            return [
+                {"id": f"{prefix}-{i}", "name": f"{prefix}-{i}", "folder": {}} for i in range(num)
             ]
+
+        def create_files_json(requests_mock: RequestsMocker, prefix: str, ext: str, num: int):
+            resp = []
+            for i in range(num):
+                name = f"{prefix}-{i}{ext}"
+                download_url = f"{self.DOWNLOAD_BASE_URL}/{name}"
+                requests_mock.get(download_url, content=name.encode())
+                resp.append(
+                    {
+                        "id": name,
+                        "name": name,
+                        "file": {},
+                        "@microsoft.graph.downloadUrl": download_url,
+                    }
+                )
+            return resp
+
+        # 2 top-level directories & 4 top-level files
+        requests_mock.get(
+            f"{GraphClientV1.api_url}/drives/{self.ID}/items/{root_id}/children",
+            json={
+                "value": list(
+                    itertools.chain(
+                        create_dirs_json("subdir", num=1),
+                        create_files_json(requests_mock, "root", ".csv", num=2),
+                        create_files_json(requests_mock, "root", ".docx", num=2),
+                    )
+                )
+            },
+        )
+        # subdir-0 node & children
+        requests_mock.get(
+            f"{GraphClientV1.api_url}/drives/{self.ID}/root:/subdir-0",
+            json=create_dirs_json("subdir", num=1)[0],
         )
         requests_mock.get(
-            f"{GraphClientV1.api_url}/drives/{cls.ID}/items/{parent_id}/children",
-            json={"value": children},
+            f"{GraphClientV1.api_url}/drives/{self.ID}/items/subdir-0/children",
+            json={
+                "value": list(
+                    itertools.chain(
+                        create_dirs_json("subsubdir", num=2),
+                        create_files_json(requests_mock, "subdir-0", ".csv", num=2),
+                        create_files_json(requests_mock, "subdir-0", ".docx", num=2),
+                    )
+                )
+            },
         )
-        for item in filter(lambda x: "file" in x, children):
-            requests_mock.get(item["@microsoft.graph.downloadUrl"], content=item["name"].encode())
 
-        return children
+        return self.expected_matching_files
+
+
+def drive_glob_test_cases() -> List[DriveTestSettings]:
+    return [
+        DriveTestSettings(glob_pattern="root-0.csv", expected_matching_files=["root-0.csv"]),
+        DriveTestSettings(
+            glob_pattern="*.csv",
+            expected_matching_files=[f"root-{index}.csv" for index in range(2)],
+        ),
+        DriveTestSettings(
+            glob_pattern="subdir-0/*.docx",
+            expected_matching_files=[f"subdir-0-{index}.docx" for index in range(2)],
+        ),
+    ]
 
 
 @pytest.fixture

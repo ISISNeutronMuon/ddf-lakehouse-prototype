@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import fnmatch
+from pathlib import PurePosixPath
 from typing import cast, Any, Dict, List
 
 import requests
@@ -7,6 +8,7 @@ import requests
 from .graphapi import GraphItem
 
 
+# Helpers
 def _is_file(graph_response: Dict[str, Any]) -> bool:
     return "file" in graph_response
 
@@ -15,12 +17,24 @@ def _is_folder(graph_response: Dict[str, Any]) -> bool:
     return "folder" in graph_response
 
 
+def _contains_glob_symbols(txt: str) -> bool:
+    for char in ("*", "?", "["):
+        if char in txt:
+            return True
+
+    return False
+
+
 class Drive(GraphItem):
     ENDPOINT = "drives"
+    FILE_SELECT_ATTRS = ("id", "name", "content.downloadUrl", "file", "folder")
+    FOLDER_SELECT_ATTRS = ("id", "name", "folder", "file")
 
     def folder(self, path: str | None = None) -> "DriveFolderItem":
         resource_path = f"root:/{path}" if path else "root"
-        response_json = self.graph_client.get(f"{self.ENDPOINT}/{self.id}/{resource_path}")
+        response_json = self.graph_client.get(
+            f"{self.ENDPOINT}/{self.id}/{resource_path}", select=Drive.FOLDER_SELECT_ATTRS
+        )
         if _is_folder(response_json):
             return DriveFolderItem(
                 drive=self,
@@ -55,38 +69,43 @@ class DriveFileItem(DriveItem):
 class DriveFolderItem(DriveItem):
     """Represents a single M365 folder"""
 
-    GLOB_FOLDER_SEP = "/"
-
-    def file(self, path: str) -> DriveFileItem:
-        """Return a file instance on the given path
-
-        :param path: Path to the file resource
-        :return: A DriveFileItem allowing for fetching the content
-        :raises: A ValueError if the item is a folder
-        """
-        response_json = self.graph_client.get(
-            f"{Drive.ENDPOINT}/{self.drive.id}/root:/{path}",
-            select=("id", "name", "content.downloadUrl", "file", "folder"),
-        )
-        if _is_file(response_json):
-            return DriveFileItem(
-                drive=self.drive,
-                graph_client=self.graph_client,
-                id=response_json["id"],
-                name=response_json["name"],
-                download_url=response_json["@microsoft.graph.downloadUrl"],
-            )
-        else:
-            raise ValueError(f"File requested but item '{path}' is not a file.")
-
     def files_matching(self, pattern: str) -> List[DriveFileItem]:
         """Use this folder as a base and find files that match the glob pattern. Any path segments must be separated with '/' separators.
         This is not recursive.
 
-        :param pattern: A glob pattern, the same as that supplied to the standard glob.glob function.
+        :param pattern: A glob pattern, the same as that supplied to the standard glob.glob function. Glob patterns
+                        are limited to globbing a set of directories in the last folder element of the glob, e.g.
+                        'a/b/c-*/*.csv' will work but 'a/b-*/c-*/*.csv' will not. The stem is assumed to point to
+                        a set of files.
         :return: A list of [DriveFileItem] objects
         """
-        return cast(List[DriveFileItem], self._items_matching(pattern, match_files=True))
+        if not pattern:
+            raise ValueError("Empty pattern supplied.")
+
+        pattern_as_path = PurePosixPath(pattern)
+        if len(pattern_as_path.parts) == 1:
+            # no folders
+            return cast(List[DriveFileItem], self._items_matching(pattern, match_files=True))
+
+        folders_path = pattern_as_path.parent
+        if not _contains_glob_symbols(str(pattern_as_path.parent)):
+            # folder paths contain no glob syntax
+            return self.drive.folder(str(folders_path)).files_matching(pattern_as_path.name)
+
+        raise NotImplementedError("Glob pattern in folders not supported")
+
+        # # is our glob pattern supported?
+        # file_stem = pattern_as_path.stem
+
+        # folders = pattern_as_path.parent
+        # for part in folders.parts[:-1]:
+        #     if _contains_glob_symbols(part):
+        #         raise NotImplementedError(
+        #             f"Unsupported glob pattern '{pattern}'. Glob patterns are only supported in the file stem and direct parent directory elements of the path."
+        #         )
+
+        # first_parent =  pattern_as_path.
+        # if len(folders.parts) ==
 
     # private
     def _items_matching(
@@ -95,7 +114,7 @@ class DriveFolderItem(DriveItem):
         """Use this folder as a base, find matching files if match_files=True or folders if match_files=False"""
         children_json = self.graph_client.get(
             f"{self.drive.ENDPOINT}/{self.drive.id}/items/{self.id}/children",
-            select=("id", "name", "content.downloadUrl", "file", "folder"),
+            select=Drive.FILE_SELECT_ATTRS,
         )
 
         items_json = children_json["value"]
