@@ -1,4 +1,5 @@
 import re
+import urllib.parse
 from pipelines_common.m365.graphapi import GraphClientV1, MsalCredentials
 
 import pytest
@@ -60,6 +61,24 @@ def test_get_includes_auth_token(graph_client: GraphClientV1, requests_mock: Req
     assert requests_mock.call_count == 1
     assert requests_mock.request_history[0].url == expected_url
     assert "Authorization" in requests_mock.request_history[0].headers
+    assert response == expected_response
+
+
+def test_get_with_select_adds_select_odata_query_parameter(
+    graph_client: GraphClientV1, requests_mock: RequestsMocker
+):
+    expected_url = f"{graph_client.api_url}/sites/MySite"
+    expected_query_params = {"$select": "key1,key2"}
+    expected_response = {"key1": "value1", "key2": "value2"}
+    requests_mock.get(expected_url, json=expected_response)
+
+    response = graph_client.get("sites/MySite", select=("key1", "key2"))
+
+    assert requests_mock.call_count == 1
+    assert (
+        requests_mock.request_history[0].url
+        == f"{expected_url}?{urllib.parse.urlencode(expected_query_params)}"
+    )
     assert response == expected_response
 
 

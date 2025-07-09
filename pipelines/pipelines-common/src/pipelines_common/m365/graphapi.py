@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, ClassVar, Dict, TYPE_CHECKING
+from typing import Any, ClassVar, Dict, TYPE_CHECKING, Sequence
 import urllib.parse as urlparser
 
 from msal import ConfidentialClientApplication
@@ -51,16 +51,19 @@ class GraphClientV1:
         else:
             raise RuntimeError("Error acquiring graph client token. No response found.")
 
-    def get(self, endpoint: str) -> Dict[str, Any]:
+    def get(self, endpoint: str, select: Sequence[str] | None = None) -> Dict[str, Any]:
         """Get the requested endpoint. Raises a requests exception if an error occurred.
 
         :param endpoint: Endpoint relative to the graph api URL
+        :param select: An optional list of response properties.
+                       The response will only include these properties instead of the full response.
         :return: The response JSON decoded as a dict
         :raises: A requests.exception if an error code is encountered
         """
         response = requests.get(
             f"{self.api_url}/{endpoint}",
             headers=self._add_bearer_token_header({}, self.acquire_token()),
+            params={"$select": ",".join(select)} if select else None,
         )
         response.raise_for_status()
         return response.json()

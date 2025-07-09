@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 
 import requests
 
@@ -28,15 +29,14 @@ class DriveFileItem(DriveItem):
 class DriveFolderItem(DriveItem):
     """Represents a single M365 folder"""
 
-    def get_file(self, file_path: str) -> DriveFileItem:
-        """Return a single file item representing the file at the path relatieve to the drive root
+    def file(self, path: str) -> DriveFileItem:
+        """Return a file instance on the given path
 
-        :param file_path: Path to the file to retrieve
-        :return: A DriveFileItem or raises
-            - a requests.exception.RequestsException if the file could not be retrieved
-            - a ValueError if the file_path exists but is a folder
+        :param path: Path to the file resource
+        :return: A DriveFileItem allowing for fetching the content
+        :raises: A ValueError if the item is a folder
         """
-        response_json = self.graph_client.get(f"{Drive.ENDPOINT}/{self.drive_id}/root:/{file_path}")
+        response_json = self.graph_client.get(f"{Drive.ENDPOINT}/{self.drive_id}/root:/{path}")
         if "folder" not in response_json:
             return DriveFileItem(
                 graph_client=self.graph_client,
@@ -46,59 +46,24 @@ class DriveFolderItem(DriveItem):
                 download_url=response_json["@microsoft.graph.downloadUrl"],
             )
         else:
-            raise ValueError(f"Path '{file_path}' exists but is a folder.")
+            raise ValueError(f"File requested but item '{path}' is not a file.")
 
-    # def glob(self, pattern: str) -> List[DriveFileItem]:
-    #     """Return a list of file items matching the given glob pattern.
-
-    #     This method does not support recursion or wildcards as folder names.
-
-    #     :param pattern: A unix-shell pattern matching a set of files
-    #     :return: A, possibly empty, list of DriveFileItem instances
-    #     """
-    #     # Steps:
-    #     #   - list the contents
-    #     #   - return the items whose name matches the pattern
-    #     response = self.graph_client.get(
-    #         f"{Drive.ENDPOINT}/{self.drive_id}/items/{self.id}/children"
-    #     )
-
-
-#    relative_path: str
-
-# @property
-# def content() -> io.BytesIO:
+    def glob(self, pattern: str) -> List[DriveFileItem]:
+        return []
 
 
 class Drive(GraphItem):
     ENDPOINT: str = "drives"
 
-    def root(self) -> DriveFolderItem:
-        response = self.graph_client.get(f"{self.ENDPOINT}/{self.id}/root")
-        return DriveFolderItem(
-            drive_id=self.id,
-            id=response["id"],
-            graph_client=self.graph_client,
-            name=response["name"],
-        )
-
-    # def item_at(self, relative_path: str) -> DriveItem:
-    #     """Return a DriveItem representing the item at the given path
-
-    #     :param relative_path: Path from drive root to file
-    #     :type relative_path: str
-    #     :return: _description_
-    #     :rtype: DriveItem
-    #     """
-    #     pass
-
-    # def fetch_item_content(self, relative_path: str) -> io.BytesIO:
-    #     """Fetch the content of a file item on a given relative path to the sharepoint site library
-
-    #     :param relative_path: Path relative to the library root. The path will be url-encoded before being passsed to the graph API.
-    #     """
-    #     response = self.graph_client.get(f"{self.ENDPOINT}/{self.id}/root:/{relative_path}")
-    #     download_url = response[GraphClientV1.Key.DOWNLOADURL]
-    #     response = requests.get(download_url)
-    #     response.raise_for_status()
-    #     return io.BytesIO(response.content)
+    def folder(self, path: str | None = None) -> DriveFolderItem:
+        resource_path = f"root:/{path}" if path else "root"
+        response_json = self.graph_client.get(f"{self.ENDPOINT}/{self.id}/{resource_path}")
+        if "folder" in response_json:
+            return DriveFolderItem(
+                drive_id=self.id,
+                id=response_json["id"],
+                graph_client=self.graph_client,
+                name=response_json["name"],
+            )
+        else:
+            raise ValueError(f"Folder requested but item '{path}' is not a folder.")
