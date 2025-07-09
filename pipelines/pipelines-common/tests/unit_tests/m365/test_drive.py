@@ -90,7 +90,7 @@ def test_drivefolderitem_returns_file_item_when_it_exists(
     drive_item = drive_root.file(file_path)
 
     assert isinstance(drive_item, DriveFileItem)
-    assert drive_item.drive_id == DriveTestSettings.ID
+    assert drive_item.drive.id == DriveTestSettings.ID
     assert drive_item.name == file_name
     assert drive_item.download_url == download_url
 
@@ -104,44 +104,22 @@ def test_drivefolderitem_returns_file_item_when_it_exists(
         drive_item.content
 
 
-# def test_drive_folder_glob_returns_expected_files(
-#     drive_root: DriveFolderItem, requests_mock: RequestsMocker
-# ):
-#     csv_files = drive_root.glob("*.csv")
+@pytest.mark.parametrize(
+    "file_glob",
+    ["*.csv"],
+)
+def test_drivefolderitem_files_matching_returns_expected_files(
+    drive_root: DriveFolderItem, requests_mock: RequestsMocker, file_glob: str
+):
+    children = DriveTestSettings.mock_requests_for_driveitem_children(drive_root.id, requests_mock)
 
-#     for file_item in csv_files:
-#         assert file_item.name.endswith(".csv")
+    matching_files = drive_root.files_matching(file_glob)
 
-
-# def test_fetch_item_content_raises_exception_for_non_existant_file(
-#     m365_drive: M365Drive, requests_mock: RequestsMocker
-# ):
-#     requests_mock.get(
-#         SharePointTestSettings.site_library_item_api_url(
-#             m365_drive.graph_client, non_existing_file_path
-#         ),
-#         exc=requests.exceptions.HTTPError("404"),
-#     )
-
-#     with pytest.raises(requests.exceptions.HTTPError) as excinfo:
-#         m365_drive.fetch_item_content(non_existing_file_path)
-
-#     assert "404" in str(excinfo.value)
-
-
-# def test_fetch_item_content_retrieves_content_of_existing_file_from_download_url(
-#     m365_drive: M365Drive, requests_mock: RequestsMocker
-# ):
-#     existing_file_path, existing_file_content = "SubFolder/AFile.txt", b"some test file content"
-#     test_downloadurl = "https://test.download.com/34534efwef54"
-#     requests_mock.get(
-#         SharePointTestSettings.site_library_item_api_url(
-#             m365_drive.graph_client, existing_file_path
-#         ),
-#         json={GraphClientV1.Key.DOWNLOADURL: test_downloadurl},
-#     )
-#     requests_mock.get(test_downloadurl, content=existing_file_content)
-
-#     fetched_file_content = m365_drive.fetch_item_content(existing_file_path)
-
-#     assert fetched_file_content != fetched_file_content.getvalue()
+    glob_ext = file_glob[-4:]
+    expected_file_paths = [
+        item["name"] for item in filter(lambda x: x["name"].endswith(glob_ext), children)
+    ]
+    assert len(matching_files) == len(expected_file_paths)
+    for file_item, file_path in zip(matching_files, expected_file_paths):
+        assert file_item.name.endswith(glob_ext)
+        assert file_item.content == file_path.encode()

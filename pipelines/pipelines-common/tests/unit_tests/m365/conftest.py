@@ -1,4 +1,6 @@
+import itertools
 from pathlib import Path
+from typing import Any, Dict, List
 
 import pytest
 from pytest_mock import MockerFixture
@@ -30,8 +32,9 @@ class SharePointTestSettings:
         return f"{GraphClientV1.api_url}/sites/{cls.HOSTNAME}:/{cls.SITE_PATH}"
 
     @classmethod
-    def site_library_api_url(cls) -> str:
-        return f"{GraphClientV1.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive"
+    def site_library_api_url(cls, *, select=None) -> str:
+        select = select if select is not None else ["id"]
+        return f"{GraphClientV1.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive?$select={','.join(select)}"
 
     @classmethod
     def mock_requests_for_file(
@@ -63,8 +66,40 @@ class DriveTestSettings:
         return f"{GraphClientV1.api_url}/drives/{cls.ID}/root"
 
     @classmethod
-    def item_api_url(cls, path: str) -> str:
-        return f"{GraphClientV1.api_url}/drives/{cls.ID}/root:/{path}"
+    def item_api_url(cls, path: str, *, select=None) -> str:
+        select = select if select is not None else ["id"]
+        return f"{GraphClientV1.api_url}/drives/{cls.ID}/root:/{path}?$select={','.join(select)}"
+
+    @classmethod
+    def mock_requests_for_driveitem_children(
+        cls,
+        parent_id: str,
+        requests_mock: RequestsMocker,
+    ) -> List[Dict[str, Any]]:
+        children = [{"id": "dir1", "name": "DirectoryName", "folder": {}}]
+        # add a mix of file types
+        csv_files = [f"{file_num}.csv" for file_num in range(3)]
+        docx_files = [f"{file_num}.docx" for file_num in range(3)]
+        download_base_url = "https://example.file.download.url"
+        children.extend(
+            [
+                {
+                    "id": f"file{index}",
+                    "name": filename,
+                    "@microsoft.graph.downloadUrl": f"{download_base_url}/{filename}",
+                    "file": {},
+                }
+                for index, filename in enumerate(itertools.chain(csv_files, docx_files))
+            ]
+        )
+        requests_mock.get(
+            f"{GraphClientV1.api_url}/drives/{cls.ID}/items/{parent_id}/children",
+            json={"value": children},
+        )
+        for item in filter(lambda x: "file" in x, children):
+            requests_mock.get(item["@microsoft.graph.downloadUrl"], content=item["name"].encode())
+
+        return children
 
 
 @pytest.fixture

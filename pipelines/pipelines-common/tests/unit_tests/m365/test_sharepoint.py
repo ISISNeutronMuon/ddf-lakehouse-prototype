@@ -20,8 +20,9 @@ def test_site_document_library_returns_drive_instance(
 ) -> None:
     sharepoint_site = Site(graph_client=graph_client, id=SharePointTestSettings.SITE_ID)
     requests_mock.get(
-        SharePointTestSettings.site_library_api_url(),
+        SharePointTestSettings.site_library_api_url(select=["id"]),
         json={"id": SharePointTestSettings.LIBRARY_ID},
+        complete_qs=True,
     )
 
     drive = sharepoint_site.document_library()
