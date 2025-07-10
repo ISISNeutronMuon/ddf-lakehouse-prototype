@@ -7,7 +7,6 @@ from pytest_mock import MockerFixture
 from requests_mock.mocker import Mocker as RequestsMocker
 from pytest_httpx import HTTPXMock
 
-from pipelines_common.m365.drive import Drive
 from pipelines_common.m365.graphapi import (
     GraphCredentials,
     GraphClientV1,
@@ -186,7 +185,7 @@ def drive_glob_test_cases() -> List[DriveTestSettings]:
 
 @pytest.fixture
 def graph_client(mocker: MockerFixture, httpx_mock: HTTPXMock) -> GraphClientV1:
-    patch_outh_client_with_access_token(mocker)
+    patch_oauth_client_to_return({"access_token": MSGraphTestSettings.ACCESS_TOKEN}, mocker)
 
     client = GraphClientV1(
         GraphCredentials(
@@ -201,10 +200,6 @@ def graph_client(mocker: MockerFixture, httpx_mock: HTTPXMock) -> GraphClientV1:
         json={"token_endpoint": "https://token.endpoint"},
     )
     return client
-
-
-def patch_outh_client_with_access_token(mocker: MockerFixture):
-    return patch_oauth_client_to_return({"access_token": MSGraphTestSettings.ACCESS_TOKEN}, mocker)
 
 
 def patch_oauth_client_to_return(msal_response: dict, mocker: MockerFixture):

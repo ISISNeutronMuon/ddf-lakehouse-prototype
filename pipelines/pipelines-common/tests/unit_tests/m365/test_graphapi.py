@@ -9,7 +9,6 @@ from pytest_httpx import HTTPXMock
 
 from unit_tests.m365.conftest import (
     MSGraphTestSettings,
-    patch_outh_client_with_access_token,
     patch_oauth_client_to_return,
 )
 from unit_tests.m365.conftest import SharePointTestSettings
@@ -40,14 +39,10 @@ def test_acquire_token_raises_runtimeerror_when_error_in_response(
     assert "error_code" in str(excinfo.value)
 
 
-def test_acquire_tokens_returns_tokens_from_response_if_exists(
-    graph_client: GraphClientV1, mocker: MockerFixture
-) -> None:
-    patched_client_app = patch_outh_client_with_access_token(mocker)
-
+def test_acquire_tokens_returns_tokens_from_response_if_exists(graph_client: GraphClientV1) -> None:
     tokens = graph_client.fetch_token()
 
-    patched_client_app.assert_called_once()
+    graph_client._oauth_client.fetch_token.assert_called_once()  # type: ignore
     assert tokens["access_token"] == MSGraphTestSettings.ACCESS_TOKEN
 
 
