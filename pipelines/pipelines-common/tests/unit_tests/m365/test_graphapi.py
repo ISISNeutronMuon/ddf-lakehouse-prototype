@@ -35,20 +35,20 @@ def test_acquire_token_raises_runtimeerror_when_error_in_response(
     )
 
     with pytest.raises(RuntimeError) as excinfo:
-        graph_client.acquire_token()
+        graph_client.acquire_tokens()
 
     assert "error_code" in str(excinfo.value)
 
 
-def test_acquire_token_returns_access_token_from_response_if_exists(
+def test_acquire_tokens_returns_tokens_from_response_if_exists(
     graph_client: GraphClientV1, mocker: MockerFixture
 ) -> None:
     patched_client_app = patch_msal_with_access_token(mocker)
 
-    access_token = graph_client.acquire_token()
+    tokens = graph_client.acquire_tokens()
 
     patched_client_app.assert_called_once()
-    assert access_token == MSGraphTestSettings.ACCESS_TOKEN
+    assert tokens["access_token"] == MSGraphTestSettings.ACCESS_TOKEN
 
 
 def test_get_includes_auth_token(graph_client: GraphClientV1, requests_mock: RequestsMocker):

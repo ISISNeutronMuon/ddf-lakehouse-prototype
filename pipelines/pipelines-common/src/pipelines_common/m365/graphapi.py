@@ -16,30 +16,36 @@ class MsalCredentials:
     client_secret: str
 
 
-@dataclasses.dataclass
 class GraphClientV1:
     # Constants
     base_url: ClassVar[str] = "https://graph.microsoft.com"
     api_url: ClassVar[str] = f"{base_url}/v1.0"
     default_scope: ClassVar[str] = f"{base_url}/.default"
+    login_url: ClassVar[str] = "https://login.microsoftonline.com"
 
-    # Instance variables
-    credentials: MsalCredentials
+    def __init__(self, credentials: MsalCredentials) -> None:
+        self.credentials = credentials
+        self._client_app = None
+
+    @property
+    def client_app(self):
+        if self._client_app is None:
+            self._client_app = ConfidentialClientApplication(
+                authority=self.authority_url(self.credentials.tenant_id),
+                client_id=f"{self.credentials.client_id}",
+                client_credential=f"{self.credentials.client_secret}",
+            )
+        return self._client_app
 
     def authority_url(self, tenant_id: str) -> str:
-        return f"https://login.microsoftonline.com/{tenant_id}"
+        return f"{self.login_url}/{tenant_id}"
 
-    def acquire_token(self) -> str:
-        """Acquire token via MSAL library"""
-        app = ConfidentialClientApplication(
-            authority=self.authority_url(self.credentials.tenant_id),
-            client_id=f"{self.credentials.client_id}",
-            client_credential=f"{self.credentials.client_secret}",
-        )
-        response = app.acquire_token_for_client(scopes=[self.default_scope])
+    def acquire_tokens(self) -> Dict[str, Any]:
+        """Acquire tokens via MSAL library"""
+        response = self.client_app.acquire_token_for_client(scopes=[self.default_scope])
         if response:
             if "access_token" in response:
-                return response["access_token"]
+                return response
             elif "error" in response:
                 raise RuntimeError(
                     f"Error acquiring graph client token: {response['error']} - {response['error_description']}"
@@ -50,6 +56,15 @@ class GraphClientV1:
                 )
         else:
             raise RuntimeError("Error acquiring graph client token. No response found.")
+
+    def oauth2_client_params(self, timeout_: float = 10.0):
+        return {
+            "scope": " ".join(self.default_scope),
+            "client_id": self.credentials.client_id,
+            "client_secret": self.credentials.client_secret,
+            "token": self.acquire_tokens(),
+            "token_endpoint": f"{self.login_url}/{self.credentials.tenant_id}/oauth2/v2.0/token",
+        }
 
     def get(self, endpoint: str, select: Sequence[str] | None = None) -> Dict[str, Any]:
         """Get the requested endpoint. Raises a requests exception if an error occurred.
@@ -62,7 +77,7 @@ class GraphClientV1:
         """
         response = requests.get(
             f"{self.api_url}/{endpoint}",
-            headers=self._add_bearer_token_header({}, self.acquire_token()),
+            headers=self._add_bearer_token_header({}, self.acquire_tokens()["access_token"]),
             params={"$select": ",".join(select)} if select else None,
         )
         response.raise_for_status()
@@ -77,7 +92,7 @@ class GraphClientV1:
         from .sharepoint import Site
 
         urlparts = urlparser.urlparse(weburl)
-        response = self.get(f"{Site.ENDPOINT}/{urlparts.netloc}:{urlparts.path}")
+        response = self.get(f"{Site.endpoint}/{urlparts.netloc}:{urlparts.path}")
         return Site(graph_client=self, id=response["id"])
 
     # ----- private -----

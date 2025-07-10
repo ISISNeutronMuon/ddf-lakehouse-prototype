@@ -1,10 +1,17 @@
-from .drive import Drive
+from msgraphfs import MSGDriveFS
+
 from .graphapi import GraphItem
 
 
 class Site(GraphItem):
-    ENDPOINT: str = "sites"
+    endpoint: str = "sites"
 
-    def document_library(self) -> Drive:
-        response = self.graph_client.get(f"{self.ENDPOINT}/{self.id}/drive", select=["id"])
-        return Drive(graph_client=self.graph_client, id=response["id"])
+    def document_library(self) -> MSGDriveFS:
+        response = self.graph_client.get(f"{self.endpoint}/{self.id}/drive", select=["id"])
+        drivefs_kwargs = {
+            "drive_id": response["id"],
+            "oauth2_client_params": self.graph_client.oauth2_client_params(),
+            "asynchronous": False,
+            "cachable": False,
+        }
+        return MSGDriveFS(**drivefs_kwargs)
