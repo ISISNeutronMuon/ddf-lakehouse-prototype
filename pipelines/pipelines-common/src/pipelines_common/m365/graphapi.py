@@ -27,16 +27,15 @@ class GraphClientV1:
     def authority_url(self) -> str:
         return f"{self.login_url}/{self.credentials.tenant_id}"
 
-    @property
-    def openid_config_url(self) -> str:
-        return f"{self.authority_url}/v2.0/.well-known/openid-configuration"
-
     def __init__(self, credentials: GraphCredentials) -> None:
         self.credentials = credentials
         self._oauth_client_value = None
 
+    def oauth2_token_endpoint(self) -> str:
+        return f"{self.authority_url}/oauth2/v2.0/token"
+
     def fetch_token(self) -> Dict[str, Any]:
-        """Acquire tokens via MSAL library"""
+        """Acquire tokens via OAuth"""
         response = self._oauth_client.fetch_token()
         if response:
             if "access_token" in response:
@@ -52,13 +51,14 @@ class GraphClientV1:
         else:
             raise RuntimeError("Error acquiring graph client token. No response found.")
 
-    def oauth2_client_params(self, timeout_: float = 10.0):
+    def oauth2_client_params(self):
+        """Return a set of parameters suitable for initializing an OAuth client"""
         return {
             "scope": " ".join(self.default_scope),
             "client_id": self.credentials.client_id,
             "client_secret": self.credentials.client_secret,
             "token": self.fetch_token(),
-            "token_endpoint": f"{self.login_url}/{self.credentials.tenant_id}/oauth2/v2.0/token",
+            "token_endpoint": self.oauth2_token_endpoint(),
         }
 
     def get(self, endpoint: str, select: Sequence[str] | None = None) -> Dict[str, Any]:
@@ -71,9 +71,9 @@ class GraphClientV1:
         :raises: A requests.exception if an error code is encountered
         """
         response = httpx.get(
-            f"{self.api_url}/{endpoint}",
+            f"{self.api_url}/{endpoint}:",
             headers=self._add_bearer_token_header({}, self.fetch_token()["access_token"]),
-            params={"$select": ",".join(select)} if select else None,
+            params={"select": ",".join(select)} if select else None,
         )
         response.raise_for_status()
         return response.json()
@@ -94,14 +94,10 @@ class GraphClientV1:
     @property
     def _oauth_client(self):
         if self._oauth_client_value is None:
-            response = httpx.get(
-                f"{GraphClientV1.login_url}/{self.credentials.tenant_id}/v2.0/.well-known/openid-configuration"
-            )
-            response.raise_for_status()
             self._oauth_client_value = OAuth2Client(
                 self.credentials.client_id,
                 self.credentials.client_secret,
-                token_endpoint=response.json()["token_endpoint"],
+                token_endpoint=self.oauth2_token_endpoint(),
                 scope=GraphClientV1.default_scope,
             )
         return self._oauth_client_value

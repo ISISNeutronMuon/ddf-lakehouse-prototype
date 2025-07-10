@@ -1,11 +1,10 @@
 import itertools
-from pathlib import Path
 from typing import List
 
+import httpx
 import pytest
-from pytest_mock import MockerFixture
-from requests_mock.mocker import Mocker as RequestsMocker
 from pytest_httpx import HTTPXMock
+from pytest_mock import MockerFixture
 
 from pipelines_common.m365.graphapi import (
     GraphCredentials,
@@ -20,72 +19,22 @@ class MSGraphTestSettings:
     ACCESS_TOKEN: str = "0987654321abcdefg"
 
 
-class SharePointTestSettings:
-    HOSTNAME: str = "site.domain.com"
-    SITE_PATH: str = "sites/MySite"
-    SITE_ID: str = (
-        f"{HOSTNAME},0000000-1111-2222-3333-444444444444,55555555-6666-7777-8888-99999999999"
-    )
-    LIBRARY_ID: str = "b!umnFmiec4Blh4I3Cv5be8uPs4IEW9cGoyL2iMLaafz2yjlrRtGbxqbR31mJiv5hCZfL"
-
-    @classmethod
-    def site_api_url(cls) -> str:
-        return f"{GraphClientV1.api_url}/sites/{cls.HOSTNAME}:/{cls.SITE_PATH}"
-
-    @classmethod
-    def site_library_api_url(cls, *, select=None) -> str:
-        select = select if select is not None else ["id"]
-        return f"{GraphClientV1.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive?$select={','.join(select)}"
-
-    @classmethod
-    def mock_request_to_site_library(cls, requests_mock: RequestsMocker):
-        requests_mock.get(cls.site_api_url(), json={"id": cls.SITE_ID})
-
-    # def mock_requests_for_file(
-    #     cls, requests_mock: RequestsMocker, file_path: str, file_content: bytes
-    # ):
-    #     requests_mock.get(cls.site_api_url(), json={"id": cls.SITE_ID})
-    #     requests_mock.get(cls.site_library_api_url(), json={"id": cls.LIBRARY_ID})
-    #     requests_mock.get(
-    #         f"{GraphClientV1.api_url}/drives/{cls.LIBRARY_ID}/root",
-    #         json={"id": cls.LIBRARY_ID, "name": "root"},
-    #     )
-    #     download_url = "https://file.download.url/458972349iuf"
-    #     requests_mock.get(
-    #         f"{GraphClientV1.api_url}/drives/{cls.LIBRARY_ID}/root:/{file_path}",
-    #         json={
-    #             "id": cls.LIBRARY_ID,
-    #             "name": Path(file_path).name,
-    #             "@microsoft.graph.downloadUrl": download_url,
-    #         },
-    #     )
-    #     requests_mock.get(download_url, content=file_content)
-
-
-class DriveTestSettings:
-    ID: str = "b!ejiYvIQW9PJmAu7cuils0N8UUvV7zURwlBMY4DJi1NRD58OMbRFXjb16RGKIn5ujQ"
+class DriveGlobTestCase:
     DOWNLOAD_BASE_URL: str = "https://example.file.download.url"
 
-    @classmethod
-    def root_api_url(cls) -> str:
-        return f"{GraphClientV1.api_url}/drives/{cls.ID}/root?$select={','.join(Drive.FOLDER_SELECT_ATTRS)}"
-
-    @classmethod
-    def item_api_url(cls, path: str, is_file: bool) -> str:
-        select = Drive.FILE_SELECT_ATTRS if is_file else Drive.FOLDER_SELECT_ATTRS
-        return f"{GraphClientV1.api_url}/drives/{cls.ID}/root:/{path}?$select={','.join(select)}"
-
-    def __init__(self, glob_pattern: str, expected_matching_files: List[str]) -> None:
+    def __init__(
+        self, drive_id: str, root_id: str, glob_pattern: str, expected_matching_files: List[str]
+    ) -> None:
         self.glob_pattern = glob_pattern
         self.expected_matching_files = expected_matching_files
+        self.drive_id = drive_id
+        self.root_id = root_id
 
     @property
     def name(self) -> str:
         return self.glob_pattern
 
-    def mock_requests_for_driveitem_children(
-        self, requests_mock: RequestsMocker, root_id: str
-    ) -> List[str]:
+    def mock_requests_for_driveitem_children(self, httpx_mock: HTTPXMock) -> List[str]:
         # We create a fake directory structure:
         #  - subdir-0/
         #    |- subsubdir-0/
@@ -111,13 +60,21 @@ class DriveTestSettings:
                 {"id": f"{prefix}-{i}", "name": f"{prefix}-{i}", "folder": {}} for i in range(num)
             ]
 
-        def create_files_json(requests_mock: RequestsMocker, prefix: str, ext: str, num: int):
-            resp = []
+        def create_files_json(httpx_mock: HTTPXMock, prefix: str, ext: str, num: int):
+            children_resp = []
             for i in range(num):
                 name = f"{prefix}-{i}{ext}"
+                httpx_mock.add_response(
+                    method="GET",
+                    url=httpx.URL(
+                        f"{GraphClientV1.api_url}/drives/{self.drive_id}/root:/{name}:",
+                        params={"select": "id"},
+                    ),
+                    json={"id": name},
+                )
                 download_url = f"{self.DOWNLOAD_BASE_URL}/{name}"
-                requests_mock.get(download_url, content=name.encode())
-                resp.append(
+                # httpx_mock.add_response(method="GET", url=download_url, content=name.encode())
+                children_resp.append(
                     {
                         "id": name,
                         "name": name,
@@ -125,66 +82,111 @@ class DriveTestSettings:
                         "@microsoft.graph.downloadUrl": download_url,
                     }
                 )
-            return resp
+            return children_resp
 
         # 2 top-level directories & 4 top-level files
-        requests_mock.get(
-            f"{GraphClientV1.api_url}/drives/{self.ID}/items/{root_id}/children",
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{GraphClientV1.api_url}/drives/{self.drive_id}/items/{self.root_id}/children",
             json={
                 "value": list(
                     itertools.chain(
                         create_dirs_json("subdir", num=1),
-                        create_files_json(requests_mock, "root", ".csv", num=2),
-                        create_files_json(requests_mock, "root", ".docx", num=2),
+                        create_files_json(httpx_mock, "root", ".csv", num=2),
+                        create_files_json(httpx_mock, "root", ".docx", num=2),
                     )
                 )
             },
         )
-        # subdir-{0,1} node & children
-        for subdir_index in range(2):
-            subdir_name = f"subdir-{subdir_index}"
-            requests_mock.get(
-                f"{GraphClientV1.api_url}/drives/{self.ID}/root:/{subdir_name}",
-                json=create_dirs_json("subdir", num=1)[0],
-            )
-            requests_mock.get(
-                f"{GraphClientV1.api_url}/drives/{self.ID}/items/{subdir_name}/children",
-                json={
-                    "value": list(
-                        itertools.chain(
-                            create_dirs_json("subsubdir", num=2),
-                            create_files_json(requests_mock, subdir_name, ".csv", num=2),
-                            create_files_json(requests_mock, subdir_name, ".docx", num=2),
-                        )
-                    )
-                },
-            )
+        # # subdir-{0,1} node & children
+        # for subdir_index in range(2):
+        #     subdir_name = f"subdir-{subdir_index}"
+        #     httpx_mock.add_response(
+        #         method="GET",
+        #         url=httpx.URL(
+        #             f"{GraphClientV1.api_url}/drives/{self.drive_id}/root:/{subdir_name}:",
+        #             params={"select": "id"},
+        #         ),
+        #         json=create_dirs_json("subdir", num=1)[0],
+        #     )
+        #     httpx_mock.add_response(
+        #         method="GET",
+        #         url=f"{GraphClientV1.api_url}/drives/{self.drive_id}/items/{subdir_name}/children",
+        #         json={
+        #             "value": list(
+        #                 itertools.chain(
+        #                     create_dirs_json("subsubdir", num=2),
+        #                     create_files_json(httpx_mock, subdir_name, ".csv", num=2),
+        #                     create_files_json(httpx_mock, subdir_name, ".docx", num=2),
+        #                 )
+        #             )
+        #         },
+        #     )
 
         return self.expected_matching_files
 
 
-def drive_glob_test_cases() -> List[DriveTestSettings]:
-    return [
-        DriveTestSettings(glob_pattern="root-0.csv", expected_matching_files=["root-0.csv"]),
-        # DriveTestSettings(
-        #     glob_pattern="*.csv",
-        #     expected_matching_files=[f"root-{index}.csv" for index in range(2)],
-        # ),
-        # DriveTestSettings(
-        #     glob_pattern="subdir-0/*.docx",
-        #     expected_matching_files=[f"subdir-0-{index}.docx" for index in range(2)],
-        # ),
-        # DriveTestSettings(
-        #     glob_pattern="subdir-*/*.docx",
-        #     expected_matching_files=(
-        #         [f"subdir-{dirindex}-{index}.docx" for dirindex in range(2) for index in range(2)]
-        #     ),
-        # ),
-    ]
+class SharePointTestSettings:
+    HOSTNAME: str = "site.domain.com"
+    SITE_PATH: str = "sites/MySite"
+    SITE_ID: str = (
+        f"{HOSTNAME},0000000-1111-2222-3333-444444444444,55555555-6666-7777-8888-99999999999"
+    )
+    LIBRARY_ID: str = "b!umnFmiec4Blh4I3Cv5be8uPs4IEW9cGoyL2iMLaafz2yjlrRtGbxqbR31mJiv5hCZfL"
+    LIBRARY_ROOT_ID: str = "b!ejiYvIQW9PJmAu7cuils0N8UUvV7zURwlBMY4DJi1NRD58OMbRFXjb16RGKIn5ujQ"
+
+    @classmethod
+    def site_api_url(cls) -> str:
+        return f"{GraphClientV1.api_url}/sites/{cls.HOSTNAME}:/{cls.SITE_PATH}:"
+
+    @classmethod
+    def site_library_api_url(cls, *, select=None) -> str:
+        select = select if select is not None else ["id"]
+        return f"{GraphClientV1.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive:?select={','.join(select)}"
+
+    @classmethod
+    def mock_requests_to_library(cls, httpx_mock: HTTPXMock):
+        httpx_mock.add_response(url=cls.site_api_url(), json={"id": cls.SITE_ID})
+        httpx_mock.add_response(url=cls.site_library_api_url(), json={"id": cls.LIBRARY_ID})
+        httpx_mock.add_response(
+            url=f"{GraphClientV1.api_url}/drives/{cls.LIBRARY_ID}/root",
+            json={"id": cls.LIBRARY_ROOT_ID},
+        )
+
+    @classmethod
+    def drive_glob_test_cases(cls) -> List[DriveGlobTestCase]:
+        return [
+            DriveGlobTestCase(
+                cls.LIBRARY_ID,
+                cls.LIBRARY_ROOT_ID,
+                glob_pattern="/root-0.csv",
+                expected_matching_files=["root-0.csv"],
+            ),
+            # DriveTestSettings(
+            #     cls.LIBRARY_ID,
+            #     cls.LIBRARY_ROOT_ID,
+            #     glob_pattern="/*.csv",
+            #     expected_matching_files=[f"root-{index}.csv" for index in range(2)],
+            # ),
+            # DriveTestSettings(
+            #     cls.LIBRARY_ID,
+            #     cls.LIBRARY_ROOT_ID,
+            #     glob_pattern="/subdir-0/*.docx",
+            #     expected_matching_files=[f"subdir-0-{index}.docx" for index in range(2)],
+            # ),
+            # DriveTestSettings(
+            #     cls.LIBRARY_ID,
+            #     cls.LIBRARY_ROOT_ID,
+            #     glob_pattern="/subdir-*/*.docx",
+            #     expected_matching_files=(
+            #         [f"subdir-{dirindex}-{index}.docx" for dirindex in range(2) for index in range(2)]
+            #     ),
+            # ),
+        ]
 
 
 @pytest.fixture
-def graph_client(mocker: MockerFixture, httpx_mock: HTTPXMock) -> GraphClientV1:
+def graph_client(mocker: MockerFixture) -> GraphClientV1:
     patch_oauth_client_to_return({"access_token": MSGraphTestSettings.ACCESS_TOKEN}, mocker)
 
     client = GraphClientV1(
@@ -194,16 +196,11 @@ def graph_client(mocker: MockerFixture, httpx_mock: HTTPXMock) -> GraphClientV1:
             MSGraphTestSettings.CLIENT_SECRET,
         )
     )
-    httpx_mock.add_response(
-        method="GET",
-        url=client.openid_config_url,
-        json={"token_endpoint": "https://token.endpoint"},
-    )
     return client
 
 
-def patch_oauth_client_to_return(msal_response: dict, mocker: MockerFixture):
+def patch_oauth_client_to_return(response: dict, mocker: MockerFixture):
     patched_client_app = mocker.patch("pipelines_common.m365.graphapi.OAuth2Client")
-    patched_client_app.return_value.fetch_token.return_value = msal_response
+    patched_client_app.return_value.fetch_token.return_value = response
 
     return patched_client_app

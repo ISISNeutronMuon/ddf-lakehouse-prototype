@@ -7,8 +7,7 @@ from pytest_httpx import HTTPXMock
 from unit_tests.m365.conftest import SharePointTestSettings
 
 
-def test_site_init(graph_client: GraphClientV1, httpx_mock: HTTPXMock) -> None:
-    httpx_mock.reset()  # don't fail because the mocked graph_client endpoint is not called
+def test_site_init(graph_client: GraphClientV1) -> None:
     sharepoint_site = Site(graph_client=graph_client, id=SharePointTestSettings.SITE_ID)
 
     assert sharepoint_site.id == SharePointTestSettings.SITE_ID
