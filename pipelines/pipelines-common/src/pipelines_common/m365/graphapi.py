@@ -2,15 +2,15 @@ import dataclasses
 from typing import Any, ClassVar, Dict, TYPE_CHECKING, Sequence
 import urllib.parse as urlparser
 
-from msal import ConfidentialClientApplication
-import requests
+import httpx
+from authlib.integrations.httpx_client import OAuth2Client
 
 if TYPE_CHECKING:
     from .sharepoint import Site
 
 
 @dataclasses.dataclass
-class MsalCredentials:
+class GraphCredentials:
     tenant_id: str
     client_id: str
     client_secret: str
@@ -23,26 +23,21 @@ class GraphClientV1:
     default_scope: ClassVar[str] = f"{base_url}/.default"
     login_url: ClassVar[str] = "https://login.microsoftonline.com"
 
-    def __init__(self, credentials: MsalCredentials) -> None:
-        self.credentials = credentials
-        self._client_app = None
+    @property
+    def authority_url(self) -> str:
+        return f"{self.login_url}/{self.credentials.tenant_id}"
 
     @property
-    def client_app(self):
-        if self._client_app is None:
-            self._client_app = ConfidentialClientApplication(
-                authority=self.authority_url(self.credentials.tenant_id),
-                client_id=f"{self.credentials.client_id}",
-                client_credential=f"{self.credentials.client_secret}",
-            )
-        return self._client_app
+    def openid_config_url(self) -> str:
+        return f"{self.authority_url}/v2.0/.well-known/openid-configuration"
 
-    def authority_url(self, tenant_id: str) -> str:
-        return f"{self.login_url}/{tenant_id}"
+    def __init__(self, credentials: GraphCredentials) -> None:
+        self.credentials = credentials
+        self._oauth_client_value = None
 
-    def acquire_tokens(self) -> Dict[str, Any]:
+    def fetch_token(self) -> Dict[str, Any]:
         """Acquire tokens via MSAL library"""
-        response = self.client_app.acquire_token_for_client(scopes=[self.default_scope])
+        response = self._oauth_client.fetch_token()
         if response:
             if "access_token" in response:
                 return response
@@ -62,7 +57,7 @@ class GraphClientV1:
             "scope": " ".join(self.default_scope),
             "client_id": self.credentials.client_id,
             "client_secret": self.credentials.client_secret,
-            "token": self.acquire_tokens(),
+            "token": self.fetch_token(),
             "token_endpoint": f"{self.login_url}/{self.credentials.tenant_id}/oauth2/v2.0/token",
         }
 
@@ -75,9 +70,9 @@ class GraphClientV1:
         :return: The response JSON decoded as a dict
         :raises: A requests.exception if an error code is encountered
         """
-        response = requests.get(
+        response = httpx.get(
             f"{self.api_url}/{endpoint}",
-            headers=self._add_bearer_token_header({}, self.acquire_tokens()["access_token"]),
+            headers=self._add_bearer_token_header({}, self.fetch_token()["access_token"]),
             params={"$select": ",".join(select)} if select else None,
         )
         response.raise_for_status()
@@ -96,6 +91,21 @@ class GraphClientV1:
         return Site(graph_client=self, id=response["id"])
 
     # ----- private -----
+    @property
+    def _oauth_client(self):
+        if self._oauth_client_value is None:
+            response = httpx.get(
+                f"{GraphClientV1.login_url}/{self.credentials.tenant_id}/v2.0/.well-known/openid-configuration"
+            )
+            response.raise_for_status()
+            self._oauth_client_value = OAuth2Client(
+                self.credentials.client_id,
+                self.credentials.client_secret,
+                token_endpoint=response.json()["token_endpoint"],
+                scope=GraphClientV1.default_scope,
+            )
+        return self._oauth_client_value
+
     def _add_bearer_token_header(self, headers: Dict[str, str], token: str) -> Dict[str, str]:
         headers.update({"Authorization": f"Bearer {token}"})
         return headers
