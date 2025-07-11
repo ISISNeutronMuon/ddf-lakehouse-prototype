@@ -56,12 +56,11 @@ def test_extract_sharepoint_files_yields_files_matching_glob(
         f"/Folder/{index}.csv": {
             "name": f"/Folder/{index}.csv",
             "type": "file",
-            "mtime": datetime.datetime.fromisoformat("1970-01-01T00:00:00Z"),
-            "size": "0",
+            "mtime": datetime.datetime.fromisoformat("2025-01-01T00:00:00Z"),
+            "size": "10",
         }
         for index in range(num_files_found)
     }
-    transformer_calls = 0
     if files_per_page >= num_files_found:
         expected_transfomer_calls = 1
         expected_transfomer_item_sizes = [num_files_found]
@@ -73,13 +72,22 @@ def test_extract_sharepoint_files_yields_files_matching_glob(
             sum(batch) for batch in itertools.batched([1] * num_files_found, files_per_page)
         ]
 
+    transformer_calls = 0
+    file_paths_seen = set()
+
     @dlt.transformer
     def assert_expected_drive_items(drive_items: Iterator[FileItemDict]):
         nonlocal transformer_calls
         assert len(list(drive_items)) == expected_transfomer_item_sizes[transformer_calls]
-        # for drive_obj, expected_path in zip(drive_items, expected_paths):
-        #     assert drive_obj["file_url"] == f"msgd://{expected_path}"
-        #     assert extract_content == ("file_content" in drive_obj)
+        for drive_obj in drive_items:
+            assert drive_obj["file_url"].startswith("msgd:///Folder/")
+            file_paths_seen.add(drive_obj["file_url"][len("msgd://") :])
+            assert drive_obj["modification_date"] == datetime.datetime.fromisoformat(
+                "2025-01-01T00:00:00Z"
+            )
+            if extract_content:
+                assert drive_obj["size"] == 10
+
         transformer_calls += 1
 
     credentials = M365CredentialsResource("tid", "cid", "cs3cr3t")
@@ -112,3 +120,6 @@ def test_extract_sharepoint_files_yields_files_matching_glob(
     )
     patched_drivefs.glob.assert_called_with(test_glob, detail=True)
     assert expected_transfomer_calls == transformer_calls
+    # check we've seen each expected_file
+    for file_path in drivefs_glob_return_value.keys():
+        assert file_path in file_paths_seen
