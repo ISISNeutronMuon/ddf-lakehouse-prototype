@@ -1,25 +1,19 @@
-import io
-from pathlib import Path
+import datetime
+import re
 from typing import Iterator
 
 import dlt
 from dlt.common.configuration.exceptions import ConfigFieldMissingException
+from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.pipeline.exceptions import PipelineStepFailed
 
 from pipelines_common.dlt_sources.m365 import sharepoint, M365CredentialsResource
-from pipelines_common.m365.sharepoint import MSGDriveFS
-
 
 import pytest
 from pytest_mock import MockerFixture
 from pytest_httpx import HTTPXMock
 
-from unit_tests.m365.conftest import (
-    MSGraphTestSettings,
-    DriveGlobTestCase,
-    SharePointTestSettings,
-    patch_oauth_client_to_return,
-)
+from unit_tests.dlt_sources.conftest import SharePointTestSettings
 
 
 def test_extract_sharepoint_source_raises_error_without_config(pipeline: dlt.Pipeline):
@@ -42,76 +36,67 @@ def test_extract_sharepoint_source_raises_error_without_config(pipeline: dlt.Pip
         assert field in config_exc.fields
 
 
-# @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-@pytest.mark.parametrize(
-    "glob_test_case",
-    SharePointTestSettings.drive_glob_test_cases(),
-    ids=lambda x: x.name,
-)
-def test_extract_sharepoint_files_matching_returns_expected_files(
-    pipeline: dlt.Pipeline,
-    mocker: MockerFixture,
-    httpx_mock: HTTPXMock,
-    glob_test_case: DriveGlobTestCase,
+@pytest.mark.parametrize("extract_content", (False,))
+def test_extract_sharepoint_files_yields_files_matching_glob(
+    pipeline: dlt.Pipeline, mocker: MockerFixture, httpx_mock: HTTPXMock, extract_content: bool
 ):
-    from msgraphfs import MSGraphBuffredFile
-
     @dlt.transformer
-    def assert_expected_drive_items(items):
-        drive_items = list(items)
-        assert len(drive_items) == 1
-
-        assert isinstance(drive_items[0], MSGraphBuffredFile)
-        assert drive_items[0].path == glob_test_case.expected_matching_files
-        # assert drive_items[0].content == file_content
-
-        # expected_file_paths = glob_test_cases.mock_requests_for_driveitem_children(
-        #     requests_mock, drive.drive_id
-        # )
-
-    patched_oauth_client = patch_oauth_client_to_return(
-        {"access_token": MSGraphTestSettings.ACCESS_TOKEN}, mocker
-    )
-    SharePointTestSettings.mock_requests_to_library(httpx_mock)
-    glob_test_case.mock_requests_for_driveitem_children(httpx_mock)
+    def assert_expected_drive_items(
+        drive_items: Iterator[FileItemDict], expected_paths: Iterator[str]
+    ):
+        for drive_obj, expected_path in zip(drive_items, expected_paths):
+            assert drive_obj["file_url"] == f"msgd://{expected_path}"
+            assert extract_content == ("file_content" in drive_obj)
 
     site_url = f"https://{SharePointTestSettings.HOSTNAME}/{SharePointTestSettings.SITE_PATH}"
     credentials = M365CredentialsResource("tid", "cid", "cs3cr3t")
-    pipeline.extract(
-        sharepoint(site_url, credentials=credentials, file_glob=glob_test_case.glob_pattern)
+    # mock the calls to return the token & drive_id
+    httpx_mock.add_response(
+        method="POST",
+        url=credentials.oauth2_token_endpoint,
+        json={"access_token": SharePointTestSettings.ACCESS_TOKEN},
+    )
+    httpx_mock.add_response(
+        method="GET",
+        url=re.compile(
+            f"{M365CredentialsResource.api_url}/sites/{SharePointTestSettings.HOSTNAME}:/{SharePointTestSettings.SITE_PATH}?.*"
+        ),
+        json={"id": SharePointTestSettings.SITE_ID},
+    )
+    httpx_mock.add_response(
+        method="GET",
+        url=re.compile(
+            f"{M365CredentialsResource.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive?.*"
+        ),
+        json={"id": SharePointTestSettings.LIBRARY_ID},
     )
 
-    patched_oauth_client.assert_called()
+    # Mock out drive client to return known items from glob.
+    # Beware that the test_glob & resulting return values are not linked so changing test_glob
+    # will not affect the glob.return_value. Here we are relying on the MSDDriveFS client to do the
+    # right thing and we just test we call it correctly.
+    patched_drivefs_cls = mocker.patch("pipelines_common.dlt_sources.m365.MSGDriveFS")
+    patched_drivefs = patched_drivefs_cls.return_value
+    test_glob = "/Folder/*.csv"
+    patched_drivefs.glob.return_value = {
+        "/Folder/0.csv": {
+            "name": "/Folder/0.csv",
+            "type": "file",
+            "mtime": datetime.datetime.fromisoformat("1970-01-01T00:00:00Z"),
+            "size": "0",
+        }
+    }
 
+    expected_glob_paths = patched_drivefs.glob.return_value.keys()
+    pipeline.extract(
+        sharepoint(site_url, credentials=credentials, file_glob=test_glob)
+        | assert_expected_drive_items(expected_glob_paths)
+    )
 
-# # def test_extract_files_with_glob(
-# #     pipeline: dlt.Pipeline, mocker: MockerFixture, requests_mock: RequestsMocker
-# # ):
-# #     site_url = f"https://{SharePointTestSettings.HOSTNAME}/{SharePointTestSettings.SITE_PATH}"
-# #     file_glob = "outer/prefix-*/*.csv"
-# #     file_paths = [
-# #         f"outer/prefix-{dir_num}/{file_num}.csv" for dir_num in range(3) for file_num in range(2)
-# #     ]
-
-# #     patched_msal_client_app = patch_msal_with_access_token(mocker)
-# #     for file_path in file_paths:
-# #         SharePointTestSettings.mock_requests_for_file(requests_mock, file_path, file_path.encode())
-
-# #     @dlt.transformer
-# #     def assert_expected_drive_items(items: Iterator[DriveFileItem]):
-# #         drive_items = list(items)
-# #         assert len(drive_items) == len(file_paths)
-
-# #         for file_path, drive_item in zip(file_paths, drive_items):
-# #             assert isinstance(drive_items, DriveFileItem)
-# #             assert drive_item.name == Path(file_path).name
-# #             assert drive_item.content == file_path
-
-# #     credentials = MsalCredentialsResource("tid", "cid", "cs3cr3t")
-# #     data = (
-# #         sharepoint(site_url, credentials=credentials, file_glob=file_glob)
-# #         | assert_expected_drive_items
-# #     )
-# #     pipeline.extract(data())
-
-# #     patched_msal_client_app.assert_called()
+    patched_drivefs_cls.assert_called_once_with(
+        drive_id=SharePointTestSettings.LIBRARY_ID,
+        oauth2_client_params=credentials.oauth2_client_params(
+            {"access_token": SharePointTestSettings.ACCESS_TOKEN}
+        ),
+    )
+    patched_drivefs.glob.assert_called_with(test_glob, detail=True)
