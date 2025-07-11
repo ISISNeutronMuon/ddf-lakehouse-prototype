@@ -1,6 +1,7 @@
 import datetime
 import itertools
 from typing import Iterator
+import unittest.mock
 
 import dlt
 from dlt.common.configuration.exceptions import ConfigFieldMissingException
@@ -40,7 +41,7 @@ def test_extract_sharepoint_source_raises_error_without_config(pipeline: dlt.Pip
     ["files_per_page", "extract_content"],
     [
         (100, False),
-        #        (100, True),
+        (100, True),
         (2, False),
     ],
 )
@@ -85,8 +86,9 @@ def test_extract_sharepoint_files_yields_files_matching_glob(
             assert drive_obj["modification_date"] == datetime.datetime.fromisoformat(
                 "2025-01-01T00:00:00Z"
             )
+            assert drive_obj["size_in_bytes"] == 10
             if extract_content:
-                assert drive_obj["size"] == 10
+                assert drive_obj["file_content"] == b"0123456789"
 
         transformer_calls += 1
 
@@ -97,10 +99,14 @@ def test_extract_sharepoint_files_yields_files_matching_glob(
     # Beware that the test_glob & resulting return values are not linked so changing test_glob
     # will not affect the glob.return_value. Here we are relying on the MSDDriveFS client to do the
     # right thing and we just test we call it correctly.
-    patched_drivefs_cls = mocker.patch("pipelines_common.dlt_sources.m365.MSGDriveFS")
+    patched_drivefs_cls = mocker.patch(
+        "pipelines_common.dlt_sources.m365.MSGDriveFS", autospec=True
+    )
     patched_drivefs = patched_drivefs_cls.return_value
     test_glob = "/Folder/*.csv"
     patched_drivefs.glob.return_value = drivefs_glob_return_value
+
+    patched_drivefs.open = unittest.mock.mock_open(read_data=b"0123456789")
 
     pipeline.extract(
         sharepoint(
@@ -108,6 +114,7 @@ def test_extract_sharepoint_files_yields_files_matching_glob(
             credentials=credentials,
             file_glob=test_glob,
             files_per_page=files_per_page,
+            extract_content=extract_content,
         )
         | assert_expected_drive_items()
     )

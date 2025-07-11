@@ -133,7 +133,10 @@ def sharepoint(
     for file_model in glob_files(
         sp_library, bucket_url=f"{MSGDRIVEFS_PROTOCOL}:/", file_glob=file_glob
     ):
-        files_chunk.append(FileItemDict(file_model, credentials=sp_library))
+        file_dict = FileItemDict(file_model, credentials=sp_library)
+        if extract_content:
+            file_dict["file_content"] = file_dict.read_bytes()
+        files_chunk.append(file_dict)
 
         # wait for the chunk to be full
         if len(files_chunk) >= files_per_page:
