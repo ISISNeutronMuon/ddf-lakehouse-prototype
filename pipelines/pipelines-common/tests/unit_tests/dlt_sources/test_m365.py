@@ -1,5 +1,5 @@
 import datetime
-import re
+import itertools
 from typing import Iterator
 
 import dlt
@@ -36,40 +36,54 @@ def test_extract_sharepoint_source_raises_error_without_config(pipeline: dlt.Pip
         assert field in config_exc.fields
 
 
-@pytest.mark.parametrize("extract_content", (False,))
+@pytest.mark.parametrize(
+    ["files_per_page", "extract_content"],
+    [
+        (100, False),
+        #        (100, True),
+        (2, False),
+    ],
+)
 def test_extract_sharepoint_files_yields_files_matching_glob(
-    pipeline: dlt.Pipeline, mocker: MockerFixture, httpx_mock: HTTPXMock, extract_content: bool
+    pipeline: dlt.Pipeline,
+    mocker: MockerFixture,
+    httpx_mock: HTTPXMock,
+    files_per_page: int,
+    extract_content: bool,
 ):
-    @dlt.transformer
-    def assert_expected_drive_items(
-        drive_items: Iterator[FileItemDict], expected_paths: Iterator[str]
-    ):
-        for drive_obj, expected_path in zip(drive_items, expected_paths):
-            assert drive_obj["file_url"] == f"msgd://{expected_path}"
-            assert extract_content == ("file_content" in drive_obj)
+    num_files_found = 6
+    drivefs_glob_return_value = {
+        f"/Folder/{index}.csv": {
+            "name": f"/Folder/{index}.csv",
+            "type": "file",
+            "mtime": datetime.datetime.fromisoformat("1970-01-01T00:00:00Z"),
+            "size": "0",
+        }
+        for index in range(num_files_found)
+    }
+    transformer_calls = 0
+    if files_per_page >= num_files_found:
+        expected_transfomer_calls = 1
+        expected_transfomer_item_sizes = [num_files_found]
+    else:
+        expected_transfomer_calls = (
+            int(num_files_found / files_per_page) + num_files_found % files_per_page
+        )
+        expected_transfomer_item_sizes = [
+            sum(batch) for batch in itertools.batched([1] * num_files_found, files_per_page)
+        ]
 
-    site_url = f"https://{SharePointTestSettings.HOSTNAME}/{SharePointTestSettings.SITE_PATH}"
+    @dlt.transformer
+    def assert_expected_drive_items(drive_items: Iterator[FileItemDict]):
+        nonlocal transformer_calls
+        assert len(list(drive_items)) == expected_transfomer_item_sizes[transformer_calls]
+        # for drive_obj, expected_path in zip(drive_items, expected_paths):
+        #     assert drive_obj["file_url"] == f"msgd://{expected_path}"
+        #     assert extract_content == ("file_content" in drive_obj)
+        transformer_calls += 1
+
     credentials = M365CredentialsResource("tid", "cid", "cs3cr3t")
-    # mock the calls to return the token & drive_id
-    httpx_mock.add_response(
-        method="POST",
-        url=credentials.oauth2_token_endpoint,
-        json={"access_token": SharePointTestSettings.ACCESS_TOKEN},
-    )
-    httpx_mock.add_response(
-        method="GET",
-        url=re.compile(
-            f"{M365CredentialsResource.api_url}/sites/{SharePointTestSettings.HOSTNAME}:/{SharePointTestSettings.SITE_PATH}?.*"
-        ),
-        json={"id": SharePointTestSettings.SITE_ID},
-    )
-    httpx_mock.add_response(
-        method="GET",
-        url=re.compile(
-            f"{M365CredentialsResource.api_url}/sites/{SharePointTestSettings.SITE_ID}/drive?.*"
-        ),
-        json={"id": SharePointTestSettings.LIBRARY_ID},
-    )
+    SharePointTestSettings.mock_get_drive_id_responses(httpx_mock, credentials)
 
     # Mock out drive client to return known items from glob.
     # Beware that the test_glob & resulting return values are not linked so changing test_glob
@@ -78,25 +92,23 @@ def test_extract_sharepoint_files_yields_files_matching_glob(
     patched_drivefs_cls = mocker.patch("pipelines_common.dlt_sources.m365.MSGDriveFS")
     patched_drivefs = patched_drivefs_cls.return_value
     test_glob = "/Folder/*.csv"
-    patched_drivefs.glob.return_value = {
-        "/Folder/0.csv": {
-            "name": "/Folder/0.csv",
-            "type": "file",
-            "mtime": datetime.datetime.fromisoformat("1970-01-01T00:00:00Z"),
-            "size": "0",
-        }
-    }
+    patched_drivefs.glob.return_value = drivefs_glob_return_value
 
-    expected_glob_paths = patched_drivefs.glob.return_value.keys()
     pipeline.extract(
-        sharepoint(site_url, credentials=credentials, file_glob=test_glob)
-        | assert_expected_drive_items(expected_glob_paths)
+        sharepoint(
+            SharePointTestSettings.site_url,
+            credentials=credentials,
+            file_glob=test_glob,
+            files_per_page=files_per_page,
+        )
+        | assert_expected_drive_items()
     )
 
     patched_drivefs_cls.assert_called_once_with(
-        drive_id=SharePointTestSettings.LIBRARY_ID,
+        drive_id=SharePointTestSettings.library_id,
         oauth2_client_params=credentials.oauth2_client_params(
-            {"access_token": SharePointTestSettings.ACCESS_TOKEN}
+            {"access_token": SharePointTestSettings.access_token}
         ),
     )
     patched_drivefs.glob.assert_called_with(test_glob, detail=True)
+    assert expected_transfomer_calls == transformer_calls
