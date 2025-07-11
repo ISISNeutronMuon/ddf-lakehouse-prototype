@@ -34,7 +34,7 @@ if __name__ == "__main__":
     cli_utils.cli_main(
         pipeline_name="statusdisplay",
         default_destination="pipelines_common.dlt_destinations.pyiceberg",
-        data_generator=statusdisplay,
+        data_generator=statusdisplay(),
         dataset_name_suffix="statusdisplay",
         default_write_disposition="replace",
     )
