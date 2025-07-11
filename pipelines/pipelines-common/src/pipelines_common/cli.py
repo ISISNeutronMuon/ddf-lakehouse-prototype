@@ -105,7 +105,7 @@ def cli_main(
     LOGGER.info("Dropping pending packages to ensure a clean new load")
     pipeline.drop_pending_packages()
     pipeline.run(
-        data_generator(),
+        data_generator,
         loader_file_format=args.loader_file_format,
         write_disposition=args.write_disposition,
     )
