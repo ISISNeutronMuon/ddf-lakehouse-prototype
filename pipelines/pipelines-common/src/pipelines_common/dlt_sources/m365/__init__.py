@@ -43,7 +43,7 @@ def sharepoint(
 
     files_chunk: List[FileItemDict] = []
     for file_model in glob_files(
-        sp_library, bucket_url=f"{MSGDRIVEFS_PROTOCOL}:/", file_glob=file_glob
+        sp_library, bucket_url=f"{MSGDRIVEFS_PROTOCOL}://", file_glob=file_glob
     ):
         file_dict = FileItemDict(file_model, credentials=sp_library)
         if extract_content:

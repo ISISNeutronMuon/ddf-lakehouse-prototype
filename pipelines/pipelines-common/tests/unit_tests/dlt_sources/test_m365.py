@@ -76,7 +76,7 @@ def test_extract_sharepoint_files_yields_files_matching_glob(
     transformer_calls = 0
     file_paths_seen = set()
 
-    @dlt.transformer
+    @dlt.transformer(standalone=True)
     def assert_expected_drive_items(drive_items: Iterator[FileItemDict]):
         nonlocal transformer_calls
         assert len(list(drive_items)) == expected_transfomer_item_sizes[transformer_calls]
@@ -105,7 +105,6 @@ def test_extract_sharepoint_files_yields_files_matching_glob(
     patched_drivefs = patched_drivefs_cls.return_value
     test_glob = "/Folder/*.csv"
     patched_drivefs.glob.return_value = drivefs_glob_return_value
-
     patched_drivefs.open = unittest.mock.mock_open(read_data=b"0123456789")
 
     pipeline.extract(
