@@ -1,4 +1,5 @@
 import dataclasses
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 import uuid
 
@@ -20,10 +21,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 def initial_providers(self) -> List[ConfigProvider]:
     # do not read the global config
     # find the .dlt in the same directory as this file
+    thisdir = Path(__file__).parent
     return [
         EnvironProvider(),
-        SecretsTomlProvider(settings_dir="e2e_tests/.dlt"),
-        ConfigTomlProvider(settings_dir="e2e_tests/.dlt"),
+        SecretsTomlProvider(settings_dir=f"{thisdir}/.dlt"),
+        ConfigTomlProvider(settings_dir=f"{thisdir}/.dlt"),
     ]
 
 
